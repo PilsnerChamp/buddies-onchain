@@ -1,0 +1,51 @@
+/*
+ * BlinkingCursor styles.
+ *   - gap between `>` and cursor block: 10px
+ *   - cursor block: 0.6ch × 1.1em, --accent color, ~10px accent-glow
+ *   - keyframes blink: 1.05s, steps(2, start)
+ *   - reduced-motion holds the cursor in its visible state.
+ */
+
+.blinking-cursor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.blinking-cursor__sigil {
+  /* `>` sigil — full-strength + bold for parity with the other route
+   * sigils (`.route-command__sigil`, `.cold-hero__sigil`,
+   * `.cold-hero__prompt-sigil`). The blinking block carries its own
+   * accent glow and remains the focal point on its own merits. */
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.blinking-cursor__block {
+  display: inline-block;
+  width: 0.6ch;
+  height: 1.1em;
+  background: var(--accent);
+  vertical-align: -0.15em;
+  box-shadow: var(--cursor-glow);
+  animation: blinking-cursor-blink 1.05s steps(2, start) infinite;
+}
+
+@keyframes blinking-cursor-blink {
+  0%,
+  49.999% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blinking-cursor__block {
+    animation: none;
+    opacity: 1;
+  }
+}

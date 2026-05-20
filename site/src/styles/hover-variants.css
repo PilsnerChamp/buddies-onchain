@@ -1,0 +1,200 @@
+/*
+ * Hover token system — locked register.
+ *
+ * Low-opacity accent row fill + sigil glow + command brightening.
+ * All actionable rows share this single treatment per
+ * `docs/site/terminal-ui.md` § Cross-cutting interaction
+ * rules — action prompts (`> claude ▊`, `> /hatch <uuid> ▊`,
+ * `> /view [uuid] ▊`, disabled `> /bond ▊`), every SEE ALSO row (route
+ * link + descriptor + repo + contract), and the AUTHOR `@PilsnerChamp`
+ * X-link row.
+ *
+ * Single code path. Tokens cascade from `:root`; every `.hover-row` rule
+ * consumes them. To re-tune the register, edit the token values here —
+ * the rules below stay constant.
+ *
+ * Constraints (see `docs/site/terminal-ui.md` § Hover register):
+ *   - opacity / colour transitions only (no box-shadow elevation, no
+ *     transform, no width/height animation on hover)
+ *   - constant ~150ms duration
+ *   - reduced-motion → instant accent state, no transition
+ *   - touch / coarse-pointer → no sticky hover; tap-down `:active` only
+ *   - focus-visible mirrors hover (keyboard parity)
+ *
+ * Cold-action-prompt idle-on-load posture is enforced at the JS layer
+ * (`ColdHeroTerminal.tsx` only adds `.hover-row` after first user
+ * interaction) so an autofocused button doesn't paint the row-fill on
+ * mount even when Chromium matches `:focus-visible` on autofocus.
+ */
+
+:root {
+  /* Accent row fill at 8% opacity over the page surface. `color-mix`
+   * derives from the canonical `--accent` token so palette drift in
+   * tokens.css cascades through the hover register automatically. */
+  --hover-row-bg: color-mix(in srgb, var(--accent) 8%, transparent);
+  /* Border stays transparent at the locked register; the row fill +
+   * glow do the affordance work. */
+  --hover-row-border-color: transparent;
+  /* Sigil text-shadow glow — pulls the eye to the active row. */
+  --hover-row-glow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+  /* Sigil (`>`) and the actionable token brighten from accent lilac to
+   * full-strength `--color-text-primary` on hover, locking the eye to "this is the
+   * active line." */
+  --hover-sigil-color: var(--color-text-primary);
+  --hover-key-color: var(--color-text-primary);
+  --hover-value-color: var(--color-text-primary);
+  --hover-transition-duration: 150ms;
+}
+
+/* ── Hoverable row primitive ────────────────────────────────────────────
+ * Applied to any actionable row (SEE ALSO row anchor, action prompts,
+ * AUTHOR link). The `:hover` rule is gated by `(hover: hover) and
+ * (pointer: fine)` so coarse-pointer devices don't get sticky hover
+ * artefacts. The `:focus-visible` rule mirrors hover for keyboard
+ * parity and fires on any pointer type. Touch devices get a tap-down
+ * `:active` state via the coarse-pointer media block at the bottom of
+ * this file.
+ *
+ * Display is intentionally unset — the host element (subgrid row,
+ * full-width flex prompt button, AUTHOR anchor) owns layout.
+ * `.hover-row` only carries cosmetics: borderless reset, accent colour,
+ * transition window, and the always-on transparent 1px border. */
+.hover-row {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-row);
+  background-color: transparent;
+  border: 1px solid transparent;
+  transition:
+    background-color var(--hover-transition-duration) linear,
+    border-color var(--hover-transition-duration) linear,
+    color var(--hover-transition-duration) linear;
+}
+
+/* Inner cell color shifts. Default values come from the host context
+ * (`.see-also__label` accent, `.see-also__value` muted, AUTHOR handle accent);
+ * tokens override on hover/focus. */
+.hover-row .hover-row__sigil {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  transition:
+    color var(--hover-transition-duration) linear,
+    text-shadow var(--hover-transition-duration) linear;
+}
+
+.hover-row .hover-row__key,
+.hover-row .see-also__label {
+  transition:
+    color var(--hover-transition-duration) linear,
+    text-shadow var(--hover-transition-duration) linear;
+}
+
+.hover-row .see-also__value {
+  transition:
+    color var(--hover-transition-duration) linear,
+    text-shadow var(--hover-transition-duration) linear;
+}
+
+/* Inert row (e.g. pre-deploy contract row, disabled `> /bond ▊` action
+ * prompt). NO hover affordance, NO cursor change, NO transition. Reads
+ * as "this is not interactive" at a glance. */
+.hover-row--inert {
+  cursor: default;
+  transition: none;
+}
+.hover-row--inert:hover,
+.hover-row--inert:focus-visible {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* ── Hover state — fine pointer only ────────────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .hover-row:not(.hover-row--inert):hover {
+    background-color: var(--hover-row-bg);
+    border-color: var(--hover-row-border-color);
+  }
+  .hover-row:not(.hover-row--inert):hover .hover-row__sigil {
+    color: var(--hover-sigil-color);
+    text-shadow: var(--hover-row-glow);
+  }
+  .hover-row:not(.hover-row--inert):hover .hover-row__key,
+  .hover-row:not(.hover-row--inert):hover .see-also__label {
+    color: var(--hover-key-color);
+    text-shadow: var(--hover-row-glow);
+  }
+  .hover-row:not(.hover-row--inert):hover .see-also__value {
+    color: var(--hover-value-color);
+  }
+}
+
+/* ── Focus-visible — keyboard parity, all pointer types ──────────────
+ * The `:has(:focus-visible)` companion selector covers the case where
+ * the focusable element lives INSIDE the `.hover-row` wrapper (e.g.
+ * /view's inline `<input>` shaped like terminal text). Without it,
+ * keyboard users would tab into the input and get no row-level accent
+ * because the wrapper itself isn't focusable. `:has` is supported in
+ * Chrome 105+ / Safari 15.4+ / Firefox 121+ — within our target set. */
+.hover-row:not(.hover-row--inert):focus-visible,
+.hover-row:not(.hover-row--inert):has(:focus-visible) {
+  outline: none;
+  background-color: var(--hover-row-bg);
+  border-color: var(--hover-row-border-color);
+}
+.hover-row:not(.hover-row--inert):focus-visible .hover-row__sigil,
+.hover-row:not(.hover-row--inert):has(:focus-visible) .hover-row__sigil {
+  color: var(--hover-sigil-color);
+  text-shadow: var(--hover-row-glow);
+}
+.hover-row:not(.hover-row--inert):focus-visible .hover-row__key,
+.hover-row:not(.hover-row--inert):focus-visible .see-also__label,
+.hover-row:not(.hover-row--inert):has(:focus-visible) .hover-row__key,
+.hover-row:not(.hover-row--inert):has(:focus-visible) .see-also__label {
+  color: var(--hover-key-color);
+  text-shadow: var(--hover-row-glow);
+}
+.hover-row:not(.hover-row--inert):focus-visible .see-also__value,
+.hover-row:not(.hover-row--inert):has(:focus-visible) .see-also__value {
+  color: var(--hover-value-color);
+}
+
+/* ── Touch / coarse pointer — tap-down only, no sticky hover ──────── */
+@media (hover: none), (pointer: coarse) {
+  /* Hit-target padding ≥44px touch target per
+   * `docs/site/terminal-ui.md` § Touch-target sizing. Desktop keeps
+   * tighter rhythm via the @media (hover: hover) branch above (no
+   * padding override there). */
+  .hover-row:not(.hover-row--inert) {
+    min-height: 44px;
+    padding: 8px 8px;
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+  .hover-row:not(.hover-row--inert):active {
+    background-color: var(--hover-row-bg);
+    border-color: var(--hover-row-border-color);
+  }
+  .hover-row:not(.hover-row--inert):active .hover-row__sigil {
+    color: var(--hover-sigil-color);
+    text-shadow: var(--hover-row-glow);
+  }
+  .hover-row:not(.hover-row--inert):active .hover-row__key,
+  .hover-row:not(.hover-row--inert):active .see-also__label {
+    color: var(--hover-key-color);
+    text-shadow: var(--hover-row-glow);
+  }
+  .hover-row:not(.hover-row--inert):active .see-also__value {
+    color: var(--hover-value-color);
+  }
+}
+
+/* ── Reduced motion — instant accent, no transition ───────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .hover-row,
+  .hover-row .hover-row__sigil,
+  .hover-row .hover-row__key,
+  .hover-row .see-also__label,
+  .hover-row .see-also__value {
+    transition: none;
+  }
+}

@@ -1,0 +1,219 @@
+/*
+ * Man-page-grammar shared utilities.
+ *
+ * Cross-route primitives that every terminal page needs but were previously
+ * duplicated under route-prefixed names (`home-see__*`, `view-see__*`,
+ * `home-author`, `view-author`, `home-status-warn`, `view-status-warn`, ...).
+ *
+ * Single source of truth for:
+ *   - SEE ALSO grid + responsive collapse + link affordances
+ *   - AUTHOR link styling
+ *   - status-color helpers (warn / bad)
+ *
+ * Imported once via global.css. Route-specific composition (lookup form,
+ * step numbering, status sentence layout) stays in each route's own file.
+ */
+
+/* ── SEE ALSO grid (used by /, /hatch, /view, /view/<uuid>, /bond) ────── */
+/*
+ * Row-anchor markup: `<div class="see-also">` holds `<Link
+ * class="see-also__row">` children (or `<div>` for the inert pre-deploy
+ * contract row). Each row anchor is one hit target spanning both
+ * columns; `__label` and `__value` spans render inside via subgrid alignment.
+ * Hover affordance hangs on `.hover-row` (see hover-variants.css).
+ */
+.see-also {
+  display: grid;
+  grid-template-columns: 24ch 1fr;
+  column-gap: 2ch;
+  row-gap: 2px;
+}
+.see-also__label {
+  color: var(--accent);
+}
+.see-also__value {
+  color: var(--color-text-secondary);
+}
+
+/* Row-anchor variant — single hit target per row, spans both grid
+ * columns, uses CSS subgrid so inner `__label` / `__value` align to parent
+ * columns. Hover affordance hangs on `.hover-row` (see hover-variants.css)
+ * — the row anchor is the focus stop, the cells are passive content. */
+.see-also__row {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  column-gap: 2ch;
+  /* Vertical padding lets the hover fill breathe without changing row
+   * cadence. Negative horizontal margin pulls the fill out into the
+   * surrounding section gutter so the hovered row reads as full-width. */
+  padding: 2px 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+@media (max-width: 640px) {
+  .see-also {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+  }
+  .see-also__row {
+    grid-template-columns: subgrid;
+    row-gap: 2px;
+  }
+}
+
+/* ── AUTHOR link (used by every terminal route's AUTHOR section) ────────
+ * Full-row hit target — same shape as SEE ALSO row anchors and the
+ * action-prompt buttons so the locked hover register (`.hover-row` +
+ * `.hover-row__key`) paints uniformly across every actionable row on
+ * every route. Negative horizontal margin pulls the row fill into the
+ * surrounding section gutter so the hovered fill reads as full-width
+ * (matches `.see-also__row` margin trick). */
+.route-author {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 2px 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  color: var(--accent);
+}
+/* Inner handle span carries `.hover-row__key` — the locked hover
+ * register flips it from accent lilac to bright `--color-text-primary` on hover/focus.
+ * Idle colour comes from `.route-author` above. */
+.route-author .hover-row__key {
+  color: var(--accent);
+}
+
+/* ── Status-color helpers ─────────────────────────────────────────────── */
+.status-text--warning {
+  color: var(--warn);
+  white-space: nowrap;
+}
+.status-text--danger {
+  color: var(--danger);
+  white-space: nowrap;
+}
+.status-text--ok {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* ── STATUS line composition (`<phrase> · <detail>`) ──────────────────── */
+.route-status {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+.route-status__sep {
+  color: var(--color-text-tertiary);
+}
+.route-status__detail {
+  color: var(--color-text-secondary);
+}
+.route-status__detail--warn,
+.route-status__detail--awaiting,
+.route-status__detail--pre-deploy {
+  color: var(--warn);
+}
+.route-status__detail--hatched {
+  color: var(--accent);
+}
+
+/* ── Terminal action row primitive ────────────────────────────────────
+ * Full-row hit target shared by every action-prompt slot (`> claude ▊` on
+ * `/`, `> /hatch <uuid> ▊` on `/hatch`, `> /view [<uuid>] ▊` on `/view`,
+ * `> /bond ▊` on `/bond`). The always-on transparent 1px border + 2px
+ * radius + ±8px negative horizontal margin are the layout-stable hover
+ * baseline so toggling `.hover-row` post-interaction does not shift
+ * layout. Routes layer route-specific tweaks on top. */
+.terminal-action-row {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font: inherit;
+  color: var(--color-text-primary);
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: var(--radius-row);
+  padding: 3px 7px;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+/* Active button variant — strip native button chrome so the prompt reads
+ * as terminal text, not a UI element. Pairs with the autofocused
+ * `<button>` shape used by cold-hero, hatch-active, and view-input rows. */
+.terminal-action-row--interactive {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+.terminal-action-row--interactive:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Inert variant — disabled prompt (e.g. `> /bond ▊` placeholder). Muted
+ * colour, no cursor change, no transition. */
+.terminal-action-row--inert {
+  color: var(--color-text-tertiary);
+  cursor: default;
+}
+
+/* ── Prose paragraphs (DESCRIPTION / NEXT STEPS body) ─────────────────── */
+.route-prose {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+.route-prose--spaced {
+  margin-top: var(--space-3);
+}
+
+/* ── Separator rail — terminal ASCII divider used between hero blocks
+ * and route metadata sections (AUTHOR/SEE ALSO). See
+ * `docs/site/terminal-ui.md` § Separator rail — a single full-width row
+ * of `-` characters renders the rail.
+ * `text-align: center` keeps the dash string visually balanced — equal
+ * gutter on left and right at any container width — and `overflow: hidden`
+ * clips symmetrically when the container is narrower than the dash count.
+ * Aria-hidden in markup so screen readers don't announce the dashes. */
+.route-rail {
+  margin: var(--space-4) 0 var(--space-3);
+  color: var(--color-text-tertiary);
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: center;
+  font: inherit;
+}
+
+/* ── Inline accent (e.g. `/buddy-onchain` token in prose) ─────────────── */
+.route-accent {
+  color: var(--accent);
+}
+a.route-accent {
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent-border-muted);
+}
+.terminal-inline-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent-border-muted);
+}
+@media (hover: hover) and (pointer: fine) {
+  a.route-accent:hover,
+  .terminal-inline-link:hover {
+    border-bottom-color: var(--accent);
+  }
+}
+a.route-accent:focus-visible,
+.terminal-inline-link:focus-visible {
+  border-bottom-color: var(--accent);
+  outline: 1px dotted currentColor;
+  outline-offset: 2px;
+}

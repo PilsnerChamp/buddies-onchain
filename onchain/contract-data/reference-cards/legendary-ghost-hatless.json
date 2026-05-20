@@ -1,0 +1,56 @@
+{
+  "name": "Buddy Onchain #5",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "image": "./legendary-ghost-hatless.svg",
+  "attributes": [
+    {
+      "trait_type": "Species",
+      "value": "Ghost"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Legendary"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Cross"
+    },
+    {
+      "trait_type": "Hat",
+      "value": "None"
+    },
+    {
+      "trait_type": "Shiny",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Stage",
+      "value": "Hatched"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Debugging",
+      "value": 92
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Patience",
+      "value": 58
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Chaos",
+      "value": 74
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Wisdom",
+      "value": 88
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Snark",
+      "value": 66
+    }
+  ]
+}

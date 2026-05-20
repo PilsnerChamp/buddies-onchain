@@ -1,0 +1,56 @@
+{
+  "name": "Buddy Onchain #4",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "image": "./epic-dragon-hat.svg",
+  "attributes": [
+    {
+      "trait_type": "Species",
+      "value": "Dragon"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Epic"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Spiral"
+    },
+    {
+      "trait_type": "Hat",
+      "value": "Wizard"
+    },
+    {
+      "trait_type": "Shiny",
+      "value": "No"
+    },
+    {
+      "trait_type": "Stage",
+      "value": "Hatched"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Debugging",
+      "value": 78
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Patience",
+      "value": 45
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Chaos",
+      "value": 88
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Wisdom",
+      "value": 62
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Snark",
+      "value": 38
+    }
+  ]
+}

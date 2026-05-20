@@ -1,0 +1,20 @@
+{
+  "name": "buddy-onchain",
+  "version": "0.4.3",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "sync-deployments": "if ls ../onchain/deployments/*.json >/dev/null 2>&1; then rm -rf deployments && mkdir -p deployments && cp ../onchain/deployments/*.json deployments/; else echo 'sync-deployments: no JSON files at ../onchain/deployments — aborting (deployments/ untouched)' >&2; exit 1; fi",
+    "build": "bun run sync-deployments && bun build src/index.ts --target=bun --outfile=dist/index.js"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.0.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "viem": "^2.48.4"
+  }
+}

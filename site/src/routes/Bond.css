@@ -1,0 +1,48 @@
+/*
+ * Bond route styles.
+ *
+ * Disabled action prompt `> /bond ▊`, plus the inline
+ * `stage 2 · not yet implemented` line beneath it.
+ *
+ * Cross-route primitives (SEE ALSO grid + row anchors, `.route-author`,
+ * `.route-rail`, status-color helpers, hover token system) live in
+ * `site/src/styles/man-page-extras.css` + `hover-variants.css`.
+ */
+
+/* Disabled action prompt — full-row visual parity with other routes' active
+ * prompts. Chrome lives on `.terminal-action-row` /
+ * `.terminal-action-row--inert` in `man-page-extras.css`; this rule only
+ * adds the route-specific top margin. Note: must NOT use the `margin:`
+ * shorthand — that would clobber the `margin-left/-right: -8px` set by the
+ * shared primitive. */
+.bond-action {
+  margin-top: var(--space-2);
+}
+.bond-action__sigil {
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+.bond-action__command {
+  color: var(--color-text-tertiary);
+}
+
+/* Muted static cursor slot — same geometry as the blinking cursor
+ * block (`.blinking-cursor__block`) so the disabled prompt holds the
+ * same visual width as an active prompt, but no accent colour, no
+ * glow, no blink. Reads as "cursor slot exists but is dormant." */
+.bond-action__cursor {
+  display: inline-block;
+  width: 0.6ch;
+  height: 1.1em;
+  background: var(--color-text-tertiary);
+  vertical-align: -0.15em;
+}
+
+.bond-action__inline {
+  margin: 0 0 0 4ch;
+  color: var(--color-text-secondary);
+  font: inherit;
+}
+.bond-action__sep {
+  color: var(--color-text-tertiary);
+}

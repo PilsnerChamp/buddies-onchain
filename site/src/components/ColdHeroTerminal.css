@@ -1,0 +1,152 @@
+/*
+ * ColdHeroTerminal styles.
+ *
+ * The cold-landing hero block has two parts: the action prompt
+ * `> claude ▊` (a focusable button styled to read as terminal text) and
+ * the indented walkthrough beneath it (5 lines that stream in via
+ * `width` clip animation, simulating fake terminal output of the
+ * `claude` command).
+ *
+ * Animation:
+ *   - Each line carries `--chars`, `--type-duration`, `--type-delay`
+ *     custom properties set inline from JSX.
+ *   - `width: 0 → calc(var(--chars) * 1ch)` clipped by `overflow: hidden`
+ *     reveals characters left-to-right at one glyph per `step`.
+ *   - `steps()` timing function gives the discrete char-clock feel of a
+ *     real terminal — character snaps into place rather than easing.
+ *   - `prefers-reduced-motion: reduce` short-circuits to `width: auto`
+ *     with no animation. Lines render full and instant.
+ *
+ * Replay:
+ *   - The parent `.cold-hero__walkthrough` carries a React `key` that
+ *     bumps on click. Remount restarts every line's animation from 0.
+ *   - No JS-side timer cleanup needed because no setTimeouts are used.
+ */
+
+.cold-hero {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* Container context for the narrow-viewport wrap fallback below. The
+   * typewriter relies on `white-space: pre` + `overflow: hidden` + animated
+   * `width` in ch units. When the hero block is narrower than the longest
+   * walkthrough line, that combination either truncates the parenthetical
+   * wallet hint (`pre`) or scrambles it (`pre-wrap` mid-animation). The
+   * container query swaps in a wrap-allowed instant render in that regime
+   * — same shape as `prefers-reduced-motion: reduce`. */
+  container: cold-hero / inline-size;
+}
+
+/* ── Action prompt button — looks like terminal text, behaves like a button ──
+ * Chrome (full-row flex, border, padding, negative gutter, button chrome
+ * reset) lives on `.terminal-action-row` /
+ * `.terminal-action-row--interactive` in `man-page-extras.css`.
+ * Conditionally carries `.hover-row` (after first user interaction) so the
+ * autofocused button stays unlit on cold load.
+ */
+
+.cold-hero__prompt-sigil {
+  /* Idle color — variant token in hover-variants.css overrides on hover
+   * via the `.hover-row__sigil` class also carried on this span. */
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.cold-hero__prompt-cmd {
+  /* Idle color — variant token overrides on hover via `.hover-row__key`. */
+  color: var(--accent);
+}
+
+/* ── Walkthrough block ──────────────────────────────────────────────── */
+.cold-hero__walkthrough {
+  /* Vertical rhythm: lines stack tight like real terminal output. */
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--color-text-primary);
+}
+
+.cold-hero__line {
+  /* Each line clips its own width from 0 to N ch via the animation. The
+   * monospace `1ch` unit lines up with one glyph in JetBrains Mono so the
+   * clip edge always lands cleanly between characters.
+   *
+   * Indent is applied via `padding-left: var(--indent)` (not via leading
+   * spaces in the source string) so the wrap-fallback below preserves
+   * indent on continuation rows — wrapped text aligns with the line's
+   * indent column instead of dropping to col 0. Mirrors the hanging-
+   * indent shape of NEXT STEP prose wrap. */
+  display: block;
+  white-space: pre;
+  overflow: hidden;
+  /* `width` here is the content-area width (excludes padding) so the
+   * animation reveal corresponds 1:1 to character count regardless of
+   * indent — the global `box-sizing: border-box` reset would otherwise
+   * eat the indent out of the visible content. */
+  box-sizing: content-box;
+  width: 0;
+  padding-left: var(--indent, 0);
+  /* Min-height keeps layout stable while width is 0 (otherwise the line
+   * collapses to 0×0 and the next line jumps up by one row). */
+  min-height: 1.2em;
+  animation-name: cold-hero-typewriter;
+  animation-duration: var(--type-duration, 0ms);
+  animation-delay: var(--type-delay, 0ms);
+  animation-timing-function: steps(var(--chars, 1));
+  animation-fill-mode: forwards;
+}
+
+@keyframes cold-hero-typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: calc(var(--chars, 0) * 1ch);
+  }
+}
+
+/* Token colors inside walkthrough lines. `>` sigil rendered full-strength
+ * + bold for parity with the page-top echo line (`.route-command__sigil`)
+ * and the action prompt (`.cold-hero__prompt-sigil`). */
+.cold-hero__sigil {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.cold-hero__command {
+  color: var(--accent);
+}
+
+/* `hatch` / `view` outcome verbs — accent color, same as commands so
+ * the eye picks out the actionable tokens at a glance. */
+.cold-hero__verb {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cold-hero__line {
+    animation: none;
+    width: auto;
+  }
+}
+
+/* Narrow-block fallback: longest walkthrough line is ~82ch (8ch indent +
+ * 74ch content for the `hatch -> ... (needs a Base-compatible wallet)`
+ * row). When the hero container can't fit it on one row, drop the
+ * typewriter and let the line wrap so the wallet hint stays visible.
+ *
+ * `padding-left: var(--indent)` is inherited from the base rule, so wrap
+ * continuation rows align with the line's indent column — same hanging-
+ * indent shape as NEXT STEP prose wrap. `overflow-wrap: break-word`
+ * prefers space/dash boundaries and only splits long unbreakable tokens
+ * (e.g. `buddy-onchain@buddies-onchain`) when no soft break point fits. */
+@container cold-hero (max-width: 82ch) {
+  .cold-hero__line {
+    animation: none;
+    width: auto;
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+}

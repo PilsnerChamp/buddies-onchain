@@ -1,0 +1,61 @@
+/*
+ * TerminalRouteShell styles — viewport-anchored centering wrapper +
+ * atmospheric orb stack behind every terminal frame, plus the
+ * `.route-command*` echo-line primitive used by every route's first body row.
+ * Route-specific composition stays in each route's own stylesheet.
+ */
+
+/* ── Stage wrapper (viewport-anchored centering container) ────────────── */
+.terminal-route-shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  overflow: hidden;
+}
+
+/* ── Atmospheric orb stack ────────────────────────────────────────────── */
+.terminal-route-shell__orbs {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(50% 45% at 78% 68%, var(--orb-lilac) 0%, transparent 65%),
+    radial-gradient(45% 50% at 18% 52%, var(--orb-rose) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Mobile — terminal becomes the viewport; shell padding collapses to 0
+ * and the shell stretches items to fill vertically so the terminal can
+ * expand edge-to-edge. */
+@media (max-width: 640px) {
+  .terminal-route-shell {
+    padding: 0;
+    align-items: stretch;
+  }
+}
+
+/* ── Terminal command-line chrome (echo header) ──────────────────────── */
+/*
+ * Shared primitive for the `> /buddy-onchain ...` echo line that every
+ * terminal route prints as the first body row. Routes that need a
+ * different sigil/accent split can override; routes that just want the
+ * canonical sigil + accented command can use this verbatim.
+ */
+.route-command {
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-4);
+  font: inherit;
+}
+.route-command__sigil {
+  /* Page-top echo header tier — brighter + bold to anchor visual
+   * hierarchy. Walkthrough/prompt sigils stay `--color-text-tertiary` so the accent-
+   * colored command bodies remain the focal point in those contexts. */
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+.route-command__accent {
+  color: var(--accent);
+}

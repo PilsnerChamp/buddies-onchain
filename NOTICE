@@ -1,0 +1,34 @@
+# NOTICE
+
+Buddies Onchain bundles two third-party fonts. The WOFF2 payloads are embedded
+in the on-chain SVG renderer (committed under `onchain/contract-data/fonts/`)
+and reused in the social-card SVGs under `site/tools/og/`. Both licenses are
+permissive; the full text of each ships alongside its font.
+
+The font payloads travel with the deployed contract bytecode. Anyone who
+redeploys or forks the contract redistributes these font payloads — this
+NOTICE and the corresponding license files must travel with such forks.
+
+## Iosevka
+
+Used as the on-chain SVG chrome font.
+
+- Source: <https://github.com/be5invis/Iosevka>
+- License: SIL Open Font License v1.1
+- Full text: `onchain/contract-data/fonts/chrome/Iosevka-LICENSE.md`
+- Copyright (c) 2015-2026, Renzhi Li (aka. Belleve Invis, belleve@typeof.net)
+
+## DejaVu Sans Mono
+
+Used as the on-chain SVG sprite-glyph font.
+
+- Source: <https://dejavu-fonts.github.io>
+- License: Bitstream Vera Fonts License (with DejaVu modifications released into
+  the public domain)
+- Full text: `onchain/contract-data/fonts/sprite/DejaVu-LICENSE.md`
+- Copyright (c) 2003 by Bitstream, Inc.
+
+Per the Bitstream Vera license, the names "Bitstream" and "Vera" may not appear
+in modified-font names or in advertising for derivative works without prior
+written authorization from Bitstream, Inc. or the GNOME Foundation. Buddies
+Onchain does not use these names in promotional copy.

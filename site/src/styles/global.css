@@ -1,0 +1,48 @@
+/*
+ * Global stylesheet — imports design tokens, applies a minimal reset, sets
+ * html/body defaults (font, color, page-level gradient backdrop). The
+ * atmospheric orb stack lives inside `TerminalRouteShell`, not here, so it
+ * sits between the dot-grid background and the terminal frame.
+ *
+ * Imported once via src/main.tsx so tokens/resets apply before any
+ * component renders.
+ */
+
+@import "./tokens.css";
+@import "./man-page-extras.css";
+@import "./hover-variants.css";
+
+/* ── Reset ────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ── Document defaults ────────────────────────────────────────────────── */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+
+  /* Page-level gradient backdrop. The two radial gradients paint the "glow"
+   * behind the terminal; the linear gradient is the near-black base. */
+  background:
+    radial-gradient(ellipse at 30% 20%, var(--page-glow-a) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 80%, var(--page-glow-b) 0%, transparent 55%),
+    linear-gradient(135deg, var(--page-bg-start) 0%, var(--page-bg-end) 100%);
+
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-variant-ligatures: none;
+  overflow: hidden;
+}
+
+/* Mobile scroll — `body { overflow: hidden }` above keeps desktop still;
+ * on mobile the terminal can exceed viewport height so body scrolls. */
+@media (max-width: 640px) {
+  body {
+    overflow: auto;
+  }
+}

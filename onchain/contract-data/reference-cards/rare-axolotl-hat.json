@@ -1,0 +1,56 @@
+{
+  "name": "Buddy Onchain #3",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "image": "./rare-axolotl-hat.svg",
+  "attributes": [
+    {
+      "trait_type": "Species",
+      "value": "Axolotl"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Rare"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Bullseye"
+    },
+    {
+      "trait_type": "Hat",
+      "value": "Top Hat"
+    },
+    {
+      "trait_type": "Shiny",
+      "value": "No"
+    },
+    {
+      "trait_type": "Stage",
+      "value": "Hatched"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Debugging",
+      "value": 48
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Patience",
+      "value": 62
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Chaos",
+      "value": 35
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Wisdom",
+      "value": 54
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Snark",
+      "value": 41
+    }
+  ]
+}

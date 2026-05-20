@@ -1,0 +1,56 @@
+{
+  "name": "Buddy Onchain #2",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "image": "./uncommon-mushroom-hatless.svg",
+  "attributes": [
+    {
+      "trait_type": "Species",
+      "value": "Mushroom"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Uncommon"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Star"
+    },
+    {
+      "trait_type": "Hat",
+      "value": "None"
+    },
+    {
+      "trait_type": "Shiny",
+      "value": "No"
+    },
+    {
+      "trait_type": "Stage",
+      "value": "Hatched"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Debugging",
+      "value": 22
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Patience",
+      "value": 44
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Chaos",
+      "value": 38
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Wisdom",
+      "value": 27
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Snark",
+      "value": 31
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+/*
+ * Hatch route styles — warm terminal man-page composition.
+ *
+ * This file owns:
+ *   - STATUS line tone variants
+ *   - DESCRIPTION wrap rule
+ *   - NEXT STEP gas warning
+ *   - HatchActionPrompt (active / committed / muted modes) — full-row
+ *     button when active, plain text when committed/muted, mirrors the
+ *     cold-hero prompt structurally (sigil + cmd + cursor block)
+ *   - HatchStream (cumulative terminal-style output below the prompt)
+ *
+ * Cross-route primitives (SEE ALSO grid + row anchors, `.route-author`,
+ * `.route-rail`, status-color helpers, hover token system) live in
+ * `site/src/styles/man-page-extras.css` + `hover-variants.css`.
+ */
+
+/* STATUS line uses shared `.route-status*` from man-page-extras.css. */
+
+/* ── DESCRIPTION ─────────────────────────────────────────────────────── */
+.hatch-description {
+  margin: 0;
+  color: var(--color-text-primary);
+  /* Preserve hard-wrap newlines from the JS source (3 lines). */
+  white-space: pre-wrap;
+}
+
+/* ── NEXT STEP ───────────────────────────────────────────────────────── */
+.hatch-next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hatch-next__gas {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* ── Action prompt ───────────────────────────────────────────────────── */
+/*
+ * Three modes — `active` is a focusable button (carries
+ * `.terminal-action-row--interactive`), `committed` is plain text after
+ * /hatch was run, `muted` is the pre-deploy placeholder
+ * (`.terminal-action-row--inert`). Chrome (border, radius, padding,
+ * negative gutter, full-row flex) lives in
+ * `man-page-extras.css :: .terminal-action-row`; rules below own
+ * route-specific token colours only.
+ */
+
+.hatch-action__sigil {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.hatch-action__command {
+  /* Long UUID — break-all so a narrow viewport doesn't push the cursor
+   * block off the row. */
+  color: var(--accent);
+  word-break: break-all;
+}
+
+/* Muted mode — pre-deploy placeholder. STATUS line carries the
+ * `contract not yet deployed on this network` reason; the prompt is
+ * inert visual parity. */
+.hatch-action--muted .hatch-action__sigil,
+.hatch-action--muted .hatch-action__command {
+  color: var(--color-text-tertiary);
+}
+
+/* ── Stream output ───────────────────────────────────────────────────── */
+.hatch-stream {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.hatch-stream__line {
+  margin: 0;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.hatch-stream__line--success {
+  color: var(--accent);
+}
+
+.hatch-stream__line--error {
+  color: var(--warn);
+}
+
+.hatch-stream__line--muted {
+  color: var(--color-text-tertiary);
+}
+
+.hatch-stream__sep {
+  color: var(--color-text-tertiary);
+}
+
+.hatch-stream__cursor {
+  height: 1.05em;
+  margin-left: 0.4ch;
+  vertical-align: -0.12em;
+}
+
+.hatch-stream__addr {
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+
+.hatch-stream__hash {
+  color: var(--color-text-primary);
+  font-family: inherit;
+}
+.hatch-stream__hash--link {
+  color: var(--accent);
+}
+
+/* AUTHOR link, SEE ALSO grid + row anchors, separator rail, and
+ * status-color helpers (`.status-text--warning`, `.status-text--ok`, `.status-text--danger`) live in
+ * `site/src/styles/man-page-extras.css` — shared across all terminal
+ * routes. */

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build output
+.output/
+dist/
+# Marketplace install ships only `plugin/` subtree; dist/index.js must be tracked
+# so the bundled artifact (with ~shared/* inlined) runs without a build step.
+!plugin/dist/
+!plugin/dist/index.js
+
+# Foundry
+out/
+cache/
+onchain/lib/
+onchain/broadcast/
+
+# Environment variables
+# .env = non-secrets (committed)
+# .env.local = secrets (ignored)
+.env.local
+.env.*.local
+.env.worktree
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Temp
+.tmp/
+
+# Worktrees (parallel development directories)
+trees/
+_examples/
+**/__pycache__/
+.claude/data/
+
+# Renderer / E2E tool output
+onchain/tools/output/
+
+# Claude Code runtime state
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

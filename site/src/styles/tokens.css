@@ -1,0 +1,79 @@
+/*
+ * Design tokens — palette, spacing, type scale. Imported once via global.css.
+ */
+
+:root {
+  /* ── Palette ─────────────────────────────────────────────────────────── */
+  --orb-lilac:  hsla(267, 62%, 65%, 0.22);
+  --orb-rose:   hsla(347, 52%, 62%, 0.18);
+
+  --color-text-primary:         #e9e4f1;
+  --color-text-secondary:   #8b85a3;
+  --color-text-tertiary:     #5a556d;
+  --accent:     hsl(278, 85%, 78%);
+  --danger:     #ef4f6e;
+  --warn:       #e9b949;
+
+  --surface-bg:         rgba(10, 8, 20, 0.72);
+  --surface-border:     rgba(190, 155, 230, 0.38);
+  --surface-border-top: rgba(220, 190, 250, 0.55);
+  --header-bg:          rgba(22, 18, 40, 0.92);
+
+  --dot-color: rgba(180, 150, 230, 0.10);
+  --dot-glow:  rgba(200, 160, 245, 0.55);
+
+  --page-glow-a: #1a1330;
+  --page-glow-b: #2a1840;
+  --page-bg-start: #0a0818;
+  --page-bg-end: #05030d;
+
+  --terminal-shadow:
+    0 1px 0 var(--surface-border-top) inset,
+    0 40px 100px -20px rgba(0, 0, 0, 0.85),
+    0 0 60px -10px rgba(180, 140, 230, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
+  --terminal-title-shadow: 0 0 18px rgba(200, 160, 245, 0.45);
+  --terminal-title-shadow-hover: 0 0 24px rgba(200, 160, 245, 0.85);
+  --terminal-header-rule: linear-gradient(
+    90deg,
+    transparent,
+    rgba(200, 160, 245, 0.35),
+    transparent
+  );
+  --terminal-scrollbar-thumb: rgba(180, 140, 220, 0.2);
+  --terminal-mobile-bg: rgba(10, 8, 20, 0.88);
+  --traffic-dot-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.4);
+  --traffic-dot-red: #ff5f57;
+  --traffic-dot-yellow: #febc2e;
+  --traffic-dot-green: #28c840;
+  --cursor-glow: 0 0 10px var(--accent);
+  --accent-border-muted: color-mix(in srgb, var(--accent) 30%, transparent);
+
+  /* ── Spacing scale ────────────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 22px;
+  --space-6: 26px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* ── Type scale ───────────────────────────────────────────────────────── */
+  --font-size-sm:   16px;    /* .heading, mobile .term-title */
+  --font-size-base: 16px;    /* .term-body */
+  --font-size-md:   14px;    /* .term-title */
+
+  --line-height-body: 1.65;
+  --letter-spacing-heading: 0.06em;
+  --letter-spacing-title:   0.08em;
+
+  /* ── Font stack ───────────────────────────────────────────────────────── */
+  --font-family-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  /* ── Surface geometry ─────────────────────────────────────────────────── */
+  --radius-terminal: 14px;
+  --radius-row: 2px;
+  --radius-scrollbar: 3px;
+  --radius-round: 999px;
+}

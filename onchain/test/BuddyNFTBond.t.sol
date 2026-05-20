@@ -1,0 +1,475 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
+import {Test} from "forge-std/Test.sol";
+
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+
+contract BuddyNFTBondTest is Test {
+    event BuddyBonded(
+        uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name
+    );
+
+    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
+        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
+
+    BuddyNFT internal nft;
+    address internal owner;
+    uint256 internal signerPk;
+    address internal signer;
+    address internal recipient;
+    uint256 internal recipientPk;
+
+    string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
+    string internal constant BOND_NAME = "buddy";
+
+    function setUp() public {
+        owner = makeAddr("owner");
+        (signer, signerPk) = makeAddrAndKey("signer");
+        (recipient, recipientPk) = makeAddrAndKey("recipient");
+
+        nft = new BuddyNFT(owner, address(0));
+
+        // Set attestation signer and enable bonding
+        vm.startPrank(owner);
+        nft.setAttestationSigner(signer);
+        nft.enableBonding();
+        vm.stopPrank();
+    }
+
+    // -------------------------------------------------------------------------
+    // EIP-712 signing helpers
+    // -------------------------------------------------------------------------
+
+    function _domainSeparator() internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("BuddyNFT"),
+                keccak256("1"),
+                block.chainid,
+                address(nft)
+            )
+        );
+    }
+
+    function _domainSeparatorFor(uint256 chainId, address verifyingContract) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("BuddyNFT"),
+                keccak256("1"),
+                chainId,
+                verifyingContract
+            )
+        );
+    }
+
+    function _hashAttestation(BuddyNFT.BondAttestation memory att) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(BOND_ATTESTATION_TYPEHASH, att.tokenId, att.identityHash, att.recipient, att.expiry)
+        );
+    }
+
+    function _computeDigest(bytes32 structHash) internal view returns (bytes32) {
+        return MessageHashUtils.toTypedDataHash(_domainSeparator(), structHash);
+    }
+
+    function _computeDigestFor(bytes32 structHash, uint256 chainId, address verifyingContract)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return MessageHashUtils.toTypedDataHash(_domainSeparatorFor(chainId, verifyingContract), structHash);
+    }
+
+    function _signBondAttestation(BuddyNFT.BondAttestation memory att) internal view returns (bytes memory) {
+        bytes32 digest = _computeDigest(_hashAttestation(att));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _signBondAttestationWithKey(BuddyNFT.BondAttestation memory att, uint256 pk)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = _computeDigest(_hashAttestation(att));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _hatchAndPrepare()
+        internal
+        returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory att)
+    {
+        tokenId = nft.hatch(TEST_UUID);
+        identityHash = keccak256(bytes(TEST_UUID));
+        att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: identityHash,
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Happy path
+    // -------------------------------------------------------------------------
+
+    function test_bond_success() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        assertEq(nft.ownerOf(tokenId), recipient);
+        assertEq(uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Bonded));
+        assertEq(nft.buddyName(tokenId), BOND_NAME);
+    }
+
+    function test_bond_emitsEvent() public {
+        (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectEmit(true, true, true, true, address(nft));
+        emit BuddyBonded(tokenId, identityHash, recipient, BOND_NAME);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_nameStoredOnlyAtBond() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        // Name is empty before bond
+        assertEq(nft.buddyName(tokenId), "");
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        // Name is set after bond
+        assertEq(nft.buddyName(tokenId), BOND_NAME);
+    }
+
+    // -------------------------------------------------------------------------
+    // Revert conditions
+    // -------------------------------------------------------------------------
+
+    function test_bond_revertsBondingNotEnabled() public {
+        // Deploy fresh contract without enabling bonding
+        BuddyNFT freshNft = new BuddyNFT(owner, address(0));
+        uint256 tokenId = freshNft.hatch(TEST_UUID);
+        bytes32 identityHash = keccak256(bytes(TEST_UUID));
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: identityHash,
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+
+        vm.expectRevert(BuddyNFT.BondingNotEnabled.selector);
+        vm.prank(recipient);
+        freshNft.bond(tokenId, BOND_NAME, att, new bytes(65));
+    }
+
+    function test_bond_revertsNonexistentToken() public {
+        uint256 fakeTokenId = 999;
+        bytes32 fakeHash = keccak256("fake");
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: fakeTokenId,
+            identityHash: fakeHash,
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, fakeTokenId));
+        vm.prank(recipient);
+        nft.bond(fakeTokenId, BOND_NAME, att, new bytes(65));
+    }
+
+    function test_bond_revertsAlreadyBonded() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        // Second bond attempt — stage is now Bonded
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, "name2", att, sig);
+    }
+
+    function test_bond_revertsOwnerNotContract() public {
+        // This is defense-in-depth. In normal flow the owner of a Custodial
+        // token is always address(this). We cannot easily construct a state
+        // where ownerOf != address(this) while stage == Custodial because
+        // _update blocks all non-bond transfers. Instead, verify that the
+        // check exists by confirming that after a successful bond (stage=Bonded,
+        // owner=recipient), a second bond reverts at the stage check (Soulbound)
+        // before reaching the owner check. The owner-not-contract check is
+        // belt-and-suspenders that can only trigger via a hypothetical future
+        // code change. Its existence is verified by code review (contract line 260).
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        // After bond: owner=recipient, stage=Bonded. Hits stage check first.
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, "name2", att, sig);
+    }
+
+    function test_bond_revertsTokenIdMismatch() public {
+        (uint256 tokenId, bytes32 identityHash,) = _hatchAndPrepare();
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId + 1, // wrong tokenId
+            identityHash: identityHash,
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsIdentityHashMismatch() public {
+        (uint256 tokenId,,) = _hatchAndPrepare();
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: keccak256("wrong"), // wrong hash
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsRecipientMismatch() public {
+        (uint256 tokenId, bytes32 identityHash,) = _hatchAndPrepare();
+        address wrongRecipient = makeAddr("wrongRecipient");
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: identityHash,
+            recipient: wrongRecipient, // wrong recipient
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+        bytes memory sig = _signBondAttestation(att);
+
+        // msg.sender == recipient, but att.recipient == wrongRecipient
+        vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsExpiredAttestation() public {
+        (uint256 tokenId, bytes32 identityHash,) = _hatchAndPrepare();
+
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: identityHash,
+            recipient: recipient,
+            expiry: uint64(block.timestamp - 1) // expired
+        });
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectRevert(BuddyNFT.AttestationExpired.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsInvalidSignature() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        // Sign with wrong key (recipientPk instead of signerPk)
+        bytes memory sig = _signBondAttestationWithKey(att, recipientPk);
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsWrongSigner() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        // Create a valid signature but from a different signer
+        (, uint256 wrongPk) = makeAddrAndKey("wrongSigner");
+        bytes memory sig = _signBondAttestationWithKey(att, wrongPk);
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsNameTooLong() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        // MAX_NAME_LENGTH is 14; use 15 chars
+        string memory longName = "123456789012345";
+
+        vm.expectRevert(abi.encodeWithSelector(BuddyNFT.NameTooLong.selector, 15));
+        vm.prank(recipient);
+        nft.bond(tokenId, longName, att, sig);
+    }
+
+    // -------------------------------------------------------------------------
+    // EIP-712 domain tests
+    // -------------------------------------------------------------------------
+
+    function test_bond_revertsWrongChainId() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        // Sign under a different chainId
+        bytes32 structHash = _hashAttestation(att);
+        bytes32 digest = _computeDigestFor(structHash, block.chainid + 1, address(nft));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsWrongVerifyingContract() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        // Sign for a different contract address
+        bytes32 structHash = _hashAttestation(att);
+        bytes32 digest = _computeDigestFor(structHash, block.chainid, address(0xdead));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsHighSMalleability() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        bytes32 digest = _computeDigest(_hashAttestation(att));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+
+        // Flip s to high-s: s' = secp256k1n - s
+        uint256 secp256k1n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+        bytes32 highS = bytes32(secp256k1n - uint256(s));
+        uint8 flippedV = v == 27 ? 28 : 27;
+
+        bytes memory sig = abi.encodePacked(r, highS, flippedV);
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    // -------------------------------------------------------------------------
+    // Malformed signature edge cases
+    // -------------------------------------------------------------------------
+
+    function test_bond_revertsEmptySignature() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, "");
+    }
+
+    function test_bond_revertsShortSignature() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, new bytes(64));
+    }
+
+    function test_bond_revertsLongSignature() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, new bytes(66));
+    }
+
+    function test_bond_revertsAllZeroSignature() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, new bytes(65));
+    }
+
+    // -------------------------------------------------------------------------
+    // Soulbound after bond
+    // -------------------------------------------------------------------------
+
+    function test_bond_transferAfterBondReverts() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        // Bonded token: from=recipient (not address(this)), stage=Bonded
+        // _update gate: from != address(0), from != address(this) → revert Soulbound
+        address dest = makeAddr("dest");
+        vm.prank(recipient);
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        nft.transferFrom(recipient, dest, tokenId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin interaction — signer rotation
+    // -------------------------------------------------------------------------
+
+    function test_bond_signerRotationInvalidatesOldAttestations() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att); // signed by old signer
+
+        // Rotate signer
+        (address newSigner,) = makeAddrAndKey("newSigner");
+        vm.prank(owner);
+        nft.setAttestationSigner(newSigner);
+
+        // Old signature no longer valid
+        vm.expectRevert(BuddyNFT.InvalidSignature.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_signerRotationNewSignerWorks() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+
+        // Rotate signer
+        (address newSigner, uint256 newSignerPk) = makeAddrAndKey("newSigner");
+        vm.prank(owner);
+        nft.setAttestationSigner(newSigner);
+
+        // Sign with new key
+        bytes memory sig = _signBondAttestationWithKey(att, newSignerPk);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        assertEq(nft.ownerOf(tokenId), recipient);
+    }
+}

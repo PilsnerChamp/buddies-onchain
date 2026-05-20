@@ -1,0 +1,77 @@
+/*
+ * ManPageRow styles. Explicit grid so long values wrap without splitting
+ * status tokens. Responsive collapse is based on the section body's actual
+ * inline size: key + status stay on one line until they would collide.
+ */
+
+.man-page-row {
+  display: grid;
+  grid-template-columns: 18ch minmax(0, 1fr) auto;
+  column-gap: 2ch;
+  row-gap: 2px;
+  margin-bottom: 6px;
+}
+
+.man-page-row__label {
+  grid-column: 1;
+  color: var(--color-text-primary);
+}
+
+.man-page-row__status {
+  grid-column: 3;
+  color: var(--color-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.man-page-row__body {
+  grid-column: 2 / -1;
+  color: var(--color-text-secondary);
+  text-align: right;
+  min-width: 0;
+}
+
+.man-page-row--has-status .man-page-row__body {
+  grid-column: 1 / -1;
+  text-align: left;
+}
+
+/*
+ * Cold-page (informational) requirements: no status column. Body still
+ * spans columns 2..end, but should read as left-aligned description
+ * rather than the right-pinned status label that warm rows use.
+ */
+.man-page-row:not(.man-page-row--has-status) .man-page-row__body {
+  text-align: left;
+}
+
+.man-page-row__value {
+  display: block;
+}
+
+.man-page-row:last-child {
+  margin-bottom: 0;
+}
+
+@container man-page-section-body (max-width: 36ch) {
+  .man-page-row--has-status {
+    grid-template-columns: max-content minmax(0, 1fr) auto;
+    column-gap: 1ch;
+  }
+}
+
+@container man-page-section-body (max-width: 28ch) {
+  .man-page-row {
+    grid-template-columns: 1fr;
+    row-gap: 2px;
+  }
+  .man-page-row__label,
+  .man-page-row__status,
+  .man-page-row__body {
+    grid-column: 1;
+  }
+  .man-page-row__status,
+  .man-page-row__body {
+    text-align: left;
+  }
+}

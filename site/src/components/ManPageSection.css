@@ -1,0 +1,32 @@
+/*
+ * ManPageSection styles.
+ *   - `.section` bottom-margin 14px
+ *   - `.heading` muted, bold, terminal-body-sized
+ *   - `.body` padded-left 4ch
+ */
+
+.man-page-section {
+  margin-bottom: var(--space-3);
+}
+
+.man-page-section__heading {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: inherit;
+  /* `<h2>` — clear default browser margins so the heading sits flush.
+   * Internal spacing is owned by `.man-page-section` (margin-bottom) and
+   * the `.body`'s padding. */
+  margin: 0;
+  /* The heading is a single-line label, not a paragraph. */
+  line-height: inherit;
+  /* Preserve exact letter-case passed in by the consumer. */
+  text-transform: none;
+}
+
+.man-page-section__body {
+  container: man-page-section-body / inline-size;
+  padding-left: 4ch;
+  color: var(--color-text-primary);
+  font-size: inherit;
+  line-height: inherit;
+}

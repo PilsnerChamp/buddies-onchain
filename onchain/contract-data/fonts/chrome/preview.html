@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BuddyFont Preview</title>
+  <style>
+    @font-face {
+      font-family: 'BuddyFont';
+      src: url('./BuddyFont.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 600;
+      font-display: block;
+    }
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, sans-serif;
+    }
+    main { max-width: 1120px; margin: 0 auto; }
+    h1, h2 { margin: 0 0 12px; }
+    p, li { color: var(--muted); line-height: 1.5; }
+    .panel {
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .font-sample {
+      font-family: 'BuddyFont', serif;
+      font-feature-settings: 'liga' 0, 'calt' 0;
+      font-variant-ligatures: none;
+    }
+    .critical-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .critical-card, .glyph-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .fallback-check { border-style: dashed; }
+    .glyph-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .glyph-sample {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'BuddyFont', serif;
+      font-feature-settings: 'liga' 0, 'calt' 0;
+      font-variant-ligatures: none;
+      font-size: 40px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .glyph-sample.critical { font-size: 44px; }
+    .glyph-char {
+      font-family: ui-monospace, monospace;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .glyph-code {
+      font-size: 13px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+    .union-line {
+      font-family: 'BuddyFont', serif;
+      font-feature-settings: 'liga' 0, 'calt' 0;
+      font-variant-ligatures: none;
+      font-size: 24px;
+      line-height: 1.5;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      white-space: pre-wrap;
+    }
+    code { font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>BuddyFont Preview</h1>
+      <p>This page loads <code>BuddyFont.woff2</code> via <code>@font-face</code> and uses the fallback stack <code>'BuddyFont', serif</code> so an unintended fallback is visually obvious.</p>
+      <p class="font-sample">No stylistic set flags are enabled. Ligatures are disabled.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Chrome-critical glyphs</h2>
+      <p>Spot-check these chrome-specific glyphs: rail separators, stat digits, and the shiny decorator.</p>
+      <div class="critical-grid">
+        <article class="critical-card"><div class="glyph-sample critical">0</div><div class="glyph-code">U+0030 · Stat value digit zero · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">8</div><div class="glyph-code">U+0038 · Stat value digit eight · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">─</div><div class="glyph-code">U+2500 · Rail rule · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">│</div><div class="glyph-code">U+2502 · Rail separator · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">✦</div><div class="glyph-code">U+2726 · Shiny decorator · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">·</div><div class="glyph-code">U+00B7 · Chrome separator · In subset</div></article><article class="critical-card"><div class="glyph-sample critical">X</div><div class="glyph-code">U+0058 · Uppercase X (AXOLOTL) · In subset</div></article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Chrome font subset (60 codepoints)</h2>
+      <p>Source: <code>CHROME_FONT_GLYPHS</code> from <code>buddies-source.mjs</code>. Sprite glyphs are in the separate DejaVu subset.</p>
+      <div class="union-line">␠-/0123456789&gt;ABCDEGHIKLMNOPRSTUWXYabcdeghiklmnoprstuwxy·─│✦</div>
+    </section>
+
+    <section class="panel">
+      <h2>Per-codepoint cards</h2>
+      <div class="glyph-grid">
+        <article class="glyph-card"><div class="glyph-sample">␠</div><div class="glyph-char">space</div><div class="glyph-code">U+0020 · SPACE</div></article><article class="glyph-card"><div class="glyph-sample">-</div><div class="glyph-char">-</div><div class="glyph-code">U+002D · HYPHEN-MINUS</div></article><article class="glyph-card"><div class="glyph-sample">/</div><div class="glyph-char">/</div><div class="glyph-code">U+002F · SOLIDUS</div></article><article class="glyph-card"><div class="glyph-sample">0</div><div class="glyph-char">0</div><div class="glyph-code">U+0030 · DIGIT ZERO</div></article><article class="glyph-card"><div class="glyph-sample">1</div><div class="glyph-char">1</div><div class="glyph-code">U+0031 · DIGIT ONE</div></article><article class="glyph-card"><div class="glyph-sample">2</div><div class="glyph-char">2</div><div class="glyph-code">U+0032 · DIGIT TWO</div></article><article class="glyph-card"><div class="glyph-sample">3</div><div class="glyph-char">3</div><div class="glyph-code">U+0033 · DIGIT THREE</div></article><article class="glyph-card"><div class="glyph-sample">4</div><div class="glyph-char">4</div><div class="glyph-code">U+0034 · DIGIT FOUR</div></article><article class="glyph-card"><div class="glyph-sample">5</div><div class="glyph-char">5</div><div class="glyph-code">U+0035 · DIGIT FIVE</div></article><article class="glyph-card"><div class="glyph-sample">6</div><div class="glyph-char">6</div><div class="glyph-code">U+0036 · DIGIT SIX</div></article><article class="glyph-card"><div class="glyph-sample">7</div><div class="glyph-char">7</div><div class="glyph-code">U+0037 · DIGIT SEVEN</div></article><article class="glyph-card"><div class="glyph-sample">8</div><div class="glyph-char">8</div><div class="glyph-code">U+0038 · DIGIT EIGHT</div></article><article class="glyph-card"><div class="glyph-sample">9</div><div class="glyph-char">9</div><div class="glyph-code">U+0039 · DIGIT NINE</div></article><article class="glyph-card"><div class="glyph-sample">&gt;</div><div class="glyph-char">&gt;</div><div class="glyph-code">U+003E · GREATER-THAN SIGN</div></article><article class="glyph-card"><div class="glyph-sample">A</div><div class="glyph-char">A</div><div class="glyph-code">U+0041 · LATIN CAPITAL LETTER A</div></article><article class="glyph-card"><div class="glyph-sample">B</div><div class="glyph-char">B</div><div class="glyph-code">U+0042 · LATIN CAPITAL LETTER B</div></article><article class="glyph-card"><div class="glyph-sample">C</div><div class="glyph-char">C</div><div class="glyph-code">U+0043 · LATIN CAPITAL LETTER C</div></article><article class="glyph-card"><div class="glyph-sample">D</div><div class="glyph-char">D</div><div class="glyph-code">U+0044 · LATIN CAPITAL LETTER D</div></article><article class="glyph-card"><div class="glyph-sample">E</div><div class="glyph-char">E</div><div class="glyph-code">U+0045 · LATIN CAPITAL LETTER E</div></article><article class="glyph-card"><div class="glyph-sample">G</div><div class="glyph-char">G</div><div class="glyph-code">U+0047 · LATIN CAPITAL LETTER G</div></article><article class="glyph-card"><div class="glyph-sample">H</div><div class="glyph-char">H</div><div class="glyph-code">U+0048 · LATIN CAPITAL LETTER H</div></article><article class="glyph-card"><div class="glyph-sample">I</div><div class="glyph-char">I</div><div class="glyph-code">U+0049 · LATIN CAPITAL LETTER I</div></article><article class="glyph-card"><div class="glyph-sample">K</div><div class="glyph-char">K</div><div class="glyph-code">U+004B · LATIN CAPITAL LETTER K</div></article><article class="glyph-card"><div class="glyph-sample">L</div><div class="glyph-char">L</div><div class="glyph-code">U+004C · LATIN CAPITAL LETTER L</div></article><article class="glyph-card"><div class="glyph-sample">M</div><div class="glyph-char">M</div><div class="glyph-code">U+004D · LATIN CAPITAL LETTER M</div></article><article class="glyph-card"><div class="glyph-sample">N</div><div class="glyph-char">N</div><div class="glyph-code">U+004E · LATIN CAPITAL LETTER N</div></article><article class="glyph-card"><div class="glyph-sample">O</div><div class="glyph-char">O</div><div class="glyph-code">U+004F · LATIN CAPITAL LETTER O</div></article><article class="glyph-card"><div class="glyph-sample">P</div><div class="glyph-char">P</div><div class="glyph-code">U+0050 · LATIN CAPITAL LETTER P</div></article><article class="glyph-card"><div class="glyph-sample">R</div><div class="glyph-char">R</div><div class="glyph-code">U+0052 · LATIN CAPITAL LETTER R</div></article><article class="glyph-card"><div class="glyph-sample">S</div><div class="glyph-char">S</div><div class="glyph-code">U+0053 · LATIN CAPITAL LETTER S</div></article><article class="glyph-card"><div class="glyph-sample">T</div><div class="glyph-char">T</div><div class="glyph-code">U+0054 · LATIN CAPITAL LETTER T</div></article><article class="glyph-card"><div class="glyph-sample">U</div><div class="glyph-char">U</div><div class="glyph-code">U+0055 · LATIN CAPITAL LETTER U</div></article><article class="glyph-card"><div class="glyph-sample">W</div><div class="glyph-char">W</div><div class="glyph-code">U+0057 · LATIN CAPITAL LETTER W</div></article><article class="glyph-card"><div class="glyph-sample">X</div><div class="glyph-char">X</div><div class="glyph-code">U+0058 · LATIN CAPITAL LETTER X</div></article><article class="glyph-card"><div class="glyph-sample">Y</div><div class="glyph-char">Y</div><div class="glyph-code">U+0059 · LATIN CAPITAL LETTER Y</div></article><article class="glyph-card"><div class="glyph-sample">a</div><div class="glyph-char">a</div><div class="glyph-code">U+0061 · LATIN SMALL LETTER A</div></article><article class="glyph-card"><div class="glyph-sample">b</div><div class="glyph-char">b</div><div class="glyph-code">U+0062 · LATIN SMALL LETTER B</div></article><article class="glyph-card"><div class="glyph-sample">c</div><div class="glyph-char">c</div><div class="glyph-code">U+0063 · LATIN SMALL LETTER C</div></article><article class="glyph-card"><div class="glyph-sample">d</div><div class="glyph-char">d</div><div class="glyph-code">U+0064 · LATIN SMALL LETTER D</div></article><article class="glyph-card"><div class="glyph-sample">e</div><div class="glyph-char">e</div><div class="glyph-code">U+0065 · LATIN SMALL LETTER E</div></article><article class="glyph-card"><div class="glyph-sample">g</div><div class="glyph-char">g</div><div class="glyph-code">U+0067 · LATIN SMALL LETTER G</div></article><article class="glyph-card"><div class="glyph-sample">h</div><div class="glyph-char">h</div><div class="glyph-code">U+0068 · LATIN SMALL LETTER H</div></article><article class="glyph-card"><div class="glyph-sample">i</div><div class="glyph-char">i</div><div class="glyph-code">U+0069 · LATIN SMALL LETTER I</div></article><article class="glyph-card"><div class="glyph-sample">k</div><div class="glyph-char">k</div><div class="glyph-code">U+006B · LATIN SMALL LETTER K</div></article><article class="glyph-card"><div class="glyph-sample">l</div><div class="glyph-char">l</div><div class="glyph-code">U+006C · LATIN SMALL LETTER L</div></article><article class="glyph-card"><div class="glyph-sample">m</div><div class="glyph-char">m</div><div class="glyph-code">U+006D · LATIN SMALL LETTER M</div></article><article class="glyph-card"><div class="glyph-sample">n</div><div class="glyph-char">n</div><div class="glyph-code">U+006E · LATIN SMALL LETTER N</div></article><article class="glyph-card"><div class="glyph-sample">o</div><div class="glyph-char">o</div><div class="glyph-code">U+006F · LATIN SMALL LETTER O</div></article><article class="glyph-card"><div class="glyph-sample">p</div><div class="glyph-char">p</div><div class="glyph-code">U+0070 · LATIN SMALL LETTER P</div></article><article class="glyph-card"><div class="glyph-sample">r</div><div class="glyph-char">r</div><div class="glyph-code">U+0072 · LATIN SMALL LETTER R</div></article><article class="glyph-card"><div class="glyph-sample">s</div><div class="glyph-char">s</div><div class="glyph-code">U+0073 · LATIN SMALL LETTER S</div></article><article class="glyph-card"><div class="glyph-sample">t</div><div class="glyph-char">t</div><div class="glyph-code">U+0074 · LATIN SMALL LETTER T</div></article><article class="glyph-card"><div class="glyph-sample">u</div><div class="glyph-char">u</div><div class="glyph-code">U+0075 · LATIN SMALL LETTER U</div></article><article class="glyph-card"><div class="glyph-sample">w</div><div class="glyph-char">w</div><div class="glyph-code">U+0077 · LATIN SMALL LETTER W</div></article><article class="glyph-card"><div class="glyph-sample">x</div><div class="glyph-char">x</div><div class="glyph-code">U+0078 · LATIN SMALL LETTER X</div></article><article class="glyph-card"><div class="glyph-sample">y</div><div class="glyph-char">y</div><div class="glyph-code">U+0079 · LATIN SMALL LETTER Y</div></article><article class="glyph-card"><div class="glyph-sample">·</div><div class="glyph-char">·</div><div class="glyph-code">U+00B7 · MIDDLE DOT</div></article><article class="glyph-card"><div class="glyph-sample">─</div><div class="glyph-char">─</div><div class="glyph-code">U+2500 · BOX DRAWINGS LIGHT HORIZONTAL</div></article><article class="glyph-card"><div class="glyph-sample">│</div><div class="glyph-char">│</div><div class="glyph-code">U+2502 · BOX DRAWINGS LIGHT VERTICAL</div></article><article class="glyph-card"><div class="glyph-sample">✦</div><div class="glyph-char">✦</div><div class="glyph-code">U+2726 · BLACK FOUR POINTED STAR</div></article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

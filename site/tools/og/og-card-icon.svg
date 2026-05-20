@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <title>Buddies Onchain — OG card (@@ face, v4 with ~ brow)</title>
+  <desc>1200x630 social preview. Single-row ASCII face {@,@} on deep surface with a tilde brow over the left eye. Minimalist composition; no chrome, no tagline. Hand-authored SVG; PNG derived via Chromium headless rasterize. Font: DejaVu Sans Mono (sprite) WOFF2 subset base64-embedded (now includes ~). Accent #d397f6, surface #0a0818.</desc>
+  <defs>
+    <style type="text/css"><![CDATA[
+      @font-face {
+        font-family: 'DejaVuMono';
+        src: url('data:font/woff2;base64,d09GMgABAAAAAAPkAA4AAAAABqgAAAOUAAJeuAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBxCBlYAfBEMCoZ4hU0BNgIkAyILHgAEIAUGByAb5AQAjtMNdfJniqUig/Cy2SSHQsQ1NR8S+x9gHLvPdypn/5d7nmWhYJhD2V2D7oXaUt9RzjrsgIp42ileWyAVKEjBpLrJvoYQ0cFbqjegNwABIAoAACgQ0BADAQEgDFWog/j6h8aCDwYA/gsAAAJAGO7wBDdGpp9VnZUNyxxBdel0C6rzSvzSrApN1JaLKii4TJiL1B5wAI4NZyZA1Odp+jryKWmAEuEJ0VyGorIdAvCIzPfLhaa+3MqV/SdLZvHKyONMkPv/738HgIyhLGiQI2BQCEAekqDBJTOFJVz730ME0sGitTexD2j5Vu6Gq0456YRd1hg3FoHap8AH9V80NPELqgAkAfwq0gbYDAgFDgQ0iCgUIVgwDFcUSx5P1Mi6v56eahIrI2iSYiULxKhE4ZSSjusiQ1fRfkV48FrG4BWq86rI0HW661pt122RoZtU5w3hwVtsowBNhGWJAI1CO64JB9toXyUJkwPZA1Jp7kbc3Se38pQmxF25Phx+Rnc9Fxu6CbZ8r/L1dOQppk9EQ3bZIuH8XOESAQrlJWbC5OyTmnMRbJUKuxJ79Sq2HMV5DxKuhZfoYC0szOKKxQbjl8lf67SJJdeba+Km6u3PFRSBJ4416nihWgVco6Nnyp0kDrfeyG7F6xd2AQG2g9jZxvxZr/y0nzLSyC+AtIwkRrT7a+f3H187emza8eP7cxsBk+dZbVRbWio/vaXmvyG3AJyueb+YcTb/p08O10taVXltSUm5bVXVTJnyAXYaHImOzbcMXHLi9aGDx18tDSixVDfqnzJ58AK3TM/Govhv5FRzX/OU9ZH2++zL0udfHO6qu2B76w/3MfS7n1cVfBATPVBVDVGxaMvfNn4fzaCtFQwtgbnd1S2mn9xMXSXl34XXhbH9036umHz3+vTi6mH3/e7DxVUzrt9dMenntH1soV/M2MWlWT0t0i2yWX1Lzo77xRZi86igMCBu7OySrL5m2RbpzJ6lF0f844oE+6b9WDbp7vXppdUj7vvdR0prpl2/u2zyj2kImGzyMthl1D4iudI6aXGoVr6CTfiwU5D70zDXCbsYuxy5IPUlSTX2af4DrgAAEABU+o4zZ0sOZUi4fuVr8AEAd5KMM8aNP2V/bnJu82NBwAeVucEr+6cGMBcj8O+H+OcJaeYiCjP+DABSDBaJSAQXqXDCBmxBIggAcUoUJsgDFwTK54BBwAWNZP9XMgAC') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+      }
+      .face { font-family: 'DejaVuMono', ui-monospace, Menlo, Consolas, monospace; font-weight: 700; font-size: 128px; fill: #d397f6; }
+      .brow { font-family: 'DejaVuMono', ui-monospace, Menlo, Consolas, monospace; font-weight: 700; font-size: 96px; fill: #d397f6; }
+    ]]></style>
+  </defs>
+
+  <!-- surface -->
+  <rect width="1200" height="630" fill="#0a0818"/>
+
+  <!-- ASCII face: single row {@,@}; baseline tuned for optical center on canvas. Brow `~` placed over left eye (left-@ center x ≈ 523 at 128px). -->
+  <g id="face" text-anchor="middle">
+    <text class="brow" x="523" y="270">~</text>
+    <text class="face" x="600" y="358">{@,@}</text>
+  </g>
+</svg>

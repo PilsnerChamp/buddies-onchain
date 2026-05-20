@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <defs>
+    <style type="text/css"><![CDATA[
+      @font-face {
+        font-family: 'DejaVuMono';
+        src: url('data:font/woff2;base64,d09GMgABAAAAAAJUAA4AAAAAA/wAAAICAAJeuAAAAAAAAAAAAAAAAAAAAAAAAAAAGhYbIBxCBlYAPBEMCoIsghwBNgIkAxILDgAEIAUGByAb4wJAHoNt8/gi15BwTBZkyv7Ew//v922fK+9/TxNnTbY4uCZRSYVFI0GndLGqliVTucePe+99gaObyQzV1TlbkaHOdfi97YhnA+uzKOcowW4cZWGaWBk17TpPPEsAArtRJ18lEXOBwBiQhKwKgaFZc2JHQFgckBRoDRAY2mQLwsXMcKEmOwccLjXXlIW8VpNfqm9nV6qwrqLFg32UN2kXKnW5PgAxF+v8SUHikEa9Qe5KSqwITu2/6p8HKlt0dLz/M/GQWI5ezgP61QKcR8aMLJhSzENHIZGpNfRee94IAElfak0GHRij4gRwF1BAAiRRynhhNrmV29zCbmW1dt8NR250fRiN3p+goMfvhyN30X0/Gr3diJbqNfW8xWPxN86Nvefej8noo1ZzHklYF3zE6TC6J+jIvP5Nca0YiFPVXfO6RgrdAr/hrbo6vzM5Oa+zuiavC9MntozPY+IKHIJWD/4+ffLqz6PAUgeFeWhuduSiK9c725f8Rc3b7bBL3Yhy23e7k7Fwea+3/sLl6bd7EXjf+jvEe8JtX0qVU/JKmLpA6Bwx5rnX7y3cZ9r1kGsuP1ixmlzrlh4w7AME0tnNzOP1z0ymz7++sg++J1sydfhb/vtYn/txgPQlEPTu/Mspb/b4/zmAZJ3LG0UAA7Cd45CTxpZc6QTpqjCdzK99lgIEAAA=') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+      }
+      .glyph { font-family: 'DejaVuMono', ui-monospace, Menlo, Consolas, monospace; font-weight: 700; fill: #d397f6; }
+    ]]></style>
+  </defs>
+  <text class="glyph" x="8" y="13" text-anchor="middle" font-size="12">@@</text>
+</svg>

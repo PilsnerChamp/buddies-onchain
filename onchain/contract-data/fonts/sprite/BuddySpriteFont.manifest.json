@@ -1,0 +1,47 @@
+{
+  "source": {
+    "fontFile": "onchain/contract-data/fonts/sprite/DejaVuSansMono.ttf",
+    "sha256": "39c29931201f08dd89fdba4129c76288e6baeecf7c94fe4f6a757f2b50718b1b",
+    "upstreamName": "DejaVu Sans Mono 2.37",
+    "license": {
+      "spdx": "Bitstream-Vera",
+      "path": "onchain/contract-data/fonts/sprite/DejaVu-LICENSE.md"
+    }
+  },
+  "family": "DejaVu Sans Mono",
+  "weight": "Regular",
+  "output": {
+    "file": "onchain/contract-data/fonts/sprite/BuddySpriteFont.woff2",
+    "sha256": "33d2220889206d08f97cb821b6c82410411c44581f93204becafea0b84e8d290",
+    "sizeBytes": 3228
+  },
+  "metrics": {
+    "rawValues": {
+      "advance": 1233,
+      "ascent": 1901,
+      "descent": -483,
+      "lineGap": 0,
+      "upem": 2048
+    },
+    "rawSource": {
+      "advance": "hmtx[space]",
+      "ascent": "hhea.ascent",
+      "descent": "hhea.descent",
+      "lineGap": "hhea.lineGap",
+      "upem": "head.unitsPerEm"
+    },
+    "uniformAdvance": true
+  },
+  "glyphCount": 38,
+  "unicodeExpression": "U+0020,U+0022,U+0028-002F,U+003C-0040,U+004F,U+005B-0060,U+006E-006F,U+0075-0076,U+007B-007E,U+00B0,U+00B4,U+00B7,U+00D7,U+03C9,U+25C9,U+2726",
+  "pyftsubsetCommand": "pyftsubset $SOURCE_FONT --output-file=$OUTPUT_FONT --flavor=woff2 --unicodes=U+0020,U+0022,U+0028-002F,U+003C-0040,U+004F,U+005B-0060,U+006E-006F,U+0075-0076,U+007B-007E,U+00B0,U+00B4,U+00B7,U+00D7,U+03C9,U+25C9,U+2726 --no-hinting --layout-features= --name-IDs=* --drop-tables+=BASE,DSIG,FFTM,GDEF,GPOS,GSUB,MATH,STAT,SVG,VORG,gasp,hdmx,kern,LTSH,VDMX,vhea,vmtx",
+  "characterSetSource": "onchain/contract-data/sprites/buddies-source.mjs (SPRITE_FONT_GLYPHS)",
+  "sizeThresholdsBytes": {
+    "warn": 8192,
+    "hardFail": 10240
+  },
+  "notes": {
+    "uniformAdvanceVerified": "All 37 requested codepoints have advance=1233 at upem=2048.",
+    "purpose": "Sprite body rows (.sprite CSS class). Fixes Iosevka .WWID double-width eye glyph problem."
+  }
+}

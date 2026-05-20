@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>BuddySpriteFont Preview</title>
+  <style>
+    @font-face {
+      font-family: 'BuddySpriteFont';
+      src: url('./BuddySpriteFont.woff2') format('woff2');
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px;
+      background: var(--bg); color: var(--text);
+      font-family: system-ui, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    h1, h2 { margin: 0 0 12px; }
+    p { color: var(--muted); line-height: 1.5; }
+    .panel {
+      background: rgba(17,24,39,0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .sprite-row {
+      font-family: 'BuddySpriteFont', serif;
+      font-size: 37px;
+      white-space: pre;
+      line-height: 1.4;
+    }
+    .glyph-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .glyph-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .glyph-sample {
+      min-height: 60px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'BuddySpriteFont', serif;
+      font-size: 37px;
+      background: rgba(15,23,42,0.65);
+      border: 1px solid rgba(148,163,184,0.2);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .glyph-char {
+      font-family: ui-monospace, monospace;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .glyph-code {
+      font-size: 12px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>BuddySpriteFont Preview</h1>
+      <p>DejaVu Sans Mono subset for <code>.sprite</code> CSS class.
+         Fallback is <code>serif</code> so missing glyphs are obvious.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Sample sprite (cat)</h2>
+      <div class="sprite-row">      /\_/\      </div>
+<div class="sprite-row">     ( ·   ·)    </div>
+<div class="sprite-row">     (  ω  )    </div>
+<div class="sprite-row">     (&quot;)_(&quot;)</div>
+    </section>
+
+    <section class="panel">
+      <h2>All 37 codepoints</h2>
+      <div class="glyph-grid">
+        <article class="glyph-card"><div class="glyph-sample">&#x2420;</div><div class="glyph-char">space</div><div class="glyph-code">U+0020 &middot; SPACE</div></article><article class="glyph-card"><div class="glyph-sample">&quot;</div><div class="glyph-char">&quot;</div><div class="glyph-code">U+0022 &middot; QUOTATION MARK</div></article><article class="glyph-card"><div class="glyph-sample">(</div><div class="glyph-char">(</div><div class="glyph-code">U+0028 &middot; LEFT PARENTHESIS</div></article><article class="glyph-card"><div class="glyph-sample">)</div><div class="glyph-char">)</div><div class="glyph-code">U+0029 &middot; RIGHT PARENTHESIS</div></article><article class="glyph-card"><div class="glyph-sample">*</div><div class="glyph-char">*</div><div class="glyph-code">U+002A &middot; ASTERISK</div></article><article class="glyph-card"><div class="glyph-sample">+</div><div class="glyph-char">+</div><div class="glyph-code">U+002B &middot; PLUS SIGN</div></article><article class="glyph-card"><div class="glyph-sample">,</div><div class="glyph-char">,</div><div class="glyph-code">U+002C &middot; COMMA</div></article><article class="glyph-card"><div class="glyph-sample">-</div><div class="glyph-char">-</div><div class="glyph-code">U+002D &middot; HYPHEN-MINUS</div></article><article class="glyph-card"><div class="glyph-sample">.</div><div class="glyph-char">.</div><div class="glyph-code">U+002E &middot; FULL STOP</div></article><article class="glyph-card"><div class="glyph-sample">/</div><div class="glyph-char">/</div><div class="glyph-code">U+002F &middot; SOLIDUS</div></article><article class="glyph-card"><div class="glyph-sample">&lt;</div><div class="glyph-char">&lt;</div><div class="glyph-code">U+003C &middot; LESS-THAN SIGN</div></article><article class="glyph-card"><div class="glyph-sample">=</div><div class="glyph-char">=</div><div class="glyph-code">U+003D &middot; EQUALS SIGN</div></article><article class="glyph-card"><div class="glyph-sample">&gt;</div><div class="glyph-char">&gt;</div><div class="glyph-code">U+003E &middot; GREATER-THAN SIGN</div></article><article class="glyph-card"><div class="glyph-sample">?</div><div class="glyph-char">?</div><div class="glyph-code">U+003F &middot; QUESTION MARK</div></article><article class="glyph-card"><div class="glyph-sample">@</div><div class="glyph-char">@</div><div class="glyph-code">U+0040 &middot; COMMERCIAL AT</div></article><article class="glyph-card"><div class="glyph-sample">O</div><div class="glyph-char">O</div><div class="glyph-code">U+004F &middot; LATIN CAPITAL LETTER O</div></article><article class="glyph-card"><div class="glyph-sample">[</div><div class="glyph-char">[</div><div class="glyph-code">U+005B &middot; LEFT SQUARE BRACKET</div></article><article class="glyph-card"><div class="glyph-sample">\</div><div class="glyph-char">\\</div><div class="glyph-code">U+005C &middot; REVERSE SOLIDUS</div></article><article class="glyph-card"><div class="glyph-sample">]</div><div class="glyph-char">]</div><div class="glyph-code">U+005D &middot; RIGHT SQUARE BRACKET</div></article><article class="glyph-card"><div class="glyph-sample">^</div><div class="glyph-char">^</div><div class="glyph-code">U+005E &middot; CIRCUMFLEX ACCENT</div></article><article class="glyph-card"><div class="glyph-sample">_</div><div class="glyph-char">_</div><div class="glyph-code">U+005F &middot; LOW LINE</div></article><article class="glyph-card"><div class="glyph-sample">`</div><div class="glyph-char">`</div><div class="glyph-code">U+0060 &middot; GRAVE ACCENT</div></article><article class="glyph-card"><div class="glyph-sample">n</div><div class="glyph-char">n</div><div class="glyph-code">U+006E &middot; LATIN SMALL LETTER N</div></article><article class="glyph-card"><div class="glyph-sample">o</div><div class="glyph-char">o</div><div class="glyph-code">U+006F &middot; LATIN SMALL LETTER O</div></article><article class="glyph-card"><div class="glyph-sample">u</div><div class="glyph-char">u</div><div class="glyph-code">U+0075 &middot; LATIN SMALL LETTER U</div></article><article class="glyph-card"><div class="glyph-sample">v</div><div class="glyph-char">v</div><div class="glyph-code">U+0076 &middot; LATIN SMALL LETTER V</div></article><article class="glyph-card"><div class="glyph-sample">{</div><div class="glyph-char">{</div><div class="glyph-code">U+007B &middot; LEFT CURLY BRACKET</div></article><article class="glyph-card"><div class="glyph-sample">|</div><div class="glyph-char">|</div><div class="glyph-code">U+007C &middot; VERTICAL LINE</div></article><article class="glyph-card"><div class="glyph-sample">}</div><div class="glyph-char">}</div><div class="glyph-code">U+007D &middot; RIGHT CURLY BRACKET</div></article><article class="glyph-card"><div class="glyph-sample">~</div><div class="glyph-char">~</div><div class="glyph-code">U+007E &middot; TILDE</div></article><article class="glyph-card"><div class="glyph-sample">°</div><div class="glyph-char">°</div><div class="glyph-code">U+00B0 &middot; DEGREE SIGN</div></article><article class="glyph-card"><div class="glyph-sample">´</div><div class="glyph-char">´</div><div class="glyph-code">U+00B4 &middot; ACUTE ACCENT</div></article><article class="glyph-card"><div class="glyph-sample">·</div><div class="glyph-char">·</div><div class="glyph-code">U+00B7 &middot; MIDDLE DOT</div></article><article class="glyph-card"><div class="glyph-sample">×</div><div class="glyph-char">×</div><div class="glyph-code">U+00D7 &middot; MULTIPLICATION SIGN</div></article><article class="glyph-card"><div class="glyph-sample">ω</div><div class="glyph-char">ω</div><div class="glyph-code">U+03C9 &middot; GREEK SMALL LETTER OMEGA</div></article><article class="glyph-card"><div class="glyph-sample">◉</div><div class="glyph-char">◉</div><div class="glyph-code">U+25C9 &middot; FISHEYE</div></article><article class="glyph-card"><div class="glyph-sample">✦</div><div class="glyph-char">✦</div><div class="glyph-code">U+2726 &middot; BLACK FOUR POINTED STAR</div></article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Normalize line endings to LF on checkin; checkout LF on all platforms.
+# Prevents CRLF drift on Windows clones from breaking shell scripts, lock
+# files, and reproducibility of bundled artifacts.
+* text=auto eol=lf
+
+# Force LF for files that must stay POSIX-line-ending regardless of attr inference.
+*.sh           text eol=lf
+*.ts           text eol=lf
+*.tsx          text eol=lf
+*.js           text eol=lf
+*.json         text eol=lf
+*.md           text eol=lf
+*.toml         text eol=lf
+*.yaml         text eol=lf
+*.yml          text eol=lf
+bun.lock       text eol=lf
+package.json   text eol=lf
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+
+# Binary — never normalize.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.svg   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary

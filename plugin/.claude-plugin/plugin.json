@@ -1,0 +1,49 @@
+{
+  "name": "buddy-onchain",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown. Run /buddy-onchain to find your buddy; /buddy-onchain off|lite|full to tune ambient mode.",
+  "version": "0.4.3",
+  "author": {
+    "name": "Buddies Onchain",
+    "url": "https://buddies-onchain.xyz"
+  },
+  "homepage": "https://buddies-onchain.xyz",
+  "repository": "https://github.com/PilsnerChamp/buddies-onchain",
+  "keywords": ["buddy", "onchain", "base", "buddies", "nft"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --session-start",
+            "timeout": 5,
+            "statusMessage": "Resolving buddy on-chain..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --hook",
+            "timeout": 10,
+            "statusMessage": "Tracking buddy mode..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

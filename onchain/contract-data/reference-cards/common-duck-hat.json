@@ -1,0 +1,56 @@
+{
+  "name": "Buddy Onchain #1",
+  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "image": "./common-duck-hat.svg",
+  "attributes": [
+    {
+      "trait_type": "Species",
+      "value": "Duck"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Eyes",
+      "value": "Dot"
+    },
+    {
+      "trait_type": "Hat",
+      "value": "Beanie"
+    },
+    {
+      "trait_type": "Shiny",
+      "value": "No"
+    },
+    {
+      "trait_type": "Stage",
+      "value": "Hatched"
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Debugging",
+      "value": 12
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Patience",
+      "value": 28
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Chaos",
+      "value": 15
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Wisdom",
+      "value": 32
+    },
+    {
+      "display_type": "number",
+      "trait_type": "Snark",
+      "value": 20
+    }
+  ]
+}
