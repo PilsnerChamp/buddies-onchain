@@ -1,0 +1,32 @@
+{  
+  "autoMemoryEnabled": false,
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",   
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "autoMemoryEnabled": "false",
+    "autoDreamEnabled": "true",
+    "CLAUDE_CODE_NO_FLICKER": "true"
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "uv run $CLAUDE_PROJECT_DIR/.claude/status_lines/status_line_main.py",
+    "padding": 0
+  },
+  "hooks": {
+    "Setup": [
+      {
+        "matcher": "init",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/setup.py",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}
