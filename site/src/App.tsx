@@ -15,7 +15,7 @@ import { ROUTES } from './config/routes';
 //                      `isValidUuid` shape check) → redirect to `/`.
 //                      Mounts under `<HatchLayout>` (lazy chunk) which wraps
 //                      the route in WagmiProvider + RainbowKitProvider.
-//   `/view`          → disclosure surface with manual UUID lookup
+//   `/view`          → manual UUID lookup page
 //   `/view/:uuid`    → identity render. Wallet-free — uses `useBuddyLookup`
 //                      (TanStack Query + viem publicClient), so no
 //                      `<WagmiProvider>` is required.

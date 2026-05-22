@@ -256,7 +256,7 @@ Single full-width row of `-` glyphs between the NEXT STEP block and the route me
 
 ## Per-route gaps
 
-Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <uuid>` for miss cards, and `> /bond --help`. The active hatch action prompt carries `> /hatch <full-uuid> ▊` below NEXT STEP. No defensive copy beyond the command itself — the command states what it does.
+Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <uuid>` for miss cards, and `> /bond --help`. The active hatch action prompt carries `> /hatch <full-uuid> ▊` below NEXT STEP.
 
 ## OG card
 

@@ -1,6 +1,6 @@
 /*
- * View route styles. Shared between bare `/view` (man-page disclosure +
- * action-prompt input) and `/view/<uuid>` (lookup pre-deploy / loading /
+ * View route styles. Shared between bare `/view` (man-page lookup form
+ * with action-prompt input) and `/view/<uuid>` (pre-deploy / loading /
  * miss / happy path).
  *
  * The lookup UI is a single action-prompt input shaped like terminal text:

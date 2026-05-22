@@ -1,8 +1,8 @@
 // site/src/routes/View.tsx
 //
 // Bare `/view` route.
-// Disclosure surface — no wallet, no contract reads. Pre-deploy is
-// fine here.
+// Manual UUID lookup page — no wallet, no contract reads. Pre-deploy
+// is fine here.
 //
 // The action prompt is rendered as a single inline:
 //

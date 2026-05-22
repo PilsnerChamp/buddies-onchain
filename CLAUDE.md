@@ -25,7 +25,7 @@ Confusion-prone. One line each.
 - `/buddy-onchain` — plugin command string; what users type in Claude Code to find their buddy. Slash-only — hook fires lookup on the slash form (and the legacy namespaced `/buddy-onchain:buddy-onchain`); no NL routing. Companion skill at `plugin/skills/buddy-onchain/SKILL.md` is the slash renderer.
 - `BuddyNFT` — Solidity contract / class / file name; technical surface only
 - `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving UUID via `?accountUuid=<uuid>`. Plugin emits query-param form. Missing/malformed → redirect to `/`.
-- `/view` — trust-surface URL on the dApp; bare `/view` is the disclosure page with manual UUID lookup
+- `/view` — bare `/view` is the dApp manual UUID lookup page; `/view/<uuid>` is the canonical buddy URL
 - `/view/<uuid>` — canonical buddy URL on the dApp; returning-user destination and public lookup result
 - `> /buddy-onchain` — SVG chrome imprint on-chain; bytecode-permanent, matches the plugin command. Site's `/` prompt renders the same `>` sigil.
 - Unknown paths → `/` via catch-all redirect.
