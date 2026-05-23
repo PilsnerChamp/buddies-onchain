@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -55,6 +56,10 @@ contract GasCeilingsTest is Test {
     address internal recipient;
 
     function setUp() public {
+        if (vm.isContext(VmSafe.ForgeContext.Coverage)) {
+            vm.skip(true, "gas ceilings are optimizer-dependent; forge coverage disables optimizer");
+        }
+
         (signer, signerPk) = makeAddrAndKey("signer");
         recipient = makeAddr("recipient");
 

@@ -5,6 +5,9 @@ libs = ["lib"]
 solc_version = "0.8.24"
 optimizer = true
 optimizer_runs = 200
+# Coverage instrumentation makes the hatch-coverage and renderer drift suites
+# exceed Foundry's default block gas limit.
+gas_limit = 2000000000
 
 # OpenZeppelin Contracts v5.x is now the canonical dependency surface.
 remappings = [

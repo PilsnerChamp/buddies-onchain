@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 
 import {BuddyFont} from "../contracts/BuddyFont.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
@@ -40,6 +41,10 @@ contract BytecodeSizeTest is Test {
     BuddyNFT internal nft;
 
     function setUp() public {
+        if (vm.isContext(VmSafe.ForgeContext.Coverage)) {
+            vm.skip(true, "bytecode ceilings are optimizer-dependent; forge coverage disables optimizer");
+        }
+
         spriteData = new BuddySpriteData();
         buddyFont = new BuddyFont(vm.readFileBinary(FONT_PATH));
         buddySpriteFont = new BuddySpriteFont(vm.readFileBinary(SPRITE_FONT_PATH));
