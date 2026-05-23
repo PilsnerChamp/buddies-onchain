@@ -268,6 +268,11 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
         _verifySignature(_hashBondAttestation(attestation), signature);
         _validateName(name);
         _tokenNames[tokenId] = name;
+        // `_transfer` (not `_safeTransfer`) is intentional. `recipient == msg.sender`
+        // is enforced above, so the receiver opted into bonding. `_safeTransfer`
+        // would reject smart-account wallets that hold ERC-721s via balance
+        // tracking without implementing `onERC721Received`, bricking their bond
+        // despite a valid attestation.
         _transfer(address(this), msg.sender, tokenId);
         _tokenStages[tokenId] = IBuddyNFT.OwnershipStage.Bonded;
 
@@ -382,7 +387,10 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
             if (i == 19) {
                 // Explicit set: '8','9','a','b'. Naive range 0x38..0x3B
                 // would silently admit ':' (0x3A) and ';' (0x3B).
-                if (char != BuddyDomain.ASCII_DIGIT_8 && char != BuddyDomain.ASCII_DIGIT_9 && char != BuddyDomain.ASCII_LOWER_A && char != BuddyDomain.ASCII_LOWER_B) {
+                if (
+                    char != BuddyDomain.ASCII_DIGIT_8 && char != BuddyDomain.ASCII_DIGIT_9
+                        && char != BuddyDomain.ASCII_LOWER_A && char != BuddyDomain.ASCII_LOWER_B
+                ) {
                     revert InvalidUuidFormat();
                 }
                 continue;
