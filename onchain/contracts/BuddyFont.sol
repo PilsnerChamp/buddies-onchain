@@ -7,8 +7,7 @@ import {BuddyFontMetrics} from "./libraries/BuddyFontMetrics.sol";
 /// @title BuddyFont
 /// @notice Holds the committed Buddy WOFF2 subset and exposes it as an embeddable data URI.
 contract BuddyFont is BuddyFontPayload {
-    string private constant FONT_FACE_PREFIX =
-        "@font-face{font-family:'BuddyFont';src:url('";
+    string private constant FONT_FACE_PREFIX = "@font-face{font-family:'BuddyFont';src:url('";
     string private constant FONT_FACE_SUFFIX =
         "') format('woff2');font-weight:600;font-style:normal;font-display:block}.stat{font-family:'BuddyFont',monospace}";
 

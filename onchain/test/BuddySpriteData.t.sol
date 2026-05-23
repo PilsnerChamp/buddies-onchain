@@ -48,16 +48,16 @@ contract BuddySpriteDataTest is Test {
     ///      Expected values reflect the generator's exact frame-0-derived shared shift.
     ///      See `docs/onchain/renderer.md` § Horizontal centering.
     function test_bodyRows_lockSpeciesOrder() public view {
-        assertEq(spriteData.getBodyRow(0, 0, 2),  "     <(0 )___    "); // duck
-        assertEq(spriteData.getBodyRow(1, 0, 1),  "        (0>      "); // goose
-        assertEq(spriteData.getBodyRow(2, 0, 1),  "      .----.     "); // blob (+3)
-        assertEq(spriteData.getBodyRow(3, 0, 3),  "     (  \xcf\x89  )    "); // cat (ω mouth)
-        assertEq(spriteData.getBodyRow(4, 0, 4),  "     `-vvvv-\xc2\xb4   "); // dragon (+3)
-        assertEq(spriteData.getBodyRow(5, 0, 4),  "     /\\/\\/\\/\\    "); // octopus
-        assertEq(spriteData.getBodyRow(6, 0, 2),  "     ((0)(0))    "); // owl
-        assertEq(spriteData.getBodyRow(7, 0, 3),  "     /(   )\\     "); // penguin
-        assertEq(spriteData.getBodyRow(8, 0, 3),  "    /[______]\\   "); // turtle
-        assertEq(spriteData.getBodyRow(9, 0, 4),  "     ~~~~~~~     "); // snail
+        assertEq(spriteData.getBodyRow(0, 0, 2), "     <(0 )___    "); // duck
+        assertEq(spriteData.getBodyRow(1, 0, 1), "        (0>      "); // goose
+        assertEq(spriteData.getBodyRow(2, 0, 1), "      .----.     "); // blob (+3)
+        assertEq(spriteData.getBodyRow(3, 0, 3), "     (  \xcf\x89  )    "); // cat (ω mouth)
+        assertEq(spriteData.getBodyRow(4, 0, 4), "     `-vvvv-\xc2\xb4   "); // dragon (+3)
+        assertEq(spriteData.getBodyRow(5, 0, 4), "     /\\/\\/\\/\\    "); // octopus
+        assertEq(spriteData.getBodyRow(6, 0, 2), "     ((0)(0))    "); // owl
+        assertEq(spriteData.getBodyRow(7, 0, 3), "     /(   )\\     "); // penguin
+        assertEq(spriteData.getBodyRow(8, 0, 3), "    /[______]\\   "); // turtle
+        assertEq(spriteData.getBodyRow(9, 0, 4), "     ~~~~~~~     "); // snail
         assertEq(spriteData.getBodyRow(10, 0, 4), "     ~`~``~`~    "); // ghost
         assertEq(spriteData.getBodyRow(11, 0, 2), "   }~(0 .. 0)~{  "); // axolotl (+3)
         assertEq(spriteData.getBodyRow(12, 0, 1), "     n______n    "); // capybara (+3)

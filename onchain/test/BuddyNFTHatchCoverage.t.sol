@@ -17,7 +17,8 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
     string internal constant MANIFEST_PATH = "contract-data/hatch-coverage/manifest.json";
     string internal constant JSON_PREFIX = "data:application/json;base64,";
     string internal constant SVG_PREFIX = "data:image/svg+xml;base64,";
-    string internal constant BLANK_TOP_ROW = '<text class="sprite" x="21" y="125" xml:space="preserve">                 </text>';
+    string internal constant BLANK_TOP_ROW =
+        '<text class="sprite" x="21" y="125" xml:space="preserve">                 </text>';
 
     struct ExpectedTraits {
         uint256 species;
@@ -139,10 +140,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         uint256 tokenId,
         string memory tokenUri,
         ExpectedTraits storage traits
-    )
-        internal
-        view
-    {
+    ) internal view {
         assertTrue(_startsWith(tokenUri, JSON_PREFIX), string.concat("json prefix missing for ", uuid));
         string memory json = _decodeJson(uuid, tokenUri);
 
@@ -155,7 +153,10 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
     }
 
     /// @dev Trait-axis structural assertions only; renderer chrome invariants live in BuddyRenderer.t.sol.
-    function _assertTokenUriSvg(string memory uuid, string memory tokenUri, ExpectedTraits storage traits) internal view {
+    function _assertTokenUriSvg(string memory uuid, string memory tokenUri, ExpectedTraits storage traits)
+        internal
+        view
+    {
         assertTrue(_startsWith(tokenUri, JSON_PREFIX), string.concat("json prefix missing for ", uuid));
         string memory json = _decodeJson(uuid, tokenUri);
         string memory imageUri = vm.parseJsonString(json, ".image");
@@ -189,7 +190,10 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         _assertShinyLabel(uuid, titleRow, traits.shiny);
     }
 
-    function _assertJsonAttributes(string memory uuid, string memory json, ExpectedTraits storage traits) internal view {
+    function _assertJsonAttributes(string memory uuid, string memory json, ExpectedTraits storage traits)
+        internal
+        view
+    {
         _assertStringAttribute(json, 0, "Species", _speciesLabel(uint8(traits.species)), uuid);
         _assertStringAttribute(json, 1, "Rarity", _rarityLabel(uint8(traits.rarity)), uuid);
         _assertStringAttribute(json, 2, "Eyes", _eyeLabel(uint8(traits.eyes)), uuid);
@@ -209,10 +213,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         string memory traitType,
         string memory value,
         string memory uuid
-    )
-        internal
-        pure
-    {
+    ) internal pure {
         string memory prefix = string.concat(".attributes[", vm.toString(index), "]");
         assertEq(
             vm.parseJsonString(json, string.concat(prefix, ".trait_type")),
@@ -232,10 +233,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         string memory traitType,
         uint256 value,
         string memory uuid
-    )
-        internal
-        pure
-    {
+    ) internal pure {
         string memory prefix = string.concat(".attributes[", vm.toString(index), "]");
         assertEq(
             vm.parseJsonString(json, string.concat(prefix, ".trait_type")),
@@ -256,9 +254,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         }
 
         assertFalse(_contains(svg, BLANK_TOP_ROW), string.concat("hatted top row unexpectedly blank for ", uuid));
-        assertTrue(
-            _contains(svg, _escapedPaddedHatRow(hat)), string.concat("hat row missing for ", uuid)
-        );
+        assertTrue(_contains(svg, _escapedPaddedHatRow(hat)), string.concat("hat row missing for ", uuid));
     }
 
     function _assertShinyLabel(string memory uuid, string memory svg, bool shiny) internal pure {
@@ -270,7 +266,8 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
     }
 
     function _decodeJson(string memory uuid, string memory tokenUri) internal pure returns (string memory) {
-        return string(Base64.decode(_afterPrefix(tokenUri, JSON_PREFIX, string.concat("json prefix missing for ", uuid))));
+        return
+            string(Base64.decode(_afterPrefix(tokenUri, JSON_PREFIX, string.concat("json prefix missing for ", uuid))));
     }
 
     function _decodeSvg(string memory uuid, string memory imageUri) internal pure returns (string memory) {

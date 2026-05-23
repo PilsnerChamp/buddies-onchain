@@ -29,19 +29,7 @@ contract BuddyRendererCircleDriftTest is Test {
     BuddyRenderer internal renderer;
     MockBuddyNFTForRenderer internal mockBuddy;
 
-    uint256[11] internal slowPool = [
-        uint256(29),
-        31,
-        37,
-        41,
-        43,
-        47,
-        53,
-        59,
-        61,
-        67,
-        71
-    ];
+    uint256[11] internal slowPool = [uint256(29), 31, 37, 41, 43, 47, 53, 59, 61, 67, 71];
 
     function setUp() public {
         spriteData = new BuddySpriteData();
@@ -87,12 +75,7 @@ contract BuddyRendererCircleDriftTest is Test {
         (uint256 pa0, uint256 pa1, uint256 pa2, uint256 da0, uint256 da1, uint256 da2) = _parseAllDriftTriples(svgA);
         (uint256 pb0, uint256 pb1, uint256 pb2, uint256 db0, uint256 db1, uint256 db2) = _parseAllDriftTriples(svgB);
 
-        bool differs = (pa0 != pb0)
-            || (pa1 != pb1)
-            || (pa2 != pb2)
-            || (da0 != db0)
-            || (da1 != db1)
-            || (da2 != db2);
+        bool differs = (pa0 != pb0) || (pa1 != pb1) || (pa2 != pb2) || (da0 != db0) || (da1 != db1) || (da2 != db2);
         assertTrue(differs, "two distinct identity hashes produced identical drift triples");
     }
 
@@ -108,14 +91,8 @@ contract BuddyRendererCircleDriftTest is Test {
 
         // The drift translate animates the <circle>'s transform — cx/cy must not have
         // migrated into the CSS rule set.
-        assertFalse(
-            _contains(svg, "translate(cx"),
-            "cx must not appear inside a CSS translate(...) call"
-        );
-        assertFalse(
-            _contains(svg, "translate(cy"),
-            "cy must not appear inside a CSS translate(...) call"
-        );
+        assertFalse(_contains(svg, "translate(cx"), "cx must not appear inside a CSS translate(...) call");
+        assertFalse(_contains(svg, "translate(cy"), "cy must not appear inside a CSS translate(...) call");
     }
 
     // --- 5. delay < period per the (mix >> 8) % period formula ----------------------
@@ -150,8 +127,7 @@ contract BuddyRendererCircleDriftTest is Test {
 
         assertTrue(_containsBytes(code, slowRun), "runtime bytecode is missing the slow-pool constant");
         assertFalse(
-            _containsBytes(code, fastRun),
-            "runtime bytecode contains the fast-pool constant 03 05 07 0B 0D 11 13 17"
+            _containsBytes(code, fastRun), "runtime bytecode contains the fast-pool constant 03 05 07 0B 0D 11 13 17"
         );
     }
 
@@ -240,7 +216,7 @@ contract BuddyRendererCircleDriftTest is Test {
         // the pin. See `docs/onchain/renderer.md` § Background circle drift for
         // the canonical mix and pool rules.
         assertEq(p0, 47, "c0 period mismatch (Python parity fixture)");
-        assertEq(d0,  1, "c0 delay mismatch (Python parity fixture)");
+        assertEq(d0, 1, "c0 delay mismatch (Python parity fixture)");
         assertEq(p1, 43, "c1 period mismatch (Python parity fixture)");
         assertEq(d1, 28, "c1 delay mismatch (Python parity fixture)");
         assertEq(p2, 59, "c2 period mismatch (Python parity fixture)");

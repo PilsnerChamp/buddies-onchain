@@ -71,7 +71,7 @@ contract FindSpeciesUuids is Script {
 
     function _deriveTraitResult(string memory uuid) internal pure returns (TraitResult memory) {
         uint32 seed = WyHash.hash(bytes(uuid), SALT);
-        (uint8 species, uint8 rarity, uint8 eyes, uint8 hat, bool shiny,,,,, ) = Mulberry32.deriveTraits(seed);
+        (uint8 species, uint8 rarity, uint8 eyes, uint8 hat, bool shiny,,,,,) = Mulberry32.deriveTraits(seed);
         return TraitResult({species: species, rarity: rarity, eyes: eyes, hat: hat, shiny: shiny});
     }
 
@@ -130,11 +130,16 @@ contract FindSpeciesUuids is Script {
             console.log(string.concat("COVERAGE_UUID ", uuid));
             console.log(
                 string.concat(
-                    "  species=", _u8(t.species),
-                    "  rarity=", _u8(t.rarity),
-                    "  eyes=", _u8(t.eyes),
-                    "  hat=", _u8(t.hat),
-                    "  shiny=", t.shiny ? "true" : "false"
+                    "  species=",
+                    _u8(t.species),
+                    "  rarity=",
+                    _u8(t.rarity),
+                    "  eyes=",
+                    _u8(t.eyes),
+                    "  hat=",
+                    _u8(t.hat),
+                    "  shiny=",
+                    t.shiny ? "true" : "false"
                 )
             );
         }

@@ -100,50 +100,26 @@ contract BuddyRendererAnimationTest is Test {
 
     function test_animationCss_f0VisibleAndHiddenWindowsPinned() public view {
         string memory body = _keyframeBody(harness.animationCss(), "f0");
-        string[4] memory expectedVisible = [
-            string("0.00%, 26.65%"),
-            "33.33%, 53.32%",
-            "60.00%, 73.32%",
-            "80.00%, 99.99%"
-        ];
-        string[3] memory expectedHidden = [
-            string("26.66%, 33.32%"),
-            "53.33%, 59.99%",
-            "73.33%, 79.99%"
-        ];
+        string[4] memory expectedVisible =
+            [string("0.00%, 26.65%"), "33.33%, 53.32%", "60.00%, 73.32%", "80.00%, 99.99%"];
+        string[3] memory expectedHidden = [string("26.66%, 33.32%"), "53.33%, 59.99%", "73.33%, 79.99%"];
 
         assertEq(_countOccurrences(body, "visibility: visible;"), 4);
         assertEq(_countOccurrences(body, "visibility: hidden;"), 3);
         assertEq(_countOccurrences(body, "visibility: "), 7);
 
         for (uint256 i = 0; i < expectedVisible.length; ++i) {
-            assertTrue(
-                _contains(
-                    body,
-                    string.concat(expectedVisible[i], " { visibility: visible; }")
-                )
-            );
+            assertTrue(_contains(body, string.concat(expectedVisible[i], " { visibility: visible; }")));
         }
 
         for (uint256 i = 0; i < expectedHidden.length; ++i) {
-            assertTrue(
-                _contains(
-                    body,
-                    string.concat(expectedHidden[i], " { visibility: hidden; }")
-                )
-            );
+            assertTrue(_contains(body, string.concat(expectedHidden[i], " { visibility: hidden; }")));
         }
     }
 
     function _assertAnimationDeclaration(string memory css, string memory name) internal pure {
         string memory compactCss = _stripWhitespace(css);
-        string memory expected = string.concat(
-            "#",
-            name,
-            "{animation:",
-            name,
-            "7500msinfinitestep-start;}"
-        );
+        string memory expected = string.concat("#", name, "{animation:", name, "7500msinfinitestep-start;}");
 
         assertTrue(_contains(compactCss, expected));
     }

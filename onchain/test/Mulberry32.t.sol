@@ -51,9 +51,7 @@ contract Mulberry32Test is Test {
             uint32 actual;
             (state, actual) = Mulberry32.next(state);
             assertEq(
-                actual,
-                expected,
-                string.concat("PRNG mismatch: seed=", vm.toString(seed), " step=", vm.toString(j))
+                actual, expected, string.concat("PRNG mismatch: seed=", vm.toString(seed), " step=", vm.toString(j))
             );
         }
     }
@@ -127,11 +125,7 @@ contract Mulberry32Test is Test {
         assertEq(snark, exp.snark, string.concat("snark mismatch: seed=", seedStr));
     }
 
-    function _parseExpectedTraits(string memory json, string memory tp)
-        internal
-        pure
-        returns (ExpectedTraits memory)
-    {
+    function _parseExpectedTraits(string memory json, string memory tp) internal pure returns (ExpectedTraits memory) {
         return ExpectedTraits({
             rarity: uint8(abi.decode(vm.parseJson(json, string.concat(tp, ".rarity")), (uint256))),
             species: uint8(abi.decode(vm.parseJson(json, string.concat(tp, ".species")), (uint256))),
@@ -152,23 +146,24 @@ contract Mulberry32Test is Test {
 
     /// @notice deriveTraits for seed 0 should not revert.
     function test_deriveTraits_zeroSeed() public pure {
-        (uint8 species,,,,,,,,, ) = Mulberry32.deriveTraits(0);
+        (uint8 species,,,,,,,,,) = Mulberry32.deriveTraits(0);
         // Just assert it didn't revert and species is in range
         assertTrue(species < 18);
     }
 
     /// @notice deriveTraits for max uint32 seed should not revert.
     function test_deriveTraits_maxSeed() public pure {
-        (uint8 species,,,,,,,,, ) = Mulberry32.deriveTraits(type(uint32).max);
+        (uint8 species,,,,,,,,,) = Mulberry32.deriveTraits(type(uint32).max);
         assertTrue(species < 18);
     }
 
     /// @notice All rarity values must be in [0, 4].
     function test_rarity_alwaysInRange() public pure {
         // Test a spread of seeds
-        uint32[10] memory seeds = [uint32(0), 1, 42, 12345, 100000, 999999, 2147483648, 3000000000, 4000000000, 4294967295];
+        uint32[10] memory seeds =
+            [uint32(0), 1, 42, 12345, 100000, 999999, 2147483648, 3000000000, 4000000000, 4294967295];
         for (uint256 i = 0; i < seeds.length; i++) {
-            (, uint8 rarity,,,,,,,, ) = Mulberry32.deriveTraits(seeds[i]);
+            (, uint8 rarity,,,,,,,,) = Mulberry32.deriveTraits(seeds[i]);
             assertTrue(rarity <= 4, "rarity out of range");
         }
     }

@@ -36,8 +36,7 @@ library WyHash {
                     a = (_read4(input, 0) << 32) | _read4(input, quarter);
                     b = (_read4(input, end) << 32) | _read4(input, end - quarter);
                 } else if (len > 0) {
-                    a = (uint64(uint8(input[0])) << 16)
-                        | (uint64(uint8(input[len >> 1])) << 8)
+                    a = (uint64(uint8(input[0])) << 16) | (uint64(uint8(input[len >> 1])) << 8)
                         | uint64(uint8(input[len - 1]));
                     b = 0;
                 } else {

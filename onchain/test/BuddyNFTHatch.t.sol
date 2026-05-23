@@ -74,8 +74,16 @@ contract BuddyNFTHatchTest is Test {
     function test_hatch_storesTraitsMatchingCanonicalPipeline() public {
         uint32 seed = WyHash.hash(bytes(TEST_UUID), bytes(HATCH_SALT));
         (
-            uint8 species, uint8 rarity, uint8 eyes, uint8 hat, bool shiny,
-            uint8 debugging, uint8 patience, uint8 chaos, uint8 wisdom, uint8 snark
+            uint8 species,
+            uint8 rarity,
+            uint8 eyes,
+            uint8 hat,
+            bool shiny,
+            uint8 debugging,
+            uint8 patience,
+            uint8 chaos,
+            uint8 wisdom,
+            uint8 snark
         ) = Mulberry32.deriveTraits(seed);
 
         uint256 tokenId = nft.hatch(TEST_UUID);
@@ -293,9 +301,7 @@ contract BuddyNFTHatchTest is Test {
         // gate allows from==address(this) && stage==Custodial (the bond path),
         // but OZ's auth check blocks unauthorized callers first.
         vm.prank(someWallet);
-        vm.expectRevert(abi.encodeWithSelector(
-            IERC721Errors.ERC721InsufficientApproval.selector, someWallet, tokenId
-        ));
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721InsufficientApproval.selector, someWallet, tokenId));
         nft.transferFrom(address(nft), someWallet, tokenId);
     }
 
@@ -320,8 +326,7 @@ contract BuddyNFTHatchTest is Test {
 
         // Verify renderer receives correct args: (address(nftWithRenderer), tokenId)
         vm.expectCall(
-            address(mockRenderer),
-            abi.encodeCall(IBuddyRenderer.tokenURI, (address(nftWithRenderer), tokenId))
+            address(mockRenderer), abi.encodeCall(IBuddyRenderer.tokenURI, (address(nftWithRenderer), tokenId))
         );
         string memory uri = nftWithRenderer.tokenURI(tokenId);
         assertEq(uri, "mock");

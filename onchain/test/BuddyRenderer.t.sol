@@ -20,7 +20,8 @@ contract BuddyRendererTest is Test {
     string internal constant DESCRIPTION = "One Claude account. One buddy. Lives on-chain. No host. No takedown.";
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string internal constant FONT_PATH = "contract-data/fonts/chrome/BuddyFont.woff2";
-    string internal constant RULE = unicode"───────────────────────────────────────────";
+    string internal constant RULE =
+        unicode"───────────────────────────────────────────";
     bytes1 internal constant ASCII_GT = 0x3e;
 
     BuddySpriteData internal spriteData;
@@ -249,7 +250,9 @@ contract BuddyRendererTest is Test {
         // chrome rail text (prompt `> /buddy-onchain` at y=28). If foreground content
         // (sprite frame groups, chrome rails) ever drifts inside the wrapper,
         // this substring stops matching and the test fails.
-        assertTrue(_contains(custodialSvg, '</g><g font-family="monospace" fill="#cbd5e1"><text class="stat" x="16" y="28"'));
+        assertTrue(
+            _contains(custodialSvg, '</g><g font-family="monospace" fill="#cbd5e1"><text class="stat" x="16" y="28"')
+        );
 
         _setMockToken(2, _defaultTraits(), "Pilsner", bytes32(uint256(0x7171)), IBuddyNFT.OwnershipStage.Bonded);
         string memory bondedSvg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 2));
@@ -258,7 +261,9 @@ contract BuddyRendererTest is Test {
         assertEq(_countOccurrences(bondedSvg, '<clipPath id="vp">'), 1);
         assertEq(_countOccurrences(bondedSvg, '<g clip-path="url(#vp)">'), 1);
         assertFalse(_contains(bondedSvg, 'overflow="hidden"'));
-        assertTrue(_contains(bondedSvg, '</g><g font-family="monospace" fill="#cbd5e1"><text class="stat" x="16" y="28"'));
+        assertTrue(
+            _contains(bondedSvg, '</g><g font-family="monospace" fill="#cbd5e1"><text class="stat" x="16" y="28"')
+        );
     }
 
     function test_tokenURI_titleAndMetadataNameContractForBothStages() public {
@@ -303,11 +308,7 @@ contract BuddyRendererTest is Test {
             assertEq(
                 _countOccurrences(
                     svg,
-                    string.concat(
-                        '<text class="sprite" x="21" y="',
-                        expectedBaselines[i],
-                        '" xml:space="preserve">'
-                    )
+                    string.concat('<text class="sprite" x="21" y="', expectedBaselines[i], '" xml:space="preserve">')
                 ),
                 4,
                 "expected identical y-coordinates across all four sprite frame groups"
@@ -393,8 +394,10 @@ contract BuddyRendererTest is Test {
         // fb must contain `-` at sprite-body content positions.
         assertTrue(_contains(fbGroup, "-"));
 
-        string memory f0EyeRow = unicode'<text class="sprite" x="21" y="225" xml:space="preserve">     &lt;(✦ )___    </text>';
-        string memory fbBlinkRow = unicode'<text class="sprite" x="21" y="225" xml:space="preserve">     &lt;(- )___    </text>';
+        string memory f0EyeRow =
+            unicode'<text class="sprite" x="21" y="225" xml:space="preserve">     &lt;(✦ )___    </text>';
+        string memory fbBlinkRow =
+            unicode'<text class="sprite" x="21" y="225" xml:space="preserve">     &lt;(- )___    </text>';
 
         assertTrue(_contains(f0Group, f0EyeRow), "f0 must contain the duck eye row with the selected glyph");
         assertTrue(_contains(fbGroup, fbBlinkRow), "fb must contain the same row with eye glyph replaced by dash");
@@ -414,10 +417,7 @@ contract BuddyRendererTest is Test {
         string[5] memory expectedBaselines = ["125", "175", "225", "275", "325"];
         for (uint256 i = 0; i < expectedBaselines.length; ++i) {
             assertEq(
-                _countOccurrences(
-                    svg,
-                    string.concat('<text class="sprite" x="21" y="', expectedBaselines[i], '"')
-                ),
+                _countOccurrences(svg, string.concat('<text class="sprite" x="21" y="', expectedBaselines[i], '"')),
                 4,
                 "expected each y-coordinate in all four frame groups"
             );
@@ -435,10 +435,7 @@ contract BuddyRendererTest is Test {
 
         for (uint256 i = 0; i < expectedBaselines.length; ++i) {
             assertEq(
-                _countOccurrences(
-                    svg,
-                    string.concat('<text class="sprite" x="21" y="', expectedBaselines[i], '"')
-                ),
+                _countOccurrences(svg, string.concat('<text class="sprite" x="21" y="', expectedBaselines[i], '"')),
                 4,
                 "expected each compressed-top y-coordinate in all four frame groups"
             );
@@ -540,9 +537,7 @@ contract BuddyRendererTest is Test {
         string memory name,
         bytes32 identityHash,
         IBuddyNFT.OwnershipStage stage
-    )
-        internal
-    {
+    ) internal {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
         mockBuddy.setIdentityHash(tokenId, identityHash);
@@ -687,5 +682,4 @@ contract BuddyRendererTest is Test {
             }
         }
     }
-
 }

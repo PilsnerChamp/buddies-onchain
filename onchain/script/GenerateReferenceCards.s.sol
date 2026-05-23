@@ -20,7 +20,8 @@ import {MockBuddyNFTForRenderer} from "../test/helpers/MockBuddyNFTForRenderer.s
 contract GenerateReferenceCards is Script {
     function run() external {
         BuddyFont buddyFont = new BuddyFont(vm.readFileBinary("contract-data/fonts/chrome/BuddyFont.woff2"));
-        BuddySpriteFont buddySpriteFont = new BuddySpriteFont(vm.readFileBinary("contract-data/fonts/sprite/BuddySpriteFont.woff2"));
+        BuddySpriteFont buddySpriteFont =
+            new BuddySpriteFont(vm.readFileBinary("contract-data/fonts/sprite/BuddySpriteFont.woff2"));
         BuddySpriteData spriteData = new BuddySpriteData();
         BuddyRenderer renderer = new BuddyRenderer(address(spriteData), address(buddyFont), address(buddySpriteFont));
         MockBuddyNFTForRenderer mock = new MockBuddyNFTForRenderer();
@@ -107,10 +108,7 @@ contract GenerateReferenceCards is Script {
         string memory name,
         bytes32 identityHash,
         IBuddyNFT.OwnershipStage stage
-    )
-        internal
-        returns (uint256)
-    {
+    ) internal returns (uint256) {
         mock.setTraits(tokenId, traits);
         mock.setName(tokenId, name);
         mock.setIdentityHash(tokenId, identityHash);
@@ -136,11 +134,7 @@ contract GenerateReferenceCards is Script {
         uint8 chaos,
         uint8 wisdom,
         uint8 snark
-    )
-        internal
-        pure
-        returns (IBuddyNFT.BuddyTraits memory)
-    {
+    ) internal pure returns (IBuddyNFT.BuddyTraits memory) {
         return IBuddyNFT.BuddyTraits({
             species: species,
             rarity: rarity,

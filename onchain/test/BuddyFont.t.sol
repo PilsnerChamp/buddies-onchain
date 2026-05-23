@@ -73,9 +73,7 @@ contract BuddyFontTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                BuddyFontPayload.UnexpectedPayloadSha256.selector,
-                sha256(mutated),
-                BuddyFontMetrics.PAYLOAD_SHA256
+                BuddyFontPayload.UnexpectedPayloadSha256.selector, sha256(mutated), BuddyFontMetrics.PAYLOAD_SHA256
             )
         );
         new BuddyFont(mutated);
@@ -89,9 +87,7 @@ contract BuddyFontTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                BuddyFontPayload.UnexpectedPayloadLength.selector,
-                truncated.length,
-                BuddyFontMetrics.PAYLOAD_LENGTH
+                BuddyFontPayload.UnexpectedPayloadLength.selector, truncated.length, BuddyFontMetrics.PAYLOAD_LENGTH
             )
         );
         new BuddyFont(truncated);

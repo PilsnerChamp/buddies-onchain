@@ -33,3 +33,19 @@ exclude_lints = ["unsafe-cheatcode", "asm-keccak256"]
 [fuzz]
 runs = 256
 max_test_rejects = 65536
+
+[fmt]
+# Skip files where layout is load-bearing or fmt is unsafe:
+# - BuddySpriteData: per-row ASCII sprite art via adjacent string literals
+# - BuddyRenderer: DRIFT_KEYFRAMES CSS blocks intentionally split per keyframe
+# - SleepingFrameParity / BuddyRendererStripFallback tests use
+#   `if (cond) { a; b; }` single-line multi-statement blocks. forge fmt 1.x
+#   drops the braces and reparents the trailing statements outside the `if`,
+#   silently breaking control flow. These files stay manually formatted
+#   until that fmt bug is fixed upstream.
+ignore = [
+    "contracts/BuddySpriteData.sol",
+    "contracts/BuddyRenderer.sol",
+    "test/SleepingFrameParity.t.sol",
+    "test/BuddyRendererStripFallback.t.sol",
+]
