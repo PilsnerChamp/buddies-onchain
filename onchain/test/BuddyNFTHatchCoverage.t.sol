@@ -62,6 +62,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
 
     function test_hatchCoverageFixtures() public {
         assertEq(manifest.length, uuids.length, "manifest length mismatch");
+        uint256 svgSplit = uuids.length / 2;
 
         for (uint256 i; i < uuids.length; ++i) {
             string memory uuid = uuids[i];
@@ -74,14 +75,19 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
 
             assertEq(uint256(nft.buddyPrngSeed(tokenId)), expected.seed, string.concat("seed mismatch for ", uuid));
             _assertTraitsEq(uuid, nft.buddyTraits(tokenId), expected.traits);
-            _assertTokenUriJson(uuid, tokenId, nft.tokenURI(tokenId), expected.traits);
+            string memory tokenUri = nft.tokenURI(tokenId);
+            _assertTokenUriJson(uuid, tokenId, tokenUri, expected.traits);
+            if (i < svgSplit) {
+                _assertTokenUriSvg(uuid, tokenUri, expected.traits);
+            }
         }
     }
 
     function test_hatchCoverageSvgStructure() public {
         assertEq(manifest.length, uuids.length, "manifest length mismatch");
 
-        for (uint256 i; i < uuids.length; ++i) {
+        uint256 svgSplit = uuids.length / 2;
+        for (uint256 i = svgSplit; i < uuids.length; ++i) {
             string memory uuid = uuids[i];
             ManifestEntry storage expected = manifest[i];
 
@@ -160,15 +166,27 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         assertTrue(_endsWith(svg, "</svg>"), string.concat("svg close missing for ", uuid));
         assertEq(_countOccurrences(svg, "<circle"), 3, string.concat("background circle count mismatch for ", uuid));
 
+        string memory titleRow = _visibleTitleRow(uuid, svg);
         assertTrue(
-            _contains(svg, _speciesLabel(uint8(traits.species))), string.concat("species label missing for ", uuid)
+            _contains(titleRow, _upper(_speciesLabel(uint8(traits.species)))),
+            string.concat("species label missing for ", uuid)
         );
         assertTrue(
-            _contains(svg, _rarityLabel(uint8(traits.rarity))), string.concat("rarity label missing for ", uuid)
+            _contains(titleRow, _upper(_rarityLabel(uint8(traits.rarity)))),
+            string.concat("rarity label missing for ", uuid)
+        );
+        // Eye glyph must appear OUTSIDE the title row. `✦` (eyes==1) also lives
+        // in SHINY_PREFIX (renderer line 55), so a broken `_replaceEyes` would
+        // silently pass for `(shiny=true, eyes=1)` if we searched the whole SVG.
+        string memory glyph = _eyeGlyph(uint8(traits.eyes));
+        assertGt(
+            _countOccurrences(svg, glyph),
+            _countOccurrences(titleRow, glyph),
+            string.concat("eye glyph missing outside title row for ", uuid)
         );
 
         _assertHatLayout(uuid, svg, uint8(traits.hat));
-        _assertShinyLabel(uuid, svg, traits.shiny);
+        _assertShinyLabel(uuid, titleRow, traits.shiny);
     }
 
     function _assertJsonAttributes(string memory uuid, string memory json, ExpectedTraits storage traits) internal view {
@@ -364,6 +382,27 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         return false;
     }
 
+    function _indexOf(bytes memory haystack, bytes memory needle, uint256 from) internal pure returns (uint256) {
+        if (needle.length == 0 || needle.length > haystack.length || from > haystack.length - needle.length) {
+            return type(uint256).max;
+        }
+
+        for (uint256 i = from; i <= haystack.length - needle.length; ++i) {
+            bool match_ = true;
+            for (uint256 j; j < needle.length; ++j) {
+                if (haystack[i + j] != needle[j]) {
+                    match_ = false;
+                    break;
+                }
+            }
+            if (match_) {
+                return i;
+            }
+        }
+
+        return type(uint256).max;
+    }
+
     function _countOccurrences(string memory haystack, string memory needle) internal pure returns (uint256 count) {
         bytes memory haystackBytes = bytes(haystack);
         bytes memory needleBytes = bytes(needle);
@@ -384,6 +423,45 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
                 ++count;
             }
         }
+    }
+
+    function _visibleTitleRow(string memory uuid, string memory svg) internal pure returns (string memory) {
+        bytes memory svgBytes = bytes(svg);
+        bytes memory openMarker = bytes('<text class="stat" x="16" y="56"');
+        uint256 start = _indexOf(svgBytes, openMarker, 0);
+        if (start == type(uint256).max) {
+            revert(string.concat("title row missing for ", uuid));
+        }
+
+        bytes memory closeMarker = bytes("</text>");
+        uint256 end = _indexOf(svgBytes, closeMarker, start);
+        if (end == type(uint256).max) {
+            revert(string.concat("title row close missing for ", uuid));
+        }
+        end += closeMarker.length;
+
+        bytes memory row = new bytes(end - start);
+        for (uint256 i; i < row.length; ++i) {
+            row[i] = svgBytes[start + i];
+        }
+
+        return string(row);
+    }
+
+    function _upper(string memory value) internal pure returns (string memory) {
+        bytes memory input = bytes(value);
+        bytes memory output = new bytes(input.length);
+
+        for (uint256 i; i < input.length; ++i) {
+            uint8 charCode = uint8(input[i]);
+            if (charCode >= 97 && charCode <= 122) {
+                output[i] = bytes1(charCode & 0xdf);
+            } else {
+                output[i] = input[i];
+            }
+        }
+
+        return string(output);
     }
 
     /// @dev Label tables duplicated from BuddyRenderer.sol — intentional per spec (no shared helper).
@@ -426,6 +504,16 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
         if (eyes == 4) return "Spiral";
         if (eyes == 5) return "Ring";
         return "Unknown";
+    }
+
+    function _eyeGlyph(uint8 eyes) internal pure returns (string memory) {
+        if (eyes == 0) return unicode"·";
+        if (eyes == 1) return unicode"✦";
+        if (eyes == 2) return unicode"×";
+        if (eyes == 3) return unicode"◉";
+        if (eyes == 4) return "@";
+        if (eyes == 5) return unicode"°";
+        return "?";
     }
 
     function _hatLabel(uint8 hat) internal pure returns (string memory) {
