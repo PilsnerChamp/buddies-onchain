@@ -3,16 +3,12 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Deploy} from "../script/Deploy.s.sol";
+import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 
 contract DeploySmokeTest is Test {
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
-
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string internal constant BOND_NAME = "buddy";
     string internal constant JSON_PREFIX = "data:application/json;base64,";
@@ -61,37 +57,12 @@ contract DeploySmokeTest is Test {
         assertTrue(_hasNonDefaultTraits(traits), "buddy traits are all default values");
     }
 
-    function _domainSeparator(BuddyNFT nft) internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                block.chainid,
-                address(nft)
-            )
-        );
-    }
-
-    function _hashAttestation(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                BOND_ATTESTATION_TYPEHASH,
-                attestation.tokenId,
-                attestation.identityHash,
-                attestation.recipient,
-                attestation.expiry
-            )
-        );
-    }
-
     function _signBondAttestation(BuddyNFT nft, BuddyNFT.BondAttestation memory attestation, uint256 signerPk)
         internal
         view
         returns (bytes memory)
     {
-        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparator(nft), _hashAttestation(attestation));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

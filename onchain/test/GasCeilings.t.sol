@@ -4,8 +4,6 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
 import {BuddyFont} from "../contracts/BuddyFont.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
@@ -13,6 +11,7 @@ import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
+import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 
 /// @dev Operator playbook on failure: each test asserts an empirical ceiling +~20% above the
@@ -20,12 +19,9 @@ import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 ///      + update the baseline comment + commit; (2) otherwise investigate the drift. The 20%
 ///      headroom absorbs typical Solc/optimizer drift; a 25%+ regression signals a real change.
 contract GasCeilingsTest is Test {
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
-
     // Baseline: 229_357 gas; ~20% headroom rounded up for hatch storage/write-path drift.
     uint256 private constant HATCH_GAS_CEILING = 280_000;
-    // Baseline: 84_823 gas; ~20% headroom rounded up for EIP-712 verification drift.
+    // Baseline: 92_507 gas (cold-slot, post `vm.cool`); ~10% headroom rounded up for EIP-712 verification drift.
     uint256 private constant BOND_GAS_CEILING = 102_000;
     // Baseline: 5_309_133 gas; ~20% headroom rounded up for custodial SVG/base64 rendering drift.
     uint256 private constant TOKEN_URI_CUSTODIAL_GAS_CEILING = 6_400_000;
@@ -88,11 +84,18 @@ contract GasCeilingsTest is Test {
         BuddyNFT.BondAttestation memory attestation = _bondAttestation(tokenId, TEST_UUID, recipient);
         bytes memory signature = _signBondAttestation(attestation);
 
+        // Hatch warmed every slot bond() will touch (token stage, identity hash,
+        // signer, bondingEnabled). Real-world bond is a separate transaction with
+        // cold access-list. `vm.cool` resets the account + all its slots so the
+        // metered call reflects the cold-tx EIP-2929 prices the on-chain user pays.
+        vm.cool(address(nft));
+
         vm.prank(recipient);
         uint256 gasBefore = gasleft();
         nft.bond(tokenId, BOND_NAME, attestation, signature);
         uint256 gasUsed = gasBefore - gasleft();
 
+        emit log_named_uint("bond gas (cold)", gasUsed);
         assertEq(nft.ownerOf(tokenId), recipient, "bond recipient did not receive token");
         assertLe(gasUsed, BOND_GAS_CEILING, "bond gas exceeds ceiling");
     }
@@ -194,33 +197,8 @@ contract GasCeilingsTest is Test {
         });
     }
 
-    function _domainSeparator() internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                block.chainid,
-                address(nft)
-            )
-        );
-    }
-
-    function _hashAttestation(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                BOND_ATTESTATION_TYPEHASH,
-                attestation.tokenId,
-                attestation.identityHash,
-                attestation.recipient,
-                attestation.expiry
-            )
-        );
-    }
-
     function _signBondAttestation(BuddyNFT.BondAttestation memory attestation) internal view returns (bytes memory) {
-        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparator(), _hashAttestation(attestation));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

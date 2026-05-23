@@ -6,15 +6,11 @@ import {Test} from "forge-std/Test.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 
 contract BuddyNFTFuzzTest is Test {
     event AttestationSignerUpdated(address indexed signer);
-
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
 
     bytes16 private constant HEX_SYMBOLS = "0123456789abcdef";
     bytes1 private constant ASCII_HYPHEN = 0x2d;
@@ -256,33 +252,9 @@ contract BuddyNFTFuzzTest is Test {
         view
         returns (bytes memory)
     {
-        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparator(target), _hashAttestation(attestation));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(SIGNER_KEY, digest);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(SIGNER_KEY, BondAttestationHelper.digest(address(target), attestation));
         return abi.encodePacked(r, s, v);
-    }
-
-    function _domainSeparator(BuddyNFT target) internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                block.chainid,
-                address(target)
-            )
-        );
-    }
-
-    function _hashAttestation(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                BOND_ATTESTATION_TYPEHASH,
-                attestation.tokenId,
-                attestation.identityHash,
-                attestation.recipient,
-                attestation.expiry
-            )
-        );
     }
 
     function _validExpiry() internal view returns (uint64) {

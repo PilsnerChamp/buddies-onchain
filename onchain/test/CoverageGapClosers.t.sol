@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Test, stdJson} from "forge-std/Test.sol";
 
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {BuddyFont} from "../contracts/BuddyFont.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
@@ -12,6 +11,7 @@ import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
 import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
+import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 
 contract BuddyRendererCoverageHarness is BuddyRenderer {
@@ -27,8 +27,6 @@ contract BuddyRendererCoverageHarness is BuddyRenderer {
 contract CoverageGapClosersTest is Test {
     using stdJson for string;
 
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
     string private constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string private constant JSON_PREFIX = "data:application/json;base64,";
     string private constant SVG_PREFIX = "data:image/svg+xml;base64,";
@@ -193,30 +191,8 @@ contract CoverageGapClosersTest is Test {
     }
 
     function _signBondAttestation(BuddyNFT.BondAttestation memory attestation) internal view returns (bytes memory) {
-        bytes32 structHash = keccak256(
-            abi.encode(
-                BOND_ATTESTATION_TYPEHASH,
-                attestation.tokenId,
-                attestation.identityHash,
-                attestation.recipient,
-                attestation.expiry
-            )
-        );
-        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparator(), structHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
-    }
-
-    function _domainSeparator() internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                block.chainid,
-                address(nft)
-            )
-        );
     }
 
     function _renderMockJson(IBuddyNFT.BuddyTraits memory traits, IBuddyNFT.OwnershipStage stage)

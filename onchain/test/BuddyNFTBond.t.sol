@@ -5,17 +5,12 @@ import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 
 contract BuddyNFTBondTest is Test {
-    event BuddyBonded(
-        uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name
-    );
-
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
+    event BuddyBonded(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name);
 
     BuddyNFT internal nft;
     address internal owner;
@@ -42,55 +37,13 @@ contract BuddyNFTBondTest is Test {
     }
 
     // -------------------------------------------------------------------------
-    // EIP-712 signing helpers
+    // EIP-712 signing helpers — domain/struct hashing lives in
+    // `helpers/BondAttestationHelper.sol`. Per-suite signing stays inline
+    // because it needs the `vm.sign` cheatcode.
     // -------------------------------------------------------------------------
 
-    function _domainSeparator() internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                block.chainid,
-                address(nft)
-            )
-        );
-    }
-
-    function _domainSeparatorFor(uint256 chainId, address verifyingContract) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("BuddyNFT"),
-                keccak256("1"),
-                chainId,
-                verifyingContract
-            )
-        );
-    }
-
-    function _hashAttestation(BuddyNFT.BondAttestation memory att) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(BOND_ATTESTATION_TYPEHASH, att.tokenId, att.identityHash, att.recipient, att.expiry)
-        );
-    }
-
-    function _computeDigest(bytes32 structHash) internal view returns (bytes32) {
-        return MessageHashUtils.toTypedDataHash(_domainSeparator(), structHash);
-    }
-
-    function _computeDigestFor(bytes32 structHash, uint256 chainId, address verifyingContract)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return MessageHashUtils.toTypedDataHash(_domainSeparatorFor(chainId, verifyingContract), structHash);
-    }
-
     function _signBondAttestation(BuddyNFT.BondAttestation memory att) internal view returns (bytes memory) {
-        bytes32 digest = _computeDigest(_hashAttestation(att));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
-        return abi.encodePacked(r, s, v);
+        return _signBondAttestationWithKey(att, signerPk);
     }
 
     function _signBondAttestationWithKey(BuddyNFT.BondAttestation memory att, uint256 pk)
@@ -98,8 +51,7 @@ contract BuddyNFTBondTest is Test {
         view
         returns (bytes memory)
     {
-        bytes32 digest = _computeDigest(_hashAttestation(att));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, BondAttestationHelper.digest(address(nft), att));
         return abi.encodePacked(r, s, v);
     }
 
@@ -332,8 +284,7 @@ contract BuddyNFTBondTest is Test {
         (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
 
         // Sign under a different chainId
-        bytes32 structHash = _hashAttestation(att);
-        bytes32 digest = _computeDigestFor(structHash, block.chainid + 1, address(nft));
+        bytes32 digest = BondAttestationHelper.digestFor(block.chainid + 1, address(nft), att);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
@@ -346,8 +297,7 @@ contract BuddyNFTBondTest is Test {
         (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
 
         // Sign for a different contract address
-        bytes32 structHash = _hashAttestation(att);
-        bytes32 digest = _computeDigestFor(structHash, block.chainid, address(0xdead));
+        bytes32 digest = BondAttestationHelper.digestFor(block.chainid, address(0xdead), att);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
 
@@ -359,7 +309,7 @@ contract BuddyNFTBondTest is Test {
     function test_bond_revertsHighSMalleability() public {
         (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
 
-        bytes32 digest = _computeDigest(_hashAttestation(att));
+        bytes32 digest = BondAttestationHelper.digest(address(nft), att);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
 
         // Flip s to high-s: s' = secp256k1n - s
