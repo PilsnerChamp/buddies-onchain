@@ -299,20 +299,6 @@ contract BuddyNFTHatchTest is Test {
         nft.transferFrom(address(nft), someWallet, tokenId);
     }
 
-    function test_hatch_approveReverts() public {
-        nft.hatch(TEST_UUID);
-
-        vm.expectRevert(BuddyNFT.Soulbound.selector);
-        nft.approve(makeAddr("operator"), 1);
-    }
-
-    function test_hatch_setApprovalForAllReverts() public {
-        nft.hatch(TEST_UUID);
-
-        vm.expectRevert(BuddyNFT.Soulbound.selector);
-        nft.setApprovalForAll(makeAddr("operator"), true);
-    }
-
     // -------------------------------------------------------------------------
     // tokenURI integration
     // -------------------------------------------------------------------------

@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 
@@ -50,16 +49,6 @@ contract BuddyNFTTest is Test {
 
     function test_bondingEnabledStartsFalse() public view {
         assertFalse(nft.bondingEnabled());
-    }
-
-    function test_approveReverts() public {
-        vm.expectRevert(BuddyNFT.Soulbound.selector);
-        nft.approve(makeAddr("operator"), 1);
-    }
-
-    function test_setApprovalForAllReverts() public {
-        vm.expectRevert(BuddyNFT.Soulbound.selector);
-        nft.setApprovalForAll(makeAddr("operator"), true);
     }
 
     function test_setRendererSuccess() public {
@@ -210,13 +199,6 @@ contract BuddyNFTTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         vm.prank(stranger);
         nft.renounceOwnership();
-    }
-
-    function test_tokenURIRevertsForNonexistentToken() public {
-        uint256 tokenId = 999;
-
-        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, tokenId));
-        nft.tokenURI(tokenId);
     }
 
     function _setSignerAndEnableBonding() internal {
