@@ -10,7 +10,7 @@ Foundry workflow for the BuddyNFT contract suite.
 
 ## Install dependencies
 
-`onchain/lib/` is gitignored. There are no submodules. Run the install dance after every clean clone:
+`onchain/lib/` is gitignored. There are no submodules. Reinstall after every clean clone:
 
 ```bash
 cd onchain
