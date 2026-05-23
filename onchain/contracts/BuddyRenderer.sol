@@ -1001,6 +1001,16 @@ contract BuddyRenderer is IBuddyRenderer {
         return "Unknown";
     }
 
+    /// @dev `_hatLabel` is reached only after `_buildSvg` completes. For any
+    ///      `hat >= HAT_COUNT`, `_renderSpriteRow` invokes
+    ///      `spriteData.getHatRow(hat)` on at least one frame's blank row-0
+    ///      (verified across all 18 species' current sprite data), which reverts
+    ///      with `InvalidHatIndex` before metadata generation. The implicit
+    ///      "Tiny Duck" default for `hat == 7` is therefore the only
+    ///      post-`_buildSvg` reachable case. If sprite data ever changes such
+    ///      that no species has any blank row-0 frame, this fallback becomes
+    ///      reachable and must be restored. See `BuddySpriteData` row-0 schema
+    ///      for the invariant.
     function _hatLabel(uint8 hat) internal pure returns (string memory) {
         if (hat == 0) return "None";
         if (hat == 1) return "Crown";

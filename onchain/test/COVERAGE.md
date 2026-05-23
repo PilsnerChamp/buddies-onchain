@@ -93,10 +93,16 @@ Every listed uncovered product line now has a BUG / DEAD CODE / GAP verdict:
 | `BuddyRenderer.sol:978` rarity fallback | BUG | Added `test_labelFallback_rarityUnknown` for arbitrary external renderer input. |
 | `BuddyRenderer.sol:988` eye glyph fallback | BUG | Added `test_labelFallback_eyeGlyphQuestionMark` for arbitrary external renderer input. |
 | `BuddyRenderer.sol:1001` eye label fallback | BUG | Added `test_labelFallback_eyeLabelUnknown` for arbitrary external renderer input. |
-| `BuddyRenderer.sol:1013` hat fallback | DEAD CODE | Deleted. Invalid hats are rejected by `spriteData.getHatRow` during SVG rendering before metadata `_hatLabel` can return a fallback. |
+| `BuddyRenderer.sol:1013` hat fallback | DEAD CODE | Deleted. `_renderSpriteRow` calls `spriteData.getHatRow(hat)` for at least one blank row-0 frame across every species in current sprite data, which reverts with `InvalidHatIndex` before metadata generation. Verified empirically: mock-injected `(species=16 Mushroom, hat=8)` still reverts via sprite data because Mushroom's frame 0 and frame 1 both have blank row 0. Verdict re-checked under reviewer pushback; held. |
 | `BuddyRenderer.sol:1019` stage fallback | DEAD CODE | Deleted. External enum decoding rejects invalid `OwnershipStage` values, and canonical internal callers only produce `Custodial` or `Bonded`. |
 | `BuddyRenderer.sol:1031-1059` XML escape branches | GAP | Added surgical `test_xmlEscape_*` coverage through a renderer test harness. Bond names do not flow into SVG in the current contract; the harness directly covers the internal escape utility. |
 | `BuddyRenderer.sol:1084-1104` JSON escape branches | GAP | Added deterministic bonded-name tests for backslash, `\b`, `\t`, `\n`, `\f`, `\r`, and generic `\u00xx` control escaping. |
+
+The `_hatLabel` DEAD verdict was challenged in a follow-up review on the
+grounds that `BODY_USES_ROW_0` species (Mushroom, Octopus, Penguin, etc.) might
+bypass `getHatRow`. Empirical testing refuted this: every species has at least
+one blank row-0 frame in current sprite data, so the `getHatRow` revert is the
+universal upstream gate. Verdict remains DEAD.
 
 Updated product coverage: `BuddyNFT.sol` and `BuddyRenderer.sol` are both 100% line / statement / branch / function coverage.
 
