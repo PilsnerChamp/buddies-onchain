@@ -209,23 +209,15 @@ contract BuddyNFTBondTest is Test {
         nft.bond(tokenId, "name2", att, sig);
     }
 
-    function test_bond_revertsOwnerNotContract() public {
-        // This is defense-in-depth. In normal flow the owner of a Custodial
-        // token is always address(this). We cannot easily construct a state
-        // where ownerOf != address(this) while stage == Custodial because
-        // _update blocks all non-bond transfers. Instead, verify that the
-        // check exists by confirming that after a successful bond (stage=Bonded,
-        // owner=recipient), a second bond reverts at the stage check (Soulbound)
-        // before reaching the owner check. The owner-not-contract check is
-        // belt-and-suspenders that can only trigger via a hypothetical future
-        // code change. Its existence is verified by code review (contract line 260).
+    function test_bond_revertsAtStageCheckAfterBond() public {
+        // After a successful bond the stage is Bonded, so a second bond attempt
+        // must stop at the stage check before any attestation validation.
         (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
         bytes memory sig = _signBondAttestation(att);
 
         vm.prank(recipient);
         nft.bond(tokenId, BOND_NAME, att, sig);
 
-        // After bond: owner=recipient, stage=Bonded. Hits stage check first.
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         vm.prank(recipient);
         nft.bond(tokenId, "name2", att, sig);

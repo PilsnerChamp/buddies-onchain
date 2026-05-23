@@ -249,10 +249,6 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
             revert Soulbound();
         }
 
-        if (ownerOf(tokenId) != address(this)) {
-            revert Soulbound();
-        }
-
         if (attestation.tokenId != tokenId) {
             revert InvalidAttestation();
         }

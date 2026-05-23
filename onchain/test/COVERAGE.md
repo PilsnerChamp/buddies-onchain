@@ -2,10 +2,10 @@
 
 ## Status / date
 
-Baseline captured 2026-05-22; 227 tests, 20 suites.
+Baseline captured 2026-05-22; Workstream F updated 2026-05-22; 247 tests, 21 suites.
 
 Notes:
-- `cd onchain && forge test` passes 227 tests across 20 suites.
+- `cd onchain && forge test` passes 247 tests across 21 suites.
 - `forge coverage` disables optimizer settings, so `BytecodeSizeTest` and
   `GasCeilingsTest` skip under `VmSafe.ForgeContext.Coverage`; they remain active
   in normal `forge test` runs.
@@ -21,7 +21,7 @@ cd onchain && forge coverage --report summary
 ## Baseline table
 
 ```text
-Ran 20 test suites in 9.18s (69.46s CPU time): 215 tests passed, 0 failed, 2 skipped (217 total tests)
+Ran 21 test suites in 9.18s (73.28s CPU time): 235 tests passed, 0 failed, 2 skipped (237 total tests)
 
 ╭------------------------------------------+-------------------+-------------------+------------------+------------------╮
 | File                                     | % Lines           | % Statements      | % Branches       | % Funcs          |
@@ -30,9 +30,9 @@ Ran 20 test suites in 9.18s (69.46s CPU time): 215 tests passed, 0 failed, 2 ski
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
 | contracts/BuddyFontPayload.sol           | 100.00% (14/14)   | 100.00% (13/13)   | 100.00% (2/2)    | 100.00% (4/4)    |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
-| contracts/BuddyNFT.sol                   | 97.95% (143/146)  | 98.71% (153/155)  | 96.30% (26/27)   | 96.30% (26/27)   |
+| contracts/BuddyNFT.sol                   | 100.00% (144/144) | 100.00% (152/152) | 100.00% (26/26)  | 100.00% (27/27)  |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
-| contracts/BuddyRenderer.sol              | 89.35% (302/338)  | 92.01% (403/438)  | 89.16% (74/83)   | 98.21% (55/56)   |
+| contracts/BuddyRenderer.sol              | 100.00% (336/336) | 100.00% (434/434) | 100.00% (81/81)  | 100.00% (56/56)  |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
 | contracts/BuddySpriteData.sol            | 100.00% (21/21)   | 100.00% (29/29)   | 100.00% (3/3)    | 100.00% (4/4)    |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
@@ -64,19 +64,41 @@ Ran 20 test suites in 9.18s (69.46s CPU time): 215 tests passed, 0 failed, 2 ski
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
 | test/BuddyRendererAnimation.t.sol        | 100.00% (6/6)     | 100.00% (4/4)     | 100.00% (0/0)    | 100.00% (3/3)    |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
+| test/CoverageGapClosers.t.sol            | 100.00% (2/2)     | 100.00% (2/2)     | 100.00% (0/0)    | 100.00% (1/1)    |
+|------------------------------------------+-------------------+-------------------+------------------+------------------|
 | test/helpers/HatchCoverageUuids.sol      | 100.00% (25/25)   | 100.00% (25/25)   | 100.00% (0/0)    | 100.00% (1/1)    |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
 | test/helpers/MockBuddyNFTForRenderer.sol | 90.00% (18/20)    | 90.00% (9/10)     | 100.00% (0/0)    | 90.00% (9/10)    |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
 | test/helpers/WyHashExposed.sol           | 40.00% (4/10)     | 40.00% (4/10)     | 100.00% (0/0)    | 40.00% (2/5)     |
 |------------------------------------------+-------------------+-------------------+------------------+------------------|
-| Total                                    | 62.57% (682/1090) | 63.27% (820/1296) | 66.84% (127/190) | 76.54% (124/162) |
+| Total                                    | 66.08% (719/1088) | 66.00% (852/1291) | 71.66% (134/187) | 77.91% (127/163) |
 ╰------------------------------------------+-------------------+-------------------+------------------+------------------╯
 ```
 
 ⚠️ low coverage rows below 80% line coverage are scripts and one test helper:
 `script/*.s.sol` and `test/helpers/WyHashExposed.sol`. No production contract row
 is below 80% line coverage.
+
+## Workstream F — closed gaps
+
+Every listed uncovered product line now has a BUG / DEAD CODE / GAP verdict:
+
+| File/line from baseline | Verdict | Action |
+|---|---|---|
+| `BuddyNFT.sol:131-132` `getTokenIdByIdentity` | GAP | Added `test_getTokenIdByIdentity_afterHatch` in `CoverageGapClosers.t.sol`. |
+| `BuddyNFT.sol:252-254` owner-not-contract check | DEAD CODE | Deleted. The preceding Custodial-stage guard plus `_update` invariant make `stage == Custodial && owner != address(this)` unreachable in production. |
+| `BuddyRenderer.sol:98` constructor zero-address guard | GAP | Added one negative constructor test per zero arg. |
+| `BuddyRenderer.sol:969` species fallback | BUG | `BuddyRenderer.tokenURI(address buddyNft, ...)` accepts arbitrary `IBuddyNFT` data; added `test_labelFallback_speciesUnknown_reachesFallbackBeforeSpriteRevert`. Invalid species still reverts later in `BuddySpriteData`. |
+| `BuddyRenderer.sol:978` rarity fallback | BUG | Added `test_labelFallback_rarityUnknown` for arbitrary external renderer input. |
+| `BuddyRenderer.sol:988` eye glyph fallback | BUG | Added `test_labelFallback_eyeGlyphQuestionMark` for arbitrary external renderer input. |
+| `BuddyRenderer.sol:1001` eye label fallback | BUG | Added `test_labelFallback_eyeLabelUnknown` for arbitrary external renderer input. |
+| `BuddyRenderer.sol:1013` hat fallback | DEAD CODE | Deleted. Invalid hats are rejected by `spriteData.getHatRow` during SVG rendering before metadata `_hatLabel` can return a fallback. |
+| `BuddyRenderer.sol:1019` stage fallback | DEAD CODE | Deleted. External enum decoding rejects invalid `OwnershipStage` values, and canonical internal callers only produce `Custodial` or `Bonded`. |
+| `BuddyRenderer.sol:1031-1059` XML escape branches | GAP | Added surgical `test_xmlEscape_*` coverage through a renderer test harness. Bond names do not flow into SVG in the current contract; the harness directly covers the internal escape utility. |
+| `BuddyRenderer.sol:1084-1104` JSON escape branches | GAP | Added deterministic bonded-name tests for backslash, `\b`, `\t`, `\n`, `\f`, `\r`, and generic `\u00xx` control escaping. |
+
+Updated product coverage: `BuddyNFT.sol` and `BuddyRenderer.sol` are both 100% line / statement / branch / function coverage.
 
 ## Files intentionally excluded from coverage interpretation
 

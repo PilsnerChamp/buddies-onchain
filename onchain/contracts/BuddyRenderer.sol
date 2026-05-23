@@ -1009,14 +1009,12 @@ contract BuddyRenderer is IBuddyRenderer {
         if (hat == 4) return "Halo";
         if (hat == 5) return "Wizard";
         if (hat == 6) return "Beanie";
-        if (hat == 7) return "Tiny Duck";
-        return "Unknown";
+        return "Tiny Duck";
     }
 
     function _stageLabel(IBuddyNFT.OwnershipStage stage) internal pure returns (string memory) {
         if (stage == IBuddyNFT.OwnershipStage.Custodial) return "Hatched";
-        if (stage == IBuddyNFT.OwnershipStage.Bonded) return "Bonded";
-        return "Unknown";
+        return "Bonded";
     }
 
     function _xmlEscape(string memory value) internal pure returns (string memory) {
