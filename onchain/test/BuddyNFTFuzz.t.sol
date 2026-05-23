@@ -1,0 +1,376 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
+import {Test} from "forge-std/Test.sol";
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+
+contract BuddyNFTFuzzTest is Test {
+    event AttestationSignerUpdated(address indexed signer);
+
+    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
+        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
+
+    bytes16 private constant HEX_SYMBOLS = "0123456789abcdef";
+    bytes1 private constant ASCII_HYPHEN = 0x2d;
+    bytes1 private constant ASCII_DIGIT_0 = 0x30;
+    bytes1 private constant ASCII_DIGIT_4 = 0x34;
+    bytes1 private constant ASCII_DIGIT_8 = 0x38;
+    bytes1 private constant ASCII_DIGIT_9 = 0x39;
+    bytes1 private constant ASCII_LOWER_A = 0x61;
+    bytes1 private constant ASCII_LOWER_B = 0x62;
+    bytes1 private constant ASCII_LOWER_F = 0x66;
+
+    uint256 internal constant SIGNER_KEY = uint256(keccak256("hatch-coverage-fuzz-signer"));
+    uint256 private constant START_TIME = 1_700_000_000;
+
+    string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
+    string internal constant SECOND_UUID = "00000000-0000-4000-8000-000000000002";
+    string internal constant BOND_NAME = "buddy";
+
+    BuddyNFT internal nft;
+    address internal owner;
+    address internal signer;
+    address internal recipient;
+
+    function setUp() public {
+        vm.warp(START_TIME);
+
+        owner = makeAddr("owner");
+        signer = vm.addr(SIGNER_KEY);
+        recipient = makeAddr("recipient");
+
+        nft = _newBondingNft();
+    }
+
+    function testFuzz_hatch_uuidValidation(string memory uuid) public {
+        vm.assume(!_isValidUuidV4(uuid));
+
+        vm.expectRevert(BuddyNFT.InvalidUuidFormat.selector);
+        nft.hatch(uuid);
+    }
+
+    function testFuzz_hatch_validV4UuidSucceeds(bytes16 entropy) public {
+        string memory uuid = _uuidV4(entropy);
+        bytes32 identityHash = keccak256(bytes(uuid));
+        vm.assume(!nft.isMinted(identityHash));
+
+        uint256 previousSupply = nft.totalSupply();
+        uint256 tokenId = nft.hatch(uuid);
+
+        assertEq(tokenId, previousSupply + 1);
+        assertEq(nft.ownerOf(tokenId), address(nft));
+        assertEq(nft.buddyIdentityHash(tokenId), identityHash);
+
+        IBuddyNFT.BuddyTraits memory traits = nft.buddyTraits(tokenId);
+        assertGt(traits.debugging, 0);
+        assertGt(traits.patience, 0);
+        assertGt(traits.chaos, 0);
+        assertGt(traits.wisdom, 0);
+        assertGt(traits.snark, 0);
+    }
+
+    function testFuzz_bond_nameLength(string memory name) public {
+        vm.assume(bytes(name).length <= 256);
+
+        BuddyNFT freshNft = _newBondingNft();
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory attestation) =
+            _hatchAndPrepare(freshNft, TEST_UUID, recipient, _validExpiry());
+        bytes memory signature = _signBondAttestation(freshNft, attestation);
+
+        uint256 nameLength = bytes(name).length;
+        if (nameLength > freshNft.MAX_NAME_LENGTH()) {
+            vm.expectRevert(abi.encodeWithSelector(BuddyNFT.NameTooLong.selector, nameLength));
+            vm.prank(recipient);
+            freshNft.bond(tokenId, name, attestation, signature);
+            return;
+        }
+
+        vm.prank(recipient);
+        freshNft.bond(tokenId, name, attestation, signature);
+
+        assertEq(freshNft.ownerOf(tokenId), recipient);
+        assertEq(uint8(freshNft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Bonded));
+        assertEq(freshNft.buddyName(tokenId), name);
+    }
+
+    function testFuzz_bond_attestationFields(
+        uint256 tokenId,
+        bytes32 identityHash,
+        address attestationRecipient,
+        uint256 expiry,
+        uint8 matchMask
+    ) public {
+        BuddyNFT freshNft = _newBondingNft();
+        (uint256 validTokenId, bytes32 validIdentityHash,) =
+            _hatchAndPrepare(freshNft, TEST_UUID, recipient, _validExpiry());
+
+        bool tokenIdMatches = matchMask & 0x01 != 0;
+        bool identityHashMatches = matchMask & 0x02 != 0;
+        bool recipientMatches = matchMask & 0x04 != 0;
+        bool expiryMatches = matchMask & 0x08 != 0;
+
+        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
+            tokenId: tokenIdMatches ? validTokenId : _differentTokenId(tokenId, validTokenId),
+            identityHash: identityHashMatches ? validIdentityHash : _differentHash(identityHash, validIdentityHash),
+            recipient: recipientMatches ? recipient : _differentAddress(attestationRecipient, recipient),
+            expiry: expiryMatches ? _validExpiry() : _expiredExpiry(expiry)
+        });
+        bytes memory signature = _signBondAttestation(freshNft, attestation);
+
+        if (!tokenIdMatches || !identityHashMatches || !recipientMatches) {
+            vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
+        } else if (!expiryMatches) {
+            vm.expectRevert(BuddyNFT.AttestationExpired.selector);
+        }
+
+        vm.prank(recipient);
+        freshNft.bond(validTokenId, BOND_NAME, attestation, signature);
+
+        if (tokenIdMatches && identityHashMatches && recipientMatches && expiryMatches) {
+            assertEq(freshNft.ownerOf(validTokenId), recipient);
+            assertEq(freshNft.buddyName(validTokenId), BOND_NAME);
+        }
+    }
+
+    function testFuzz_setAttestationSigner_accessControl(address caller, address newSigner, bool useOwner) public {
+        address effectiveCaller = useOwner ? owner : caller;
+        vm.assume(effectiveCaller != address(0));
+
+        if (effectiveCaller != owner) {
+            vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, effectiveCaller));
+            vm.prank(effectiveCaller);
+            nft.setAttestationSigner(newSigner);
+            return;
+        }
+
+        vm.assume(newSigner != address(0));
+
+        vm.expectEmit(true, false, false, true, address(nft));
+        emit AttestationSignerUpdated(newSigner);
+
+        vm.prank(owner);
+        nft.setAttestationSigner(newSigner);
+
+        assertEq(nft.attestationSigner(), newSigner);
+    }
+
+    function testFuzz_soulbound_transfersRevert_custodial(address caller, address from, address to, uint256 tokenIdSeed)
+        public
+    {
+        BuddyNFT freshNft = _newBondingNft();
+        freshNft.hatch(TEST_UUID);
+        freshNft.hatch(SECOND_UUID);
+
+        uint256 tokenId = bound(tokenIdSeed, 1, 2);
+        vm.assume(caller != address(0));
+        vm.assume(caller != address(freshNft));
+        vm.assume(to != address(0));
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721InsufficientApproval.selector, caller, tokenId));
+        vm.prank(caller);
+        freshNft.transferFrom(from, to, tokenId);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721InsufficientApproval.selector, caller, tokenId));
+        vm.prank(caller);
+        freshNft.safeTransferFrom(from, to, tokenId);
+    }
+
+    function testFuzz_soulbound_transfersRevert_bonded(address caller, address from, address to, uint256 tokenIdSeed)
+        public
+    {
+        BuddyNFT freshNft = _newBondingNft();
+        _hatchAndBond(freshNft, TEST_UUID, recipient);
+        _hatchAndBond(freshNft, SECOND_UUID, recipient);
+
+        uint256 tokenId = bound(tokenIdSeed, 1, 2);
+        vm.assume(caller != address(0));
+        vm.assume(to != address(0));
+
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(caller);
+        freshNft.transferFrom(from, to, tokenId);
+
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(caller);
+        freshNft.safeTransferFrom(from, to, tokenId);
+    }
+
+    /// @dev Deterministic case: caller is the bonded owner. OZ's _checkAuthorized passes
+    ///      (msg.sender == ownerOf), so revert MUST originate in the contract's _update
+    ///      override — random fuzz almost never collides caller == recipient.
+    function test_soulbound_bonded_callerIsOwner_revertsViaUpdateOverride() public {
+        BuddyNFT freshNft = _newBondingNft();
+        _hatchAndBond(freshNft, TEST_UUID, recipient);
+
+        address dest = makeAddr("dest");
+
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(recipient);
+        freshNft.transferFrom(recipient, dest, 1);
+
+        vm.expectRevert(BuddyNFT.Soulbound.selector);
+        vm.prank(recipient);
+        freshNft.safeTransferFrom(recipient, dest, 1);
+    }
+
+    function _newBondingNft() internal returns (BuddyNFT freshNft) {
+        freshNft = new BuddyNFT(owner, address(0));
+
+        vm.startPrank(owner);
+        freshNft.setAttestationSigner(signer);
+        freshNft.enableBonding();
+        vm.stopPrank();
+    }
+
+    function _hatchAndPrepare(BuddyNFT target, string memory uuid, address bondRecipient, uint64 expiry)
+        internal
+        returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory attestation)
+    {
+        tokenId = target.hatch(uuid);
+        identityHash = keccak256(bytes(uuid));
+        attestation = BuddyNFT.BondAttestation({
+            tokenId: tokenId, identityHash: identityHash, recipient: bondRecipient, expiry: expiry
+        });
+    }
+
+    function _hatchAndBond(BuddyNFT target, string memory uuid, address bondRecipient)
+        internal
+        returns (uint256 tokenId)
+    {
+        BuddyNFT.BondAttestation memory attestation;
+        (tokenId,, attestation) = _hatchAndPrepare(target, uuid, bondRecipient, _validExpiry());
+        bytes memory signature = _signBondAttestation(target, attestation);
+
+        vm.prank(bondRecipient);
+        target.bond(tokenId, BOND_NAME, attestation, signature);
+    }
+
+    function _signBondAttestation(BuddyNFT target, BuddyNFT.BondAttestation memory attestation)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = MessageHashUtils.toTypedDataHash(_domainSeparator(target), _hashAttestation(attestation));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(SIGNER_KEY, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _domainSeparator(BuddyNFT target) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("BuddyNFT"),
+                keccak256("1"),
+                block.chainid,
+                address(target)
+            )
+        );
+    }
+
+    function _hashAttestation(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                BOND_ATTESTATION_TYPEHASH,
+                attestation.tokenId,
+                attestation.identityHash,
+                attestation.recipient,
+                attestation.expiry
+            )
+        );
+    }
+
+    function _validExpiry() internal view returns (uint64) {
+        return uint64(block.timestamp + 1 hours);
+    }
+
+    function _expiredExpiry(uint256 seed) internal view returns (uint64) {
+        return uint64(bound(seed, 0, block.timestamp - 1));
+    }
+
+    function _differentTokenId(uint256 candidate, uint256 validTokenId) internal pure returns (uint256) {
+        if (candidate != validTokenId) {
+            return candidate;
+        }
+        return validTokenId + 1;
+    }
+
+    function _differentHash(bytes32 candidate, bytes32 validHash) internal pure returns (bytes32) {
+        if (candidate != validHash) {
+            return candidate;
+        }
+        return bytes32(uint256(validHash) ^ 1);
+    }
+
+    function _differentAddress(address candidate, address validAddress) internal pure returns (address) {
+        if (candidate != validAddress) {
+            return candidate;
+        }
+        return address(uint160(validAddress) ^ 1);
+    }
+
+    function _uuidV4(bytes16 entropy) internal pure returns (string memory) {
+        bytes memory raw = abi.encodePacked(entropy);
+        raw[6] = bytes1((uint8(raw[6]) & 0x0f) | 0x40);
+        raw[8] = bytes1((uint8(raw[8]) & 0x3f) | 0x80);
+
+        bytes memory uuid = new bytes(36);
+        uint256 out;
+        for (uint256 i = 0; i < 16; ++i) {
+            if (i == 4 || i == 6 || i == 8 || i == 10) {
+                uuid[out++] = ASCII_HYPHEN;
+            }
+
+            uint8 value = uint8(raw[i]);
+            uuid[out++] = HEX_SYMBOLS[value >> 4];
+            uuid[out++] = HEX_SYMBOLS[value & 0x0f];
+        }
+
+        return string(uuid);
+    }
+
+    function _isValidUuidV4(string memory uuid) internal pure returns (bool) {
+        bytes memory uuidBytes = bytes(uuid);
+        if (uuidBytes.length != 36) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < 36; ++i) {
+            bytes1 char = uuidBytes[i];
+
+            if (i == 8 || i == 13 || i == 18 || i == 23) {
+                if (char != ASCII_HYPHEN) {
+                    return false;
+                }
+                continue;
+            }
+
+            if (i == 14) {
+                if (char != ASCII_DIGIT_4) {
+                    return false;
+                }
+                continue;
+            }
+
+            if (i == 19) {
+                if (char != ASCII_DIGIT_8 && char != ASCII_DIGIT_9 && char != ASCII_LOWER_A && char != ASCII_LOWER_B) {
+                    return false;
+                }
+                continue;
+            }
+
+            bool isDigit = char >= ASCII_DIGIT_0 && char <= ASCII_DIGIT_9;
+            bool isLowerHex = char >= ASCII_LOWER_A && char <= ASCII_LOWER_F;
+            if (!isDigit && !isLowerHex) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
