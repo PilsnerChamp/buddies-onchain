@@ -476,7 +476,7 @@ Tries `applyShift("X                ", 100, ...)` — shift is way too large. As
 
 ### 7.5 Visual smoke (`onchain/tools/renderer/renderer-card.sh`)
 
-Not a pass/fail gate — outputs SVG for human inspection. Useful for spotting visual regressions the structural assertions miss (font kerning shifts, accidental color changes, viewBox math errors). Committed byte-deterministic snapshots live at `onchain/contract-data/reference-cards/` for side-by-side comparison.
+Not a pass/fail gate — outputs SVG for human inspection. Useful for spotting visual regressions the structural assertions miss (font kerning shifts, accidental color changes, viewBox math errors). Committed byte-deterministic snapshots live at `onchain/contract-data/reference-cards/` as a human-eyeball showroom for side-by-side comparison.
 
 Available presets:
 
@@ -505,4 +505,4 @@ The script overwrites its output dir on each run, so render one preset at a time
 - Diagnostic: `onchain/contract-data/sprites/tools/sprite-audit.mjs`
 - Generated runtime bytes: `onchain/contracts/BuddySpriteData.sol`
 - Renderer integration: `onchain/contracts/BuddyRenderer.sol::_spriteSurface`
-- Reference cards: `onchain/contract-data/reference-cards/`
+- Reference cards (showroom): `onchain/contract-data/reference-cards/`

@@ -19,6 +19,7 @@ fs_permissions = [
     { access = "read", path = "contract-data/fonts/chrome" },
     { access = "read", path = "contract-data/fonts/sprite" },
     { access = "read", path = "deployments" },
+    { access = "read", path = "contract-data/hatch-coverage" },
 ]
 
 [lint]

@@ -51,44 +51,7 @@ contract BuddyRendererCircleDriftTest is Test {
         mockBuddy = new MockBuddyNFTForRenderer();
     }
 
-    // --- 1. id="cN" on each circle --------------------------------------------------
-
-    function test_tokenURI_emitsThreeBackgroundCirclesWithIdAttributes() public {
-        string memory svg = _renderSvg(1, bytes32(uint256(0xC0DE1D00)));
-
-        assertTrue(_contains(svg, 'id="c0"'), "missing id=\"c0\"");
-        assertTrue(_contains(svg, 'id="c1"'), "missing id=\"c1\"");
-        assertTrue(_contains(svg, 'id="c2"'), "missing id=\"c2\"");
-        assertEq(_countOccurrences(svg, "<circle"), 3, "expected exactly 3 <circle> elements");
-        assertEq(_countOccurrences(svg, 'id="c'), 3, "expected exactly 3 circle id attributes");
-    }
-
-    // --- 2. @keyframes driftN present inside the <style> block ----------------------
-
-    function test_tokenURI_emitsDriftKeyframesInStyleBlock() public {
-        string memory svg = _renderSvg(1, bytes32(uint256(0xDEADBEEF)));
-        string memory styleContent = _extractStyleBlock(svg);
-
-        assertTrue(_contains(styleContent, "@keyframes drift0"), "missing @keyframes drift0");
-        assertTrue(_contains(styleContent, "@keyframes drift1"), "missing @keyframes drift1");
-        assertTrue(_contains(styleContent, "@keyframes drift2"), "missing @keyframes drift2");
-    }
-
-    // --- 3. Per-circle drift animation rules ---------------------------------------
-
-    function test_tokenURI_emitsPerCircleDriftAnimationRules() public {
-        string memory svg = _renderSvg(1, bytes32(uint256(0xCAFE00D1)));
-
-        assertTrue(_contains(svg, "#c0{animation:drift0 "), "missing #c0 rule");
-        assertTrue(_contains(svg, "#c1{animation:drift1 "), "missing #c1 rule");
-        assertTrue(_contains(svg, "#c2{animation:drift2 "), "missing #c2 rule");
-
-        // Each rule must carry ease-in-out and a negative animation-delay.
-        assertEq(_countOccurrences(svg, "ease-in-out"), 3, "expected 3 ease-in-out timing functions");
-        assertEq(_countOccurrences(svg, "animation-delay:-"), 3, "expected 3 negative animation-delay declarations");
-    }
-
-    // --- 4. Only slow-pool primes appear as drift periods ---------------------------
+    // --- 1. Only slow-pool primes appear as drift periods ---------------------------
 
     function test_tokenURI_driftPeriodsComeFromSlowPoolOnly() public {
         // Spray 20 distinct identity hashes; every emitted (period) value must lie in slowPool.
@@ -102,7 +65,7 @@ contract BuddyRendererCircleDriftTest is Test {
         }
     }
 
-    // --- 5. Pairwise-distinct periods per token (sampling without replacement) ------
+    // --- 2. Pairwise-distinct periods per token (sampling without replacement) ------
 
     function test_tokenURI_driftPeriodsAreDistinctPerToken() public {
         for (uint256 salt = 1; salt <= 20; ++salt) {
@@ -115,7 +78,7 @@ contract BuddyRendererCircleDriftTest is Test {
         }
     }
 
-    // --- 6. Drift triples vary across tokens ---------------------------------------
+    // --- 3. Drift triples vary across tokens ---------------------------------------
 
     function test_tokenURI_driftVariesAcrossTokens() public {
         string memory svgA = _renderSvg(1, keccak256("drift-cross-token-a"));
@@ -133,7 +96,7 @@ contract BuddyRendererCircleDriftTest is Test {
         assertTrue(differs, "two distinct identity hashes produced identical drift triples");
     }
 
-    // --- 7. cx/cy remain as attributes on <circle> (degradation path) --------------
+    // --- 4. cx/cy remain as attributes on <circle> (degradation path) --------------
 
     function test_tokenURI_circleCxCyStayAsAttributes() public {
         string memory svg = _renderSvg(1, keccak256("degradation-cx-cy"));
@@ -155,7 +118,7 @@ contract BuddyRendererCircleDriftTest is Test {
         );
     }
 
-    // --- 8. delay < period per the (mix >> 8) % period formula ----------------------
+    // --- 5. delay < period per the (mix >> 8) % period formula ----------------------
 
     function test_tokenURI_driftDelayLessThanPeriod() public {
         for (uint256 salt = 1; salt <= 10; ++salt) {
@@ -168,7 +131,7 @@ contract BuddyRendererCircleDriftTest is Test {
         }
     }
 
-    // --- 9. Bytecode-layer slow-pool-only enforcement -------------------------------
+    // --- 6. Bytecode-layer slow-pool-only enforcement -------------------------------
     //
     // The DRIFT_PRIMES constant is the single source of prime truth. The runtime
     // bytecode must contain the slow-pool byte run (1D1F25292B2F353B3D4347) and must
@@ -192,7 +155,7 @@ contract BuddyRendererCircleDriftTest is Test {
         );
     }
 
-    // --- 10. Motion grammar invariant — exactly two timing functions ----------------
+    // --- 7. Motion grammar invariant — exactly two timing functions ----------------
 
     function test_tokenURI_motionGrammarInvariant_exactlyTwoTimingFunctions() public {
         string memory svg = _renderSvg(1, keccak256("motion-grammar"));
@@ -226,7 +189,7 @@ contract BuddyRendererCircleDriftTest is Test {
         assertEq(_countOccurrences(svg, " ease-out "), 0, "ease-out timing function is forbidden");
     }
 
-    // --- 11a. Python-parity fixture — pinned-value regression guard -----------------
+    // --- 8. Python-parity fixture — pinned-value regression guard -----------------
     //
     // The earlier drift tests verify invariants (slow pool, distinct, no third grammar,
     // etc.) but an implementation that satisfies every invariant could still drift from
@@ -282,21 +245,6 @@ contract BuddyRendererCircleDriftTest is Test {
         assertEq(d1, 28, "c1 delay mismatch (Python parity fixture)");
         assertEq(p2, 59, "c2 period mismatch (Python parity fixture)");
         assertEq(d2, 28, "c2 delay mismatch (Python parity fixture)");
-    }
-
-    // --- 11. Regression guard — drift rules inside the <style> block ---------------
-
-    function test_tokenURI_driftRulesLiveInsideStyleBlock() public {
-        string memory svg = _renderSvg(1, keccak256("drift-inside-style"));
-        string memory styleContent = _extractStyleBlock(svg);
-
-        assertTrue(_contains(styleContent, "#c0{animation:drift0"), "drift rule #c0 must live inside <style>");
-        assertTrue(_contains(styleContent, "#c1{animation:drift1"), "drift rule #c1 must live inside <style>");
-        assertTrue(_contains(styleContent, "#c2{animation:drift2"), "drift rule #c2 must live inside <style>");
-
-        // There must be exactly one <style> block — no stray <defs>-scoped style shims.
-        assertEq(_countOccurrences(svg, "<style>"), 1);
-        assertEq(_countOccurrences(svg, "</style>"), 1);
     }
 
     // =============================================================================
@@ -388,24 +336,6 @@ contract BuddyRendererCircleDriftTest is Test {
             require(digit >= 0x30 && digit <= 0x39, "non-digit in uint span");
             value = value * 10 + (digit - 0x30);
         }
-    }
-
-    function _extractStyleBlock(string memory svg) internal pure returns (string memory) {
-        bytes memory svgBytes = bytes(svg);
-        bytes memory openMarker = bytes("<style>");
-        bytes memory closeMarker = bytes("</style>");
-
-        uint256 start = _indexOf(svgBytes, openMarker, 0);
-        require(start != type(uint256).max, "no <style> open");
-        uint256 contentStart = start + openMarker.length;
-        uint256 closeAt = _indexOf(svgBytes, closeMarker, contentStart);
-        require(closeAt != type(uint256).max, "no </style> close");
-
-        bytes memory slice = new bytes(closeAt - contentStart);
-        for (uint256 i = 0; i < slice.length; ++i) {
-            slice[i] = svgBytes[contentStart + i];
-        }
-        return string(slice);
     }
 
     function _afterPrefix(string memory value, string memory prefix) internal pure returns (string memory) {

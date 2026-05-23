@@ -71,7 +71,7 @@ Pinned fixtures:
 - `onchain/test/vectors/wyhash-vectors.json`
 - `onchain/test/vectors/mulberry32-vectors.json`
 
-Rendered visual references: `onchain/contract-data/reference-cards/`.
+Rendered visual references (human-eyeball showroom): `onchain/contract-data/reference-cards/`.
 
 Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → seed32 `2990586173` → epic robot, eye `×`, no hat, not shiny, stats `DEBUGGING=57 PATIENCE=49 CHAOS=33 WISDOM=68 SNARK=100`.
 

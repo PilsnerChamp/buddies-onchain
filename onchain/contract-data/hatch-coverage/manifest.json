@@ -1,0 +1,376 @@
+[
+  {
+    "uuid": "00000000-0000-4000-8000-000000000001",
+    "tokenId": 1,
+    "seed": 712111263,
+    "traits": {
+      "species": 7,
+      "rarity": 0,
+      "eyes": 4,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 11,
+      "patience": 15,
+      "chaos": 36,
+      "wisdom": 1,
+      "snark": 77
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000002",
+    "tokenId": 2,
+    "seed": 2763609465,
+    "traits": {
+      "species": 4,
+      "rarity": 1,
+      "eyes": 5,
+      "hat": 1,
+      "shiny": false,
+      "debugging": 37,
+      "patience": 31,
+      "chaos": 49,
+      "wisdom": 91,
+      "snark": 9
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000003",
+    "tokenId": 3,
+    "seed": 2916736361,
+    "traits": {
+      "species": 14,
+      "rarity": 2,
+      "eyes": 2,
+      "hat": 2,
+      "shiny": false,
+      "debugging": 91,
+      "patience": 49,
+      "chaos": 28,
+      "wisdom": 27,
+      "snark": 27
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000004",
+    "tokenId": 4,
+    "seed": 2646957491,
+    "traits": {
+      "species": 1,
+      "rarity": 1,
+      "eyes": 4,
+      "hat": 1,
+      "shiny": false,
+      "debugging": 7,
+      "patience": 92,
+      "chaos": 49,
+      "wisdom": 53,
+      "snark": 23
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000005",
+    "tokenId": 5,
+    "seed": 4139114853,
+    "traits": {
+      "species": 9,
+      "rarity": 0,
+      "eyes": 5,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 43,
+      "patience": 56,
+      "chaos": 8,
+      "wisdom": 16,
+      "snark": 8
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000006",
+    "tokenId": 6,
+    "seed": 3474663265,
+    "traits": {
+      "species": 8,
+      "rarity": 0,
+      "eyes": 1,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 28,
+      "patience": 10,
+      "chaos": 19,
+      "wisdom": 60,
+      "snark": 1
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000007",
+    "tokenId": 7,
+    "seed": 1651685501,
+    "traits": {
+      "species": 1,
+      "rarity": 4,
+      "eyes": 4,
+      "hat": 7,
+      "shiny": false,
+      "debugging": 74,
+      "patience": 42,
+      "chaos": 80,
+      "wisdom": 86,
+      "snark": 100
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000009",
+    "tokenId": 8,
+    "seed": 345966576,
+    "traits": {
+      "species": 17,
+      "rarity": 1,
+      "eyes": 0,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 74,
+      "patience": 17,
+      "chaos": 34,
+      "wisdom": 37,
+      "snark": 35
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000000a",
+    "tokenId": 9,
+    "seed": 2626836456,
+    "traits": {
+      "species": 6,
+      "rarity": 3,
+      "eyes": 5,
+      "hat": 3,
+      "shiny": false,
+      "debugging": 72,
+      "patience": 37,
+      "chaos": 100,
+      "wisdom": 37,
+      "snark": 42
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000000b",
+    "tokenId": 10,
+    "seed": 3428576806,
+    "traits": {
+      "species": 9,
+      "rarity": 0,
+      "eyes": 3,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 19,
+      "patience": 80,
+      "chaos": 1,
+      "wisdom": 11,
+      "snark": 7
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000000c",
+    "tokenId": 11,
+    "seed": 4040155800,
+    "traits": {
+      "species": 0,
+      "rarity": 3,
+      "eyes": 4,
+      "hat": 6,
+      "shiny": false,
+      "debugging": 33,
+      "patience": 100,
+      "chaos": 54,
+      "wisdom": 43,
+      "snark": 72
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000000e",
+    "tokenId": 12,
+    "seed": 362742076,
+    "traits": {
+      "species": 5,
+      "rarity": 0,
+      "eyes": 3,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 3,
+      "patience": 7,
+      "chaos": 38,
+      "wisdom": 29,
+      "snark": 63
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000000f",
+    "tokenId": 13,
+    "seed": 1632669274,
+    "traits": {
+      "species": 8,
+      "rarity": 1,
+      "eyes": 1,
+      "hat": 4,
+      "shiny": false,
+      "debugging": 7,
+      "patience": 70,
+      "chaos": 18,
+      "wisdom": 35,
+      "snark": 49
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000010",
+    "tokenId": 14,
+    "seed": 3608002285,
+    "traits": {
+      "species": 15,
+      "rarity": 2,
+      "eyes": 5,
+      "hat": 5,
+      "shiny": false,
+      "debugging": 61,
+      "patience": 44,
+      "chaos": 32,
+      "wisdom": 95,
+      "snark": 24
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000011",
+    "tokenId": 15,
+    "seed": 3839588727,
+    "traits": {
+      "species": 12,
+      "rarity": 0,
+      "eyes": 5,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 3,
+      "patience": 35,
+      "chaos": 13,
+      "wisdom": 77,
+      "snark": 12
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000012",
+    "tokenId": 16,
+    "seed": 634810700,
+    "traits": {
+      "species": 11,
+      "rarity": 0,
+      "eyes": 5,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 10,
+      "patience": 14,
+      "chaos": 22,
+      "wisdom": 6,
+      "snark": 57
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000015",
+    "tokenId": 17,
+    "seed": 2740672101,
+    "traits": {
+      "species": 2,
+      "rarity": 0,
+      "eyes": 0,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 8,
+      "patience": 15,
+      "chaos": 82,
+      "wisdom": 5,
+      "snark": 38
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000016",
+    "tokenId": 18,
+    "seed": 3617496901,
+    "traits": {
+      "species": 10,
+      "rarity": 1,
+      "eyes": 1,
+      "hat": 5,
+      "shiny": false,
+      "debugging": 12,
+      "patience": 54,
+      "chaos": 77,
+      "wisdom": 25,
+      "snark": 35
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000001a",
+    "tokenId": 19,
+    "seed": 3213852325,
+    "traits": {
+      "species": 16,
+      "rarity": 0,
+      "eyes": 0,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 5,
+      "patience": 44,
+      "chaos": 65,
+      "wisdom": 7,
+      "snark": 6
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-00000000001d",
+    "tokenId": 20,
+    "seed": 2435724470,
+    "traits": {
+      "species": 3,
+      "rarity": 0,
+      "eyes": 3,
+      "hat": 0,
+      "shiny": false,
+      "debugging": 24,
+      "patience": 11,
+      "chaos": 3,
+      "wisdom": 35,
+      "snark": 60
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-000000000026",
+    "tokenId": 21,
+    "seed": 247976623,
+    "traits": {
+      "species": 13,
+      "rarity": 1,
+      "eyes": 4,
+      "hat": 6,
+      "shiny": false,
+      "debugging": 50,
+      "patience": 7,
+      "chaos": 28,
+      "wisdom": 50,
+      "snark": 74
+    }
+  },
+  {
+    "uuid": "00000000-0000-4000-8000-0000000000f1",
+    "tokenId": 22,
+    "seed": 170489689,
+    "traits": {
+      "species": 5,
+      "rarity": 0,
+      "eyes": 4,
+      "hat": 0,
+      "shiny": true,
+      "debugging": 16,
+      "patience": 27,
+      "chaos": 3,
+      "wisdom": 75,
+      "snark": 35
+    }
+  }
+]

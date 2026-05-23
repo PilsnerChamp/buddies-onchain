@@ -1,9 +1,10 @@
 # Canonical Reference Cards
 
-**Status:** Reference (as-built)
+**Status:** Showroom (curated combos for human review — not the regression gate)
 **Mirrors:** `onchain/script/GenerateReferenceCards.s.sol`, `onchain/tools/renderer/regen-reference-cards.sh`
+**Gate:** `../hatch-coverage/README.md` is the trait-derivation and structural-rendering regression gate.
 
-Committed, byte-deterministic SVG output from `BuddyRenderer.tokenURI`, covering one card per rarity tier with alternating hat / hatless state. Permanent visual-truth snapshots that other docs, skills, and surfaces can reference instead of regenerating scratch artifacts on every check.
+Committed, byte-deterministic SVG output from `BuddyRenderer.tokenURI`, covering one card per rarity tier with alternating hat / hatless state. Curated visual snapshots that other docs, skills, and surfaces can reference without treating this suite as the main drift gate.
 
 ## Suite
 
@@ -32,10 +33,10 @@ Runs `forge script` in the in-memory EVM (no Anvil, no deploy), decodes each `to
 
 ## Regeneration discipline
 
-Regenerate and commit the diff whenever any of the following change:
+Regenerate and commit the diff when the visual change matters for human review and any of the following changed:
 
 - `onchain/contracts/BuddyRenderer.sol` (or anything it calls)
 - `onchain/contracts/BuddySpriteData.sol` (regenerated from `onchain/contract-data/sprites/buddies-source.mjs`)
 - Font artifacts under `onchain/contract-data/fonts/`
 
-A non-trivial diff on a commit that did not intend a visual change is the signal that a regression landed and needs human review. Treat this suite as the renderer's visual contract — the PR description should explain any intentional visual shift.
+A non-trivial diff on a commit that did not intend a visual change still needs human review. The regression gate is `../hatch-coverage/`; use this suite as the curated showroom for explaining intentional visual shifts.

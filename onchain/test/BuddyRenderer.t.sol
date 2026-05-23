@@ -7,7 +7,6 @@ import {Test, stdJson} from "forge-std/Test.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 
 import {BuddyFont} from "../contracts/BuddyFont.sol";
-import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
 import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
@@ -29,8 +28,6 @@ contract BuddyRendererTest is Test {
     BuddySpriteFont internal buddySpriteFont;
     BuddyRenderer internal renderer;
     MockBuddyNFTForRenderer internal mockBuddy;
-    BuddyNFT internal liveBuddy;
-    address internal owner;
 
     function setUp() public {
         spriteData = new BuddySpriteData();
@@ -38,9 +35,6 @@ contract BuddyRendererTest is Test {
         buddySpriteFont = new BuddySpriteFont(vm.readFileBinary("contract-data/fonts/sprite/BuddySpriteFont.woff2"));
         renderer = new BuddyRenderer(address(spriteData), address(buddyFont), address(buddySpriteFont));
         mockBuddy = new MockBuddyNFTForRenderer();
-
-        owner = makeAddr("owner");
-        liveBuddy = new BuddyNFT(owner, address(0));
     }
 
     function test_tokenURI_metadataStructureAndSvgPrefixes() public {
@@ -181,34 +175,6 @@ contract BuddyRendererTest is Test {
         assertTrue(_contains(svg, '<text class="sprite" x="21" y="225"'));
         assertTrue(_contains(svg, '<text class="sprite" x="21" y="275"'));
         assertTrue(_contains(svg, '<text class="sprite" x="21" y="325"'));
-    }
-
-    function test_tokenURI_rendersEachRarityTier() public {
-        IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
-        string[5] memory labels = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
-
-        for (uint8 rarity; rarity < labels.length; ++rarity) {
-            traits.rarity = rarity;
-            traits.hat = rarity == 0 ? 0 : 5;
-            _setMockToken(rarity + 1, traits, "", bytes32(uint256(rarity + 1)), IBuddyNFT.OwnershipStage.Custodial);
-
-            string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), rarity + 1));
-
-            assertEq(json.readString(".attributes[1].value"), labels[rarity]);
-        }
-    }
-
-    function test_tokenURI_eyeSubstitutionForAllSixGlyphs() public {
-        IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
-
-        for (uint8 eyes; eyes < 6; ++eyes) {
-            traits.eyes = eyes;
-            _setMockToken(1, traits, "", bytes32(uint256(0x100 + eyes)), IBuddyNFT.OwnershipStage.Custodial);
-
-            string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
-            assertTrue(_contains(svg, _eyeGlyph(eyes)));
-            assertFalse(_contains(svg, "<(0 )___"));
-        }
     }
 
     function test_tokenURI_escapesAdversarialNamesInJsonAndSvg() public {
@@ -555,43 +521,6 @@ contract BuddyRendererTest is Test {
         assertFalse(_contains(_decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1)), "url(#shine)"));
     }
 
-    function test_tokenURI_speciesCoverage_all18SpeciesRender() public {
-        IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
-
-        for (uint8 species; species < 18; ++species) {
-            traits.species = species;
-            _setMockToken(
-                species + 1,
-                traits,
-                "",
-                keccak256(abi.encodePacked("species", species)),
-                IBuddyNFT.OwnershipStage.Custodial
-            );
-
-            string memory tokenUri = renderer.tokenURI(address(mockBuddy), species + 1);
-            string memory json = _decodeJson(tokenUri);
-            assertEq(json.readString(".attributes[0].value"), _speciesLabel(species));
-            assertTrue(_startsWith(json.readString(".image"), SVG_PREFIX));
-        }
-    }
-
-    function test_tokenURI_integrationWithRealBuddyNFT() public {
-        vm.prank(owner);
-        liveBuddy.setRenderer(address(renderer));
-
-        uint256 tokenId = liveBuddy.hatch(TEST_UUID);
-        string memory tokenUri = liveBuddy.tokenURI(tokenId);
-        string memory json = _decodeJson(tokenUri);
-        string memory image = json.readString(".image");
-        string memory svg = _decodeSvg(image);
-
-        assertTrue(_startsWith(tokenUri, JSON_PREFIX));
-        assertEq(json.readString(".name"), "Buddy Onchain #1");
-        assertTrue(_startsWith(image, SVG_PREFIX));
-        assertGt(bytes(svg).length, 0);
-        assertTrue(_contains(svg, "<svg"));
-    }
-
     function _defaultTraits() internal pure returns (IBuddyNFT.BuddyTraits memory traits) {
         traits.species = 0;
         traits.rarity = 1;
@@ -759,35 +688,4 @@ contract BuddyRendererTest is Test {
         }
     }
 
-    function _eyeGlyph(uint8 eyes) internal pure returns (string memory) {
-        if (eyes == 0) return unicode"·";
-        if (eyes == 1) return unicode"✦";
-        if (eyes == 2) return unicode"×";
-        if (eyes == 3) return unicode"◉";
-        if (eyes == 4) return "@";
-        if (eyes == 5) return unicode"°";
-        revert("invalid eye index");
-    }
-
-    function _speciesLabel(uint8 species) internal pure returns (string memory) {
-        if (species == 0) return "Duck";
-        if (species == 1) return "Goose";
-        if (species == 2) return "Blob";
-        if (species == 3) return "Cat";
-        if (species == 4) return "Dragon";
-        if (species == 5) return "Octopus";
-        if (species == 6) return "Owl";
-        if (species == 7) return "Penguin";
-        if (species == 8) return "Turtle";
-        if (species == 9) return "Snail";
-        if (species == 10) return "Ghost";
-        if (species == 11) return "Axolotl";
-        if (species == 12) return "Capybara";
-        if (species == 13) return "Cactus";
-        if (species == 14) return "Robot";
-        if (species == 15) return "Rabbit";
-        if (species == 16) return "Mushroom";
-        if (species == 17) return "Chonk";
-        revert("invalid species index");
-    }
 }

@@ -261,7 +261,7 @@ cast call <BuddyNFT> 'tokenURI(uint256)(string)' <id> --rpc-url <url> \
 - Sprite data: `onchain/contracts/BuddySpriteData.sol`
 - Font contracts: `onchain/contracts/BuddyFont.sol`, `onchain/contracts/BuddySpriteFont.sol`
 - Sprite source + generator: `onchain/contract-data/sprites/`
-- Reference cards (visual smoke): `onchain/contract-data/reference-cards/`
+- Reference cards (human-eyeball showroom; not the gate): `onchain/contract-data/reference-cards/`
 - Tests: `onchain/test/BuddyRenderer*.t.sol`, `onchain/test/BuddySpriteData.t.sol`
 
 See `docs/onchain/contract.md` for the hatch flow and `docs/onchain/derivation.md` for trait derivation.

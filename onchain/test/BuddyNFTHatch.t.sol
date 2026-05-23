@@ -314,49 +314,6 @@ contract BuddyNFTHatchTest is Test {
     }
 
     // -------------------------------------------------------------------------
-    // Vector integration (WyHash parity)
-    // -------------------------------------------------------------------------
-
-    function test_hatch_vectorSample_matchesStoredSeedAndTraits() public {
-        // Hardcoded from test/vectors/wyhash-vectors.json (category: "real-uuid")
-        string[3] memory uuids = [
-            "00000000-0000-4000-8000-000000000001",
-            "00000000-0000-4000-8000-000000000002",
-            "00000000-0000-4000-8000-000000000003"
-        ];
-        uint32[3] memory expectedSeeds = [
-            uint32(712111263),
-            uint32(2763609465),
-            uint32(2916736361)
-        ];
-
-        for (uint256 i = 0; i < 3; i++) {
-            uint256 tokenId = nft.hatch(uuids[i]);
-
-            // Seed parity
-            assertEq(nft.buddyPrngSeed(tokenId), expectedSeeds[i]);
-
-            // Traits parity — derive from expected seed and compare
-            (
-                uint8 species, uint8 rarity, uint8 eyes, uint8 hat, bool shiny,
-                uint8 debugging, uint8 patience, uint8 chaos, uint8 wisdom, uint8 snark
-            ) = Mulberry32.deriveTraits(expectedSeeds[i]);
-
-            IBuddyNFT.BuddyTraits memory traits = nft.buddyTraits(tokenId);
-            assertEq(traits.species, species);
-            assertEq(traits.rarity, rarity);
-            assertEq(traits.eyes, eyes);
-            assertEq(traits.hat, hat);
-            assertEq(traits.shiny, shiny);
-            assertEq(traits.debugging, debugging);
-            assertEq(traits.patience, patience);
-            assertEq(traits.chaos, chaos);
-            assertEq(traits.wisdom, wisdom);
-            assertEq(traits.snark, snark);
-        }
-    }
-
-    // -------------------------------------------------------------------------
     // tokenURI integration
     // -------------------------------------------------------------------------
 
