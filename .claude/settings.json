@@ -1,10 +1,8 @@
 {  
   "autoMemoryEnabled": false,
   "env": {
-    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",   
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "autoMemoryEnabled": "false",
-    "autoDreamEnabled": "true",
     "CLAUDE_CODE_NO_FLICKER": "true"
   },
   "permissions": {
