@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
@@ -13,12 +14,14 @@ import {BuddyRenderer} from "../../contracts/BuddyRenderer.sol";
 ///         SVG vs local renderer fixture" item: the hermetic suite proves the renderer is
 ///         deterministic from the uuid hash, but it cannot prove the DEPLOYED bytecode
 ///         equals today's source. This forks the live deploy, reads tokenURI(1) from the
-///         deployed renderer, then swaps in a renderer freshly compiled from HEAD (pointed
-///         at the data contracts the live renderer itself holds, read from its public
-///         immutables) and reads tokenURI(1) again. Byte-equal ⇒ the deployed renderer
-///         matches HEAD source for token #1's exercised render path (its traits + stage);
-///         full trait-space equivalence stays the hermetic suite's job. No uuid needed:
-///         token #1's traits already live in the deployed BuddyNFT.
+///         deployed renderer, gates live `setRenderer` access control with an
+///         OwnableUnauthorizedAccount revert from a non-owner, then swaps in a renderer
+///         freshly compiled from HEAD (pointed at the data contracts the live renderer
+///         itself holds, read from its public immutables) and reads tokenURI(1) again.
+///         Byte-equal ⇒ the deployed renderer matches HEAD source for token #1's
+///         exercised render path (its traits + stage); full trait-space equivalence stays
+///         the hermetic suite's job. No uuid needed: token #1's traits already live in
+///         the deployed BuddyNFT.
 /// @dev    Runnable with ONLY a fork URL — no private keys, no pasted address. Addresses
 ///         load from the `deployments/84532.json` manifest (repo source of truth). The
 ///         renderer swap is an owner prank on the fork and is discarded. Skips cleanly
@@ -36,7 +39,7 @@ contract RendererDriftParityTest is Test {
     string internal constant MANIFEST_PATH = "deployments/84532.json";
     uint256 internal constant TOKEN_ID = 1; // first hatch; exists iff totalSupply >= 1
 
-    function test_rendererDrift_liveSvgMatchesHeadSource() public {
+    function test_rendererDrift_liveAccessControlAndSvgMatchesHeadSource() public {
         string memory rpc = vm.envOr("SEPOLIA_RPC_URL", string(""));
         if (bytes(rpc).length == 0 || !vm.exists(MANIFEST_PATH)) {
             emit log("skip: set SEPOLIA_RPC_URL and deploy (deployments/84532.json) to byte-match the live render");
@@ -68,12 +71,22 @@ contract RendererDriftParityTest is Test {
         // variable left is the renderer bytecode itself: a mismatch is then unambiguously
         // renderer-source drift, never a data-contract divergence the manifest might
         // misreport.
-        BuddyRenderer liveRenderer = BuddyRenderer(nft.renderer());
+        address liveRendererAddr = nft.renderer();
+        BuddyRenderer liveRenderer = BuddyRenderer(liveRendererAddr);
         BuddyRenderer headRenderer =
             new BuddyRenderer(address(liveRenderer.spriteData()), liveRenderer.font(), liveRenderer.spriteFont());
 
+        address nonOwner = address(0xB0B);
+        require(nonOwner != nft.owner(), "test non-owner unexpectedly owns live BuddyNFT");
+
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        nft.setRenderer(address(headRenderer));
+        assertEq(nft.renderer(), liveRendererAddr, "non-owner changed renderer");
+
         vm.prank(nft.owner());
         nft.setRenderer(address(headRenderer));
+        assertEq(nft.renderer(), address(headRenderer), "owner setRenderer did not persist HEAD renderer");
 
         string memory headUri = nft.tokenURI(TOKEN_ID);
 
