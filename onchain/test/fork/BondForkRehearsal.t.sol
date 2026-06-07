@@ -115,8 +115,10 @@ contract BondForkRehearsalTest is Test {
         emit log_named_uint("rehearsed bond on fork, tokenId", tokenId);
     }
 
-    /// @dev Deterministic-per-block valid RFC 4122 v4 UUID; varies across runs via
-    ///      block + address entropy so reruns don't collide on the live fork.
+    /// @dev Valid RFC 4122 v4 UUID seeded from block + address entropy. Deterministic
+    ///      WITHIN a fork block (same block ⇒ same uuid); reruns at a later Sepolia block
+    ///      reseed. The isMinted() guard at the call site turns any collision into a loud
+    ///      revert, never a false pass.
     function _freshUuid(address salt) internal view returns (string memory) {
         bytes16 rand = bytes16(keccak256(abi.encodePacked(block.timestamp, block.prevrandao, salt)));
         bytes memory hexc = "0123456789abcdef";
