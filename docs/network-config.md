@@ -53,6 +53,18 @@ Address fields are optional. A pre-deploy manifest may omit `addresses` entirely
 
 Missing manifest for the active chain is soft — `getActiveNetwork()` returns `buddyNft: null` and consumers fall back to the cold/pre-deploy path. Filename-vs-payload chainId mismatch and malformed JSON throw.
 
+### Commit policy
+
+Only canonical chains are committed. The root `.gitignore` is the enforcement source of truth and carries this policy as a comment.
+
+| chainId | Network | Committed? | Why |
+|---|---|---|---|
+| `31337` | local Anvil | Yes — tracked | Deterministic Anvil address, same every fork run. Canonical for local dev at `onchain/deployments/31337.json`. |
+| `84532` | Base Sepolia | No — gitignored | Validation network, redeployed on demand; only the address changes. |
+| `8453` | Base mainnet | On deploy day | Canonical runtime pointer the shipped plugin and site resolve against. One permanent address. |
+
+`84532.json` is gitignored in both `onchain/deployments/` and `plugin/deployments/`. `sync-deployments` still copies it into `plugin/deployments/` for local runs, but that copy is gitignored too — it never shows dirty and never ships.
+
 ## Active network accessors
 
 - `site/src/config/chains.ts::getNetwork(chainId)` — merges static metadata with the deployment loader. Pre-deploy chains return `{ ...static, buddyNft: null, status: 'not-yet-deployed' }`.

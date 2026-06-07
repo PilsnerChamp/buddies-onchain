@@ -15,6 +15,14 @@ cache/
 onchain/lib/
 onchain/broadcast/
 
+# Deployment manifests: commit canonical chains only.
+#   31337 (local anvil) — deterministic, tracked.
+#   8453  (Base mainnet) — canonical runtime pointer, committed on deploy day.
+# Base Sepolia (84532) is throwaway validation — redeploy on demand, never commit.
+# sync-deployments still copies it into plugin/ for local runs; both copies stay ignored.
+onchain/deployments/84532.json
+plugin/deployments/84532.json
+
 # Environment variables
 # .env = non-secrets (committed)
 # .env.local = secrets (ignored)
