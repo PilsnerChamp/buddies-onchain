@@ -162,17 +162,31 @@ contract BuddyNFTBondTest is Test {
     }
 
     function test_bond_revertsAtStageCheckAfterBond() public {
-        // After a successful bond the stage is Bonded, so a second bond attempt
-        // must stop at the stage check before any attestation validation.
+        // The stage check (Soulbound) must fire BEFORE any attestation-field
+        // validation. After a successful bond, a second bond carrying a
+        // deliberately INVALID attestation (a mismatched tokenId — the FIRST field
+        // check) must still revert Soulbound — NOT InvalidAttestation — proving the
+        // stage gate precedes attestation validation. This is what distinguishes it
+        // from test_bond_revertsAlreadyBonded, which re-bonds with a VALID attestation.
         (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
         bytes memory sig = _signBondAttestation(att);
 
         vm.prank(recipient);
         nft.bond(tokenId, BOND_NAME, att, sig);
 
+        // Tamper the attestation's tokenId — the FIRST attestation-field check in
+        // bond() (before identityHash/recipient/expiry/signature). The call still
+        // passes the real tokenId, so ownership and the stage gate operate on the
+        // bonded token; only the attestation field is wrong. Re-signed so the
+        // signature is valid for the tampered fields — isolating the revert cause to
+        // the stage gate vs the first field check, never the signature (checked last).
+        BuddyNFT.BondAttestation memory tampered = att;
+        tampered.tokenId = tokenId + 1;
+        bytes memory tamperedSig = _signBondAttestation(tampered);
+
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         vm.prank(recipient);
-        nft.bond(tokenId, "name2", att, sig);
+        nft.bond(tokenId, "name2", tampered, tamperedSig);
     }
 
     function test_bond_revertsTokenIdMismatch() public {
