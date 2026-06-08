@@ -8,7 +8,6 @@ import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.s
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
-import {WyHash} from "../contracts/libraries/WyHash.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {IBuddyRenderer} from "../contracts/interfaces/IBuddyRenderer.sol";
 
@@ -26,7 +25,8 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
     address internal owner;
 
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
-    string internal constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+    string internal constant ROBOT_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
+    uint32 internal constant ROBOT_SEED = 2_990_586_173;
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -67,13 +67,13 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
     }
 
     function test_hatch_storesPrngSeedFromCanonicalPipeline() public {
-        uint32 expectedSeed = WyHash.hash(abi.encodePacked(_identityHash(TEST_UUID)), bytes(SEED_DOMAIN));
+        uint32 expectedSeed = _prngSeed(TEST_UUID);
         uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         assertEq(nft.buddyPrngSeed(tokenId), expectedSeed);
     }
 
     function test_hatch_storesTraitsMatchingCanonicalPipeline() public {
-        uint32 seed = WyHash.hash(abi.encodePacked(_identityHash(TEST_UUID)), bytes(SEED_DOMAIN));
+        uint32 seed = _prngSeed(TEST_UUID);
         (
             uint8 species,
             uint8 rarity,
@@ -100,6 +100,47 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
         assertEq(traits.chaos, chaos);
         assertEq(traits.wisdom, wisdom);
         assertEq(traits.snark, snark);
+    }
+
+    function test_hatch_acceptsZeroPrngSeedAndStoresDerivedTraits() public {
+        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), 0);
+
+        assertEq(nft.buddyPrngSeed(tokenId), 0);
+
+        IBuddyNFT.BuddyTraits memory traits = nft.buddyTraits(tokenId);
+        assertLt(traits.species, 18);
+        assertLt(traits.rarity, 5);
+        assertLt(traits.eyes, 6);
+        assertLt(traits.hat, 8);
+        assertGt(traits.debugging, 0);
+        assertGt(traits.patience, 0);
+        assertGt(traits.chaos, 0);
+        assertGt(traits.wisdom, 0);
+        assertGt(traits.snark, 0);
+        assertLe(traits.debugging, 100);
+        assertLe(traits.patience, 100);
+        assertLe(traits.chaos, 100);
+        assertLe(traits.wisdom, 100);
+        assertLe(traits.snark, 100);
+    }
+
+    function test_hatch_robotGoldenAnchor_preservesMainTraitBones() public {
+        assertEq(_prngSeed(ROBOT_UUID), ROBOT_SEED, "main robot seed anchor");
+
+        uint256 tokenId = _hatchUuid(nft, ROBOT_UUID);
+        IBuddyNFT.BuddyTraits memory traits = nft.buddyTraits(tokenId);
+
+        assertEq(nft.buddyPrngSeed(tokenId), ROBOT_SEED);
+        assertEq(traits.rarity, 3, "epic");
+        assertEq(traits.species, 14, "robot");
+        assertEq(traits.eyes, 2, "x eyes");
+        assertEq(traits.hat, 0, "hatless");
+        assertFalse(traits.shiny, "not shiny");
+        assertEq(traits.debugging, 57);
+        assertEq(traits.patience, 49);
+        assertEq(traits.chaos, 33);
+        assertEq(traits.wisdom, 68);
+        assertEq(traits.snark, 100);
     }
 
     function test_hatch_recordsHatcher() public {
@@ -145,7 +186,7 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
 
     function test_hatch_revertsInvalidIdentityHash_zero() public {
         vm.expectRevert(BuddyNFT.InvalidIdentityHash.selector);
-        nft.hatch(bytes32(0));
+        nft.hatch(bytes32(0), _prngSeed(TEST_UUID));
     }
 
     // Note: v4 variant/shape acceptance is no longer an on-chain responsibility

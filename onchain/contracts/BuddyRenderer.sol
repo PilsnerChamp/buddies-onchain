@@ -195,12 +195,13 @@ contract BuddyRenderer is IBuddyRenderer {
         IBuddyNFT buddy = IBuddyNFT(buddyNft);
         IBuddyNFT.BuddyTraits memory traits = buddy.buddyTraits(tokenId);
         string memory buddyName = buddy.buddyName(tokenId);
-        bytes32 identityHash = buddy.buddyIdentityHash(tokenId);
+        uint32 seed = buddy.buddyPrngSeed(tokenId);
+        bytes32 backdropHash = keccak256(abi.encode(seed));
         IBuddyNFT.OwnershipStage stage = buddy.getStage(tokenId);
 
         string memory metadataName = _metadataDisplayName(buddyName, tokenId);
         string memory svgMetadataTitle = _svgMetadataTitle(tokenId, traits, stage);
-        string memory svg = _buildSvg(svgMetadataTitle, identityHash, traits, stage);
+        string memory svg = _buildSvg(svgMetadataTitle, backdropHash, traits, stage);
         string memory image = string(
             abi.encodePacked("data:image/svg+xml;base64,", Base64.encode(bytes(svg)))
         );
@@ -213,7 +214,7 @@ contract BuddyRenderer is IBuddyRenderer {
 
     function _buildSvg(
         string memory metadataTitle,
-        bytes32 identityHash,
+        bytes32 backdropHash,
         IBuddyNFT.BuddyTraits memory traits,
         IBuddyNFT.OwnershipStage stage
     )
@@ -228,7 +229,7 @@ contract BuddyRenderer is IBuddyRenderer {
         // slate-200 tier inside `_spriteGroup`.
         return string(
             abi.encodePacked(
-                _svgOpen(metadataTitle, identityHash, traits),
+                _svgOpen(metadataTitle, backdropHash, traits),
                 '<g font-family="monospace" fill="#cbd5e1">',
                 _railText(PROMPT, PROMPT_BASELINE, false),
                 _titleText(traits, stage),
@@ -282,7 +283,7 @@ contract BuddyRenderer is IBuddyRenderer {
         );
     }
 
-    function _svgOpen(string memory metadataTitle, bytes32 identityHash, IBuddyNFT.BuddyTraits memory traits)
+    function _svgOpen(string memory metadataTitle, bytes32 backdropHash, IBuddyNFT.BuddyTraits memory traits)
         internal
         view
         returns (string memory)
@@ -296,10 +297,10 @@ contract BuddyRenderer is IBuddyRenderer {
                 TEXT_STYLE_CSS,
                 _animationCss(),
                 DRIFT_KEYFRAMES,
-                _driftRulesCss(identityHash),
+                _driftRulesCss(backdropHash),
                 "</style>",
-                _backgroundDefs(identityHash, traits),
-                _backgroundShapes(identityHash, traits)
+                _backgroundDefs(backdropHash, traits),
+                _backgroundShapes(backdropHash, traits)
             )
         );
     }
@@ -643,7 +644,7 @@ contract BuddyRenderer is IBuddyRenderer {
         return string.concat(IBuddyFont(font).fontCss(), IBuddyFont(spriteFont).fontCss());
     }
 
-    function _backgroundDefs(bytes32 identityHash, IBuddyNFT.BuddyTraits memory traits)
+    function _backgroundDefs(bytes32 backdropHash, IBuddyNFT.BuddyTraits memory traits)
         internal
         pure
         returns (string memory)
@@ -652,7 +653,7 @@ contract BuddyRenderer is IBuddyRenderer {
         // (preset 2 emits the default horizontal vector), so the separator space between `id="bg"` and
         // the vector is emitted only when the vector is non-empty — avoids the stale
         // trailing-space form `<linearGradient id="bg" >`.
-        string memory vector = _gradientVector(identityHash);
+        string memory vector = _gradientVector(backdropHash);
         string memory separator = bytes(vector).length == 0 ? "" : " ";
         return string(
             abi.encodePacked(
@@ -660,20 +661,20 @@ contract BuddyRenderer is IBuddyRenderer {
                 separator,
                 vector,
                 '><stop offset="0%" stop-color="',
-                _backgroundStartColor(identityHash, traits),
+                _backgroundStartColor(backdropHash, traits),
                 '"/><stop offset="100%" stop-color="',
-                _backgroundEndColor(identityHash, traits),
+                _backgroundEndColor(backdropHash, traits),
                 '"/></linearGradient></defs>'
             )
         );
     }
 
-    function _backgroundShapes(bytes32 identityHash, IBuddyNFT.BuddyTraits memory traits)
+    function _backgroundShapes(bytes32 backdropHash, IBuddyNFT.BuddyTraits memory traits)
         internal
         pure
         returns (string memory)
     {
-        uint256 hue = _baseHue(identityHash, traits.species);
+        uint256 hue = _baseHue(backdropHash, traits.species);
         uint256 saturation = _baseSaturation(traits.rarity, traits.species);
 
         return string(
@@ -681,28 +682,28 @@ contract BuddyRenderer is IBuddyRenderer {
                 '<g clip-path="url(#vp)"><rect width="420" height="420" fill="url(#bg) ',
                 _backgroundFallbackColor(hue, saturation, traits),
                 '"/>',
-                // Circle centers: identityHash bytes (4,5)=c0, (6,7)=c1, (8,9)=c2.
+                // Circle centers: backdropHash bytes (4,5)=c0, (6,7)=c1, (8,9)=c2.
                 // This mapping MUST match `_driftRulesCss` below — the two call sites
                 // are the byte-for-byte parity contract with the reference Python
                 // injector. If you change one side, change the other.
                 _backgroundCircle(
                     0,
-                    _shapeX(identityHash[4]),
-                    _shapeY(identityHash[5]),
+                    _shapeX(backdropHash[4]),
+                    _shapeY(backdropHash[5]),
                     52 + (uint256(traits.debugging) / 2),
                     _hsla((hue + 28) % 360, saturation + 10, 66, "0.18")
                 ),
                 _backgroundCircle(
                     1,
-                    _shapeX(identityHash[6]),
-                    _shapeY(identityHash[7]),
+                    _shapeX(backdropHash[6]),
+                    _shapeY(backdropHash[7]),
                     42 + (uint256(traits.patience) / 2),
                     _hsla((hue + 108) % 360, saturation, 60, "0.14")
                 ),
                 _backgroundCircle(
                     2,
-                    _shapeX(identityHash[8]),
-                    _shapeY(identityHash[9]),
+                    _shapeX(backdropHash[8]),
+                    _shapeY(backdropHash[9]),
                     46 + (uint256(traits.chaos) / 2),
                     _hsla((hue + 188) % 360, saturation + 6, 58, "0.12")
                 ),
@@ -799,7 +800,7 @@ contract BuddyRenderer is IBuddyRenderer {
         );
     }
 
-    function _driftRulesCss(bytes32 identityHash) internal pure returns (string memory) {
+    function _driftRulesCss(bytes32 backdropHash) internal pure returns (string memory) {
         bytes memory pool = new bytes(DRIFT_PRIMES.length);
         for (uint256 k = 0; k < DRIFT_PRIMES.length; ++k) {
             pool[k] = DRIFT_PRIMES[k];
@@ -808,14 +809,14 @@ contract BuddyRenderer is IBuddyRenderer {
         string memory rule0;
         string memory rule1;
         string memory rule2;
-        // identityHash byte pairs MUST match `_backgroundShapes` above — (4,5)=c0,
+        // backdropHash byte pairs MUST match `_backgroundShapes` above — (4,5)=c0,
         // (6,7)=c1, (8,9)=c2. Changing the mapping here without changing the <circle>
         // cx/cy attributes (or vice versa) breaks byte-for-byte parity with the
         // reference Python injector and the test_tokenURI_pythonParity_pinnedFixture
         // regression guard.
-        (rule0, pool) = _driftRule(_shapeX(identityHash[4]), _shapeY(identityHash[5]), 0, pool);
-        (rule1, pool) = _driftRule(_shapeX(identityHash[6]), _shapeY(identityHash[7]), 1, pool);
-        (rule2, pool) = _driftRule(_shapeX(identityHash[8]), _shapeY(identityHash[9]), 2, pool);
+        (rule0, pool) = _driftRule(_shapeX(backdropHash[4]), _shapeY(backdropHash[5]), 0, pool);
+        (rule1, pool) = _driftRule(_shapeX(backdropHash[6]), _shapeY(backdropHash[7]), 1, pool);
+        (rule2, pool) = _driftRule(_shapeX(backdropHash[8]), _shapeY(backdropHash[9]), 2, pool);
 
         return string.concat(rule0, rule1, rule2);
     }
@@ -831,8 +832,8 @@ contract BuddyRenderer is IBuddyRenderer {
     ///        an explicit `x2="0%"`, rendering a pure-vertical gradient.
     ///      Preset 2 returning an empty string triggers the `_backgroundDefs` no-space
     ///      branch so the output is a clean `<linearGradient id="bg">`.
-    function _gradientVector(bytes32 identityHash) internal pure returns (string memory) {
-        uint256 preset = uint256(uint8(identityHash[3])) % 4;
+    function _gradientVector(bytes32 backdropHash) internal pure returns (string memory) {
+        uint256 preset = uint256(uint8(backdropHash[3])) % 4;
 
         if (preset == 0) return 'y2="100%"';
         if (preset == 1) return 'x1="100%" x2="0%" y2="100%"';
@@ -840,20 +841,20 @@ contract BuddyRenderer is IBuddyRenderer {
         return 'x2="0%" y2="100%"';
     }
 
-    function _backgroundStartColor(bytes32 identityHash, IBuddyNFT.BuddyTraits memory traits)
+    function _backgroundStartColor(bytes32 backdropHash, IBuddyNFT.BuddyTraits memory traits)
         internal
         pure
         returns (string memory)
     {
-        return _hsl(_baseHue(identityHash, traits.species), _baseSaturation(traits.rarity, traits.species), 15);
+        return _hsl(_baseHue(backdropHash, traits.species), _baseSaturation(traits.rarity, traits.species), 15);
     }
 
-    function _backgroundEndColor(bytes32 identityHash, IBuddyNFT.BuddyTraits memory traits)
+    function _backgroundEndColor(bytes32 backdropHash, IBuddyNFT.BuddyTraits memory traits)
         internal
         pure
         returns (string memory)
     {
-        uint256 hue = _baseHue(identityHash, traits.species);
+        uint256 hue = _baseHue(backdropHash, traits.species);
         uint256 saturation = _baseSaturation(traits.rarity, traits.species);
 
         return _hsl((hue + 42 + (uint256(traits.species) * 3)) % 360, saturation + 8, 24 + (uint256(traits.rarity) * 2));
@@ -889,11 +890,11 @@ contract BuddyRenderer is IBuddyRenderer {
     }
 
 
-    function _baseHue(bytes32 identityHash, uint8 species) internal pure returns (uint256) {
+    function _baseHue(bytes32 backdropHash, uint8 species) internal pure returns (uint256) {
         uint256 hue = (
-            (uint256(uint8(identityHash[0])) << 16)
-                | (uint256(uint8(identityHash[1])) << 8)
-                | uint256(uint8(identityHash[2]))
+            (uint256(uint8(backdropHash[0])) << 16)
+                | (uint256(uint8(backdropHash[1])) << 8)
+                | uint256(uint8(backdropHash[2]))
         ) % 360;
 
         return (hue + (uint256(species) * 11)) % 360;

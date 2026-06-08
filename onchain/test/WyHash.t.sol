@@ -4,16 +4,15 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 
 import {WyHash} from "../contracts/libraries/WyHash.sol";
-import {IdentityHash} from "./helpers/IdentityHash.sol";
 import {WyHashExposed} from "./helpers/WyHashExposed.sol";
 
 /// @title WyHashTest
 /// @notice Bun.hash parity tests for the Solidity wyhash port.
 /// @dev The vector fixture in test/vectors/wyhash-vectors.json is the A1 gate.
 contract WyHashTest is Test {
-    string internal constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+    string internal constant HATCH_SALT = "friend-2026-401";
     string internal constant GAS_UUID = "550e8400-e29b-41d4-a716-446655440000";
-    uint32 internal constant GAS_EXPECTED_SEED = 1246639183;
+    uint32 internal constant GAS_EXPECTED_SEED = 1_530_910_344;
 
     WyHashExposed internal exposed;
 
@@ -25,7 +24,7 @@ contract WyHashTest is Test {
     // Primary parity gate
     // -------------------------------------------------------------------------
 
-    /// @notice Verify WyHash.hash matches every Bun-derived seed fixture.
+    /// @notice Verify WyHash.hash(bytes(uuid), bytes(salt)) matches every Bun-derived seed fixture.
     function test_hashMatchesBunVectors() public view {
         string memory json = vm.readFile("test/vectors/wyhash-vectors.json");
         uint256 vectorCount = abi.decode(vm.parseJson(json, ".vectorCount"), (uint256));
@@ -39,17 +38,15 @@ contract WyHashTest is Test {
     }
 
     function _assertTwoArgVector(string memory json, string memory prefix) internal pure {
-        bytes32 dataWord = abi.decode(vm.parseJson(json, string.concat(prefix, ".dataHex")), (bytes32));
-        bytes memory data = abi.encodePacked(dataWord);
-        string memory saltAscii = abi.decode(vm.parseJson(json, string.concat(prefix, ".saltAscii")), (string));
-        bytes memory seedInput = abi.decode(vm.parseJson(json, string.concat(prefix, ".seedInputHex")), (bytes));
+        string memory source = abi.decode(vm.parseJson(json, string.concat(prefix, ".source")), (string));
+        string memory salt = abi.decode(vm.parseJson(json, string.concat(prefix, ".salt")), (string));
+        bytes memory input = abi.decode(vm.parseJson(json, string.concat(prefix, ".inputHex")), (bytes));
+        uint256 inputLength = abi.decode(vm.parseJson(json, string.concat(prefix, ".inputLength")), (uint256));
         uint32 expectedSeed = uint32(abi.decode(vm.parseJson(json, string.concat(prefix, ".seed32")), (uint256)));
 
-        assertEq(data.length, 32, string.concat("dataHex length mismatch at ", prefix));
-        assertEq(saltAscii, SEED_DOMAIN, string.concat("saltAscii mismatch at ", prefix));
-        _assertSeedInput(data, bytes(saltAscii), seedInput, prefix);
+        _assertInput(bytes(source), bytes(salt), input, inputLength, prefix);
 
-        uint32 actualSeed = WyHash.hash(data, bytes(SEED_DOMAIN));
+        uint32 actualSeed = WyHash.hash(bytes(source), bytes(salt));
         assertEq(actualSeed, expectedSeed, string.concat("WyHash parity fail at ", prefix));
     }
 
@@ -66,12 +63,13 @@ contract WyHashTest is Test {
     }
 
     function _assertFullInputVector(string memory json, string memory prefix) internal pure {
-        bytes memory seedInput = abi.decode(vm.parseJson(json, string.concat(prefix, ".seedInputHex")), (bytes));
+        bytes memory input = abi.decode(vm.parseJson(json, string.concat(prefix, ".inputHex")), (bytes));
+        uint256 inputLength = abi.decode(vm.parseJson(json, string.concat(prefix, ".inputLength")), (uint256));
         uint32 expectedSeed = uint32(abi.decode(vm.parseJson(json, string.concat(prefix, ".seed32")), (uint256)));
 
-        assertEq(seedInput.length, 32 + bytes(SEED_DOMAIN).length, string.concat("seedInput length at ", prefix));
+        assertEq(input.length, inputLength, string.concat("input length at ", prefix));
 
-        uint32 actualSeed = WyHash.hash(seedInput, bytes(""));
+        uint32 actualSeed = WyHash.hash(input, bytes(""));
         assertEq(actualSeed, expectedSeed, string.concat("WyHash full-preimage parity fail at ", prefix));
     }
 
@@ -104,22 +102,22 @@ contract WyHashTest is Test {
     // -------------------------------------------------------------------------
 
     function test_hash_gasUnder8K() public {
-        bytes memory data = abi.encodePacked(IdentityHash._computeIdentityHash(GAS_UUID));
-        bytes memory salt = bytes(SEED_DOMAIN);
+        bytes memory data = bytes(GAS_UUID);
+        bytes memory salt = bytes(HATCH_SALT);
 
         uint256 gasBefore = gasleft();
         uint32 result = WyHash.hash(data, salt);
         uint256 gasUsed = gasBefore - gasleft();
 
-        emit log_named_uint("WyHash gas (identityHash raw32 + seed domain)", gasUsed);
+        emit log_named_uint("WyHash gas (uuid + hatch salt)", gasUsed);
 
         assertEq(result, GAS_EXPECTED_SEED, "unexpected canonical WyHash output");
         assertLt(gasUsed, 8000, "WyHash exceeds 8K gas ceiling");
     }
 
     function test_hash_isDeterministic() public pure {
-        bytes memory data = abi.encodePacked(IdentityHash._computeIdentityHash("00000000-0000-4000-8000-000000000001"));
-        bytes memory salt = bytes(SEED_DOMAIN);
+        bytes memory data = bytes("00000000-0000-4000-8000-000000000001");
+        bytes memory salt = bytes(HATCH_SALT);
 
         uint32 first = WyHash.hash(data, salt);
         uint32 second = WyHash.hash(data, salt);
@@ -130,23 +128,19 @@ contract WyHashTest is Test {
     }
 
     function test_hash_saltChangesOutput() public pure {
-        bytes memory data = abi.encodePacked(IdentityHash._computeIdentityHash(GAS_UUID));
+        bytes memory data = bytes(GAS_UUID);
 
-        uint32 first = WyHash.hash(data, bytes(SEED_DOMAIN));
-        uint32 second = WyHash.hash(data, bytes("buddies-onchain:trait-seed:v2-alt"));
+        uint32 first = WyHash.hash(data, bytes(HATCH_SALT));
+        uint32 second = WyHash.hash(data, bytes("friend-2026-402"));
 
         assertNotEq(first, second, "different salts must produce different hashes");
     }
 
     function test_hash_uuidChangesOutput() public pure {
-        bytes memory salt = bytes(SEED_DOMAIN);
+        bytes memory salt = bytes(HATCH_SALT);
 
-        uint32 first = WyHash.hash(
-            abi.encodePacked(IdentityHash._computeIdentityHash("00000000-0000-4000-8000-000000000001")), salt
-        );
-        uint32 second = WyHash.hash(
-            abi.encodePacked(IdentityHash._computeIdentityHash("00000000-0000-4000-8000-000000000002")), salt
-        );
+        uint32 first = WyHash.hash(bytes("00000000-0000-4000-8000-000000000001"), salt);
+        uint32 second = WyHash.hash(bytes("00000000-0000-4000-8000-000000000002"), salt);
 
         assertNotEq(first, second, "different UUIDs must produce different hashes");
     }
@@ -162,18 +156,22 @@ contract WyHashTest is Test {
     // Test helpers
     // -------------------------------------------------------------------------
 
-    function _assertSeedInput(bytes memory data, bytes memory salt, bytes memory seedInput, string memory prefix)
-        internal
-        pure
-    {
-        assertEq(seedInput.length, data.length + salt.length, string.concat("seedInput length mismatch at ", prefix));
+    function _assertInput(
+        bytes memory source,
+        bytes memory salt,
+        bytes memory input,
+        uint256 inputLength,
+        string memory prefix
+    ) internal pure {
+        assertEq(input.length, inputLength, string.concat("inputHex length mismatch at ", prefix));
+        assertEq(input.length, source.length + salt.length, string.concat("input length mismatch at ", prefix));
 
-        for (uint256 i; i < data.length; i++) {
-            assertEq(seedInput[i], data[i], string.concat("seedInput data mismatch at ", prefix));
+        for (uint256 i; i < source.length; i++) {
+            assertEq(input[i], source[i], string.concat("input source mismatch at ", prefix));
         }
 
         for (uint256 i; i < salt.length; i++) {
-            assertEq(seedInput[data.length + i], salt[i], string.concat("seedInput salt mismatch at ", prefix));
+            assertEq(input[source.length + i], salt[i], string.concat("input salt mismatch at ", prefix));
         }
     }
 }

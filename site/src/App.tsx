@@ -4,15 +4,14 @@ import { Home } from './routes/Home';
 import { Bond } from './routes/Bond';
 import { View } from './routes/View';
 import { ViewToken } from './routes/ViewToken';
-import { isValidUuid } from '~shared/isValidUuid';
 import { useArrowRowNav } from './lib/useArrowRowNav';
 import { ROUTES } from './config/routes';
 
 // URL map:
 //   `/`              → `<Home />`
-//   `/hatch`         → execution surface; reads `accountUuid` from the URL
-//                      fragment, validates it, synchronously scrubs the URL,
-//                      then passes the UUID as a prop. Missing/malformed →
+//   `/hatch`         → execution surface; reads identityHash + prngSeed from
+//                      the URL fragment, validates them, synchronously scrubs
+//                      the URL, then passes both as props. Missing/malformed →
 //                      redirect to `/`.
 //                      Mounts under `<HatchLayout>` (lazy chunk) which wraps
 //                      the route in WagmiProvider + RainbowKitProvider.
@@ -37,54 +36,99 @@ const Hatch = lazy(() =>
   import('./routes/Hatch').then((m) => ({ default: m.Hatch })),
 );
 
-// Max chars of the raw fragment value we echo to the console before redirect. A
-// valid UUID is 36 chars; anything much longer is almost certainly a probe
-// or plugin-drift artifact and not worth logging in full.
-const RAW_LOG_MAX = 64;
+type HatchHandoff = {
+  identityHash: `0x${string}`;
+  prngSeed: number;
+};
 
-function readHashAccountUuid(hash: string): string | null {
-  const fragment = hash.startsWith('#') ? hash.slice(1) : hash;
-  return new URLSearchParams(fragment).get('accountUuid');
+type HatchHandoffParse =
+  | { ok: true; handoff: HatchHandoff }
+  | { ok: false; reason: 'missing' | 'malformed' };
+
+const IDENTITY_HASH_RE = /^0x[0-9a-f]{64}$/;
+const ZERO_IDENTITY_HASH =
+  '0x0000000000000000000000000000000000000000000000000000000000000000';
+const MAX_UINT32 = 4_294_967_295;
+
+function isValidIdentityHash(value: string): value is `0x${string}` {
+  return IDENTITY_HASH_RE.test(value) && value !== ZERO_IDENTITY_HASH;
 }
 
-// Sole hatch ingress owner: reads `accountUuid` from the fragment and
-// redirects to `/` when missing/malformed. On valid UUID it synchronously
-// scrubs the fragment with `replaceState` before rendering the lazy hatch
-// surface, so third-party-free app code never renders `/hatch` descendants
-// while the UUID is still present in `location.href`.
+function parsePrngSeed(value: string): number | null {
+  if (!/^[0-9]+$/.test(value)) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_UINT32) {
+    return null;
+  }
+  return parsed;
+}
+
+function readHashHandoff(hash: string): HatchHandoffParse {
+  const fragment = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (fragment === '') return { ok: false, reason: 'missing' };
+
+  const params = new URLSearchParams(fragment);
+  const rawIdentityHash = params.get('identityHash');
+  const rawPrngSeed = params.get('prngSeed');
+  if (
+    rawIdentityHash === null ||
+    rawIdentityHash === '' ||
+    rawPrngSeed === null ||
+    rawPrngSeed === ''
+  ) {
+    return { ok: false, reason: 'missing' };
+  }
+
+  const prngSeed = parsePrngSeed(rawPrngSeed);
+  if (!isValidIdentityHash(rawIdentityHash) || prngSeed === null) {
+    return { ok: false, reason: 'malformed' };
+  }
+
+  return {
+    ok: true,
+    handoff: {
+      identityHash: rawIdentityHash,
+      prngSeed,
+    },
+  };
+}
+
+// Sole hatch ingress owner: reads the fragment handoff and redirects to `/`
+// when missing/malformed. On valid input it synchronously scrubs the fragment
+// with `replaceState` before rendering the lazy hatch surface, so app code
+// never renders `/hatch` descendants while the handoff is still present in
+// `location.href`.
 function HatchGate(): JSX.Element {
   const location = useLocation();
-  const accountUuidRef = useRef<string | null>(null);
-  const rawFromHash = readHashAccountUuid(location.hash);
+  const handoffRef = useRef<HatchHandoff | null>(null);
+  const parsed = readHashHandoff(location.hash);
 
-  if (rawFromHash !== null) {
-    const accountUuid = rawFromHash.trim().toLowerCase();
-    if (accountUuid !== '' && isValidUuid(accountUuid)) {
-      accountUuidRef.current = accountUuid;
-      window.history.replaceState(null, '', ROUTES.hatch);
-      return <Hatch accountUuid={accountUuid} />;
-    }
-
-    const reason: 'missing' | 'malformed' =
-      accountUuid === '' ? 'missing' : 'malformed';
-    // eslint-disable-next-line no-console
-    console.warn('[hatch] invalid accountUuid, redirecting to /', {
-      reason,
-      raw: reason === 'missing' ? null : rawFromHash.slice(0, RAW_LOG_MAX),
-    });
-    return <Navigate to={ROUTES.home} replace />;
+  if (parsed.ok) {
+    handoffRef.current = parsed.handoff;
+    window.history.replaceState(null, '', ROUTES.hatch);
+    return (
+      <Hatch
+        identityHash={parsed.handoff.identityHash}
+        prngSeed={parsed.handoff.prngSeed}
+      />
+    );
   }
 
-  if (accountUuidRef.current !== null) {
-    return <Hatch accountUuid={accountUuidRef.current} />;
+  if (location.hash === '' && handoffRef.current !== null) {
+    return (
+      <Hatch
+        identityHash={handoffRef.current.identityHash}
+        prngSeed={handoffRef.current.prngSeed}
+      />
+    );
   }
 
-  // Missing fragment. Query-param handoffs are intentionally no longer
-  // accepted; raw UUIDs must not cross the HTTP wire.
+  // Missing or malformed fragment. Query-param handoffs are intentionally not
+  // accepted. Do not log fragment values: the hash and seed are pre-mint
+  // handoff data and must be scrubbed rather than copied into telemetry.
   // eslint-disable-next-line no-console
-  console.warn('[hatch] invalid accountUuid, redirecting to /', {
-    reason: 'missing',
-    raw: null,
+  console.warn('[hatch] invalid handoff, redirecting to /', {
+    reason: parsed.reason,
   });
   return <Navigate to={ROUTES.home} replace />;
 }

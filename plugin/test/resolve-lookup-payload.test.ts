@@ -27,10 +27,10 @@ import {
 
 const EXPECTED_SLEEPING_CARD_ROWS = [
   "",
-  "       __",
-  "     <(- )___",
-  "      (  ._>",
-  "       `--´",
+  "      .[||].",
+  "     [ -  - ]",
+  "     [ ==== ]",
+  "     `------´",
 ];
 const EXPECTED_COLD_SLEEPING_CARD_ROWS = [
   SLEEP_INDICATOR_ROW,
@@ -40,6 +40,10 @@ const EXPECTED_CACHED_F0_ROWS = [
   "cached f0 row 1",
   "cached f0 row 2",
 ];
+const EXPECTED_HATCH_FRAGMENT =
+  "identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173";
+const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#${EXPECTED_HATCH_FRAGMENT}`;
+const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${EXPECTED_HATCH_FRAGMENT}`;
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 let claudeConfigRoot: string | null = null;
 
@@ -351,10 +355,13 @@ describe("resolveLookupPayload — status mapping", () => {
       accountUuidOverride: FIXTURE_ACCOUNT_UUID,
       netOverride: SEPOLIA_DEPLOYED_NET,
     });
-    expect(result!.hatchUrl).toBe(
-      `https://buddies-onchain.xyz/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`,
-    );
+    expect(result!.hatchUrl).toBe(PROD_HATCH_URL);
     expect(result!.viewUrl).toBe("https://buddies-onchain.xyz/view");
+    expect(result!.hatchUrl).not.toContain(FIXTURE_ACCOUNT_UUID);
+    expect(result!.hatchUrl).not.toContain("accountUuid");
+    expect(result!.hatchUrl).toMatch(
+      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+$/,
+    );
   });
 
   test("RPC throw with cached warm maps to warm + offline with view URL", async () => {
@@ -436,7 +443,7 @@ describe("resolveLookupPayload — orchestrator integration", () => {
     expect(result!.buddyStatus).toBe("warm");
     expect(result!.cardLines.length).toBeGreaterThan(0);
     expect(result!.viewUrl).toContain("/view/42");
-    expect(result!.hatchUrl).toContain(`/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`);
+    expect(result!.hatchUrl).toBe(PROD_HATCH_URL);
     expect(state).not.toBeNull();
     expect(state!.hatch).toBe("warm");
     expect(state!.tokenId).toBe("0x2a");
@@ -453,9 +460,7 @@ describe("resolveLookupPayload — orchestrator integration", () => {
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("warm");
     expect(result!.viewUrl).toBe("http://localhost:5173/view/65261");
-    expect(result!.hatchUrl).toBe(
-      `http://localhost:5173/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`,
-    );
+    expect(result!.hatchUrl).toBe(LOCAL_HATCH_URL);
     expect(result!.cardLines).toEqual(EXPECTED_CACHED_F0_ROWS);
     expect(getTokenCalls).toBe(1);
     expect(tokenUriCalls).toBe(0);

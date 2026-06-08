@@ -2,6 +2,9 @@ import { describe, test, expect } from "bun:test";
 import { formatLookupBlock, type LookupPayload } from "../src/lookup-payload";
 import type { ModeLevel } from "../src/buddy-state";
 
+const HATCH_URL =
+  "https://buddies-onchain.xyz/hatch#identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173";
+
 function makeLookupPayload(
   payload: Partial<LookupPayload> &
     Pick<LookupPayload, "buddyStatus">,
@@ -9,7 +12,7 @@ function makeLookupPayload(
   return {
     cardLines: [],
     viewUrl: "https://buddies-onchain.xyz/view/123",
-    hatchUrl: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
+    hatchUrl: HATCH_URL,
     openseaCollectionUrl: null,
     effectiveMode: "lite",
     persistedMode: "lite",
@@ -34,13 +37,13 @@ describe("formatLookupBlock", () => {
       name: "cold uses hatch copy and hatch URL",
       buddyStatus: "cold" as const,
       message: "your buddy is sleeping - hatch it onchain:",
-      url: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
+      url: HATCH_URL,
     },
     {
       name: "unknown uses retry copy and hatch URL",
       buddyStatus: "unknown" as const,
       message: "unable to verify onchain status - try online:",
-      url: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
+      url: HATCH_URL,
     },
   ];
 
@@ -90,7 +93,7 @@ describe("formatLookupBlock", () => {
     for (const buddyStatus of ["cold", "unknown"] as const) {
       const out = formatLookupBlock(makeLookupPayload({ buddyStatus }));
 
-      expect(out).toContain("https://buddies-onchain.xyz/hatch#accountUuid=abc");
+      expect(out).toContain(HATCH_URL);
       expect(out).not.toContain("https://buddies-onchain.xyz/view/123");
     }
   });
@@ -199,7 +202,7 @@ describe("formatLookupBlock", () => {
       const expected = [
         "BUDDY_RENDER_BEGIN",
         "your buddy is sleeping - hatch it onchain:",
-        "https://buddies-onchain.xyz/hatch#accountUuid=abc",
+        HATCH_URL,
         "",
         ...cell.expectedLines,
         "BUDDY_RENDER_END",

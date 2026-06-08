@@ -10,7 +10,6 @@ import {IBuddyNFT} from "./interfaces/IBuddyNFT.sol";
 import {IBuddyRenderer} from "./interfaces/IBuddyRenderer.sol";
 import {AuthorAttestation} from "./libraries/AuthorAttestation.sol";
 import {Mulberry32} from "./libraries/Mulberry32.sol";
-import {WyHash} from "./libraries/WyHash.sol";
 
 /// @title BuddyNFT
 /// @notice Soulbound ERC721 for Claude Code Buddy companions on Base L2.
@@ -69,8 +68,6 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
 
     bytes32 private constant BOND_ATTESTATION_TYPEHASH =
         keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
-
-    string private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
 
     // -------------------------------------------------------------------------
     // Storage
@@ -150,7 +147,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
         return _tokenIdentityHashes[tokenId];
     }
 
-    function buddyPrngSeed(uint256 tokenId) external view returns (uint32) {
+    function buddyPrngSeed(uint256 tokenId) external view override returns (uint32) {
         _requireOwned(tokenId);
         return _tokenPrngSeeds[tokenId];
     }
@@ -208,7 +205,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
     // Hatch & Bond
     // -------------------------------------------------------------------------
 
-    function hatch(bytes32 identityHash) external returns (uint256 tokenId) {
+    function hatch(bytes32 identityHash, uint32 prngSeed) external returns (uint256 tokenId) {
         if (identityHash == bytes32(0)) {
             revert InvalidIdentityHash();
         }
@@ -217,7 +214,6 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
             revert AlreadyHatched();
         }
 
-        uint32 prngSeed = WyHash.hash(abi.encodePacked(identityHash), bytes(SEED_DOMAIN));
         IBuddyNFT.BuddyTraits memory traits = _deriveTraits(prngSeed);
 
         tokenId = _nextTokenId++;

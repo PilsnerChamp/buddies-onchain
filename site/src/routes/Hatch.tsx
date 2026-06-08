@@ -1,7 +1,7 @@
 // site/src/routes/Hatch.tsx
 //
-// `/hatch#accountUuid=<uuid>` warm execution terminal. `App.tsx` owns
-// fragment parse/validate/scrub and passes the UUID in as a prop.
+// `/hatch#identityHash=0x…&prngSeed=…` warm execution terminal. `App.tsx`
+// owns fragment parse/validate/scrub and passes the handoff values as props.
 //
 // The bracketed-button lifecycle is gone, replaced by the action-prompt +
 // appended-stream model that mirrors cold's `> claude ▊` register. Running
@@ -12,7 +12,7 @@
 //   echo `> /hatch --help`
 //   STATUS (state-driven copy per the locked state matrix)
 //   DESCRIPTION (Stage 1 mechanics — not Block E)
-//   REQUIREMENTS (account-uuid + wallet rows)
+//   REQUIREMENTS (handoff + wallet rows)
 //   NEXT STEP — gas warning + action prompt + appended stream output
 //   separator rail
 //   AUTHOR
@@ -44,10 +44,9 @@
 //   pre-deploy                    → STATUS "contract not yet deployed
 //                                   on this network"; action prompt muted
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useReadContract } from 'wagmi';
-import { computeIdentityHash } from '~shared/computeIdentityHash';
 
 import { ManPageRow } from '../components/ManPageRow';
 import { ManPageSection } from '../components/ManPageSection';
@@ -74,14 +73,15 @@ const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
 // explicit newlines; CSS `white-space: pre-wrap` preserves them.
 const HATCH_DESCRIPTION =
   'Stage 1 of buddy evolution. Your buddy is derived from your\n' +
-  'account UUID and minted directly into the Buddies Onchain\n' +
-  'contract. One Claude account, one buddy, one mint. Soulbound.';
+  'Claude account by the plugin and minted directly into the\n' +
+  'Buddies Onchain contract. One Claude account, one buddy,\n' +
+  'one mint. Soulbound.';
 
 const GAS_WARNING_COPY =
   'Sign a single Base transaction — you pay your own gas.';
 
 // Events that count as user interaction for the idle-on-load hover
-// gate. Same list as cold-hero — the autofocused `> /hatch <uuid> ▊`
+// gate. Same list as cold-hero — the autofocused `> /hatch ▊`
 // action prompt stays unlit until the user does something. See
 // `docs/site/terminal-ui.md` § Focus-on-load posture.
 const INTERACTION_EVENTS = [
@@ -99,14 +99,6 @@ function getExplorerTxBase(chainId: number): string | null {
   const addressBase = getNetwork(chainId)?.explorerAddressBase ?? null;
   if (addressBase === null) return null;
   return addressBase.replace(/\/address\/$/, '/tx/');
-}
-
-// UUID truncation for REQUIREMENTS row + the redirect stream line:
-// 8 chars + ellipsis + last 7 chars (see `docs/site/terminal-ui.md`
-// § Truncation rules).
-function truncUuid(uuid: string): string {
-  if (uuid.length <= 16) return uuid;
-  return `${uuid.slice(0, 8)}…${uuid.slice(-7)}`;
 }
 
 // Address truncation: `0x` + first 8 hex + ellipsis + last 4 hex
@@ -132,8 +124,6 @@ function failureLineFor(category: HatchErrorCategory): string {
       return 'tx cancelled — try again when ready';
     case 'already-hatched':
       return 'already hatched — see /view';
-    case 'invalid-uuid':
-      return 'invalid account uuid — rerun /buddy-onchain';
     case 'no-contract':
       return 'no contract on this network';
     case 'event-parse-failed':
@@ -151,25 +141,32 @@ function failureLineFor(category: HatchErrorCategory): string {
 
 // ── Route entry ──────────────────────────────────────────────────────────
 //
-// App.tsx is the sole URL parse/validate/scrub owner. Hatch receives an
-// already-canonical v4 UUID prop; after the scrub, rereading the URL would
-// lose it.
-export function Hatch({ accountUuid }: { accountUuid: string }): JSX.Element {
-  return <HatchSurface accountUuid={accountUuid} />;
+// App.tsx is the sole URL parse/validate/scrub owner. Hatch receives the
+// already-validated pass-through values; after the scrub, rereading the URL
+// would lose them.
+export function Hatch({
+  identityHash,
+  prngSeed,
+}: {
+  identityHash: `0x${string}`;
+  prngSeed: number;
+}): JSX.Element {
+  return <HatchSurface identityHash={identityHash} prngSeed={prngSeed} />;
 }
 
 // ── Main warm surface ────────────────────────────────────────────────────
-function HatchSurface({ accountUuid }: { accountUuid: string }): JSX.Element {
+function HatchSurface({
+  identityHash,
+  prngSeed,
+}: {
+  identityHash: `0x${string}`;
+  prngSeed: number;
+}): JSX.Element {
   const { state, onRunHatch, activeChainId, isConnected, walletAddress } =
-    useHatchFlow(accountUuid);
+    useHatchFlow(identityHash, prngSeed);
 
   // Active-chain contract for the preflight read.
   const preflightAddress = getNetwork(activeChainId)?.buddyNft ?? null;
-
-  const identityHash = useMemo(
-    () => computeIdentityHash(accountUuid),
-    [accountUuid],
-  );
 
   const { data: preflightTokenId } = useReadContract({
     abi: BUDDY_NFT_ABI,
@@ -199,7 +196,6 @@ function HatchSurface({ accountUuid }: { accountUuid: string }): JSX.Element {
 
   return (
     <WarmHatchPage
-      accountUuid={accountUuid}
       activeChainId={activeChainId}
       preflightAddress={preflightAddress}
       isConnected={isConnected}
@@ -212,7 +208,6 @@ function HatchSurface({ accountUuid }: { accountUuid: string }): JSX.Element {
 
 // ── Warm page render ─────────────────────────────────────────────────────
 function WarmHatchPage({
-  accountUuid,
   activeChainId,
   preflightAddress,
   isConnected,
@@ -220,7 +215,6 @@ function WarmHatchPage({
   state,
   onAction,
 }: {
-  accountUuid: string;
   activeChainId: number;
   preflightAddress: `0x${string}` | null;
   isConnected: boolean;
@@ -259,9 +253,8 @@ function WarmHatchPage({
   return (
     <TerminalRouteShell>
       {/* Echo header — `> /hatch --help` per `docs/site/terminal-ui.md`
-          § Routes and command echoes. The full UUID echo lives on the
-          action prompt below, where it is a literal command echo (no
-          truncation). */}
+          § Routes and command echoes. The action prompt below echoes a
+          bare `> /hatch` — no UUID crosses the wire (pass-through handoff). */}
       <p className="route-command">
         <span className="route-command__sigil">&gt;</span>{' '}
         <span className="route-command__accent">/hatch --help</span>
@@ -285,8 +278,8 @@ function WarmHatchPage({
 
       <ManPageSection heading="REQUIREMENTS">
         <ManPageRow
-          k="account-uuid"
-          v={truncUuid(accountUuid)}
+          k="handoff"
+          v="identity hash + trait seed"
           status={<span className="status-text--ok">connected</span>}
         />
         <ManPageRow
@@ -311,7 +304,6 @@ function WarmHatchPage({
           )}
           <HatchActionPrompt
             mode={actionMode}
-            uuid={accountUuid}
             onClick={onAction}
           />
           <HatchStream
@@ -441,11 +433,9 @@ function computeActionMode({
 //   - muted: pre-deploy. Plain muted text, no cursor, no click.
 function HatchActionPrompt({
   mode,
-  uuid,
   onClick,
 }: {
   mode: ActionMode;
-  uuid: string;
   onClick: () => void;
 }): JSX.Element {
   const [interactionReady, setInteractionReady] = useState(false);
@@ -471,7 +461,7 @@ function HatchActionPrompt({
         aria-disabled="true"
       >
         <span className="hatch-action__sigil">&gt;</span>{' '}
-        <span className="hatch-action__command">/hatch {uuid}</span>
+        <span className="hatch-action__command">/hatch</span>
       </p>
     );
   }
@@ -480,7 +470,7 @@ function HatchActionPrompt({
     return (
       <p className="terminal-action-row hatch-action hatch-action--committed">
         <span className="hatch-action__sigil">&gt;</span>{' '}
-        <span className="hatch-action__command">/hatch {uuid}</span>
+        <span className="hatch-action__command">/hatch</span>
       </p>
     );
   }
@@ -494,7 +484,7 @@ function HatchActionPrompt({
       className={`terminal-action-row terminal-action-row--interactive hatch-action hatch-action--active${interactionReady ? ' hover-row' : ''}`}
     >
       <span className="hatch-action__sigil hover-row__sigil">&gt;</span>{' '}
-      <span className="hatch-action__command hover-row__key">/hatch {uuid}</span>{' '}
+      <span className="hatch-action__command hover-row__key">/hatch</span>{' '}
       <span className="blinking-cursor__block" aria-hidden="true" />
     </button>
   );

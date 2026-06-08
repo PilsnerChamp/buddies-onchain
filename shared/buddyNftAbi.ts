@@ -12,7 +12,7 @@
 // missing the entry.
 //
 // Subset used by the public site and plugin:
-//   - hatch(bytes32 identityHash) → uint256 tokenId       [write]
+//   - hatch(bytes32 identityHash, uint32 prngSeed) → uint256 tokenId [write]
 //   - tokenURI(uint256 tokenId) → string                  [view]
 //   - isMinted(bytes32 identityHash) → bool               [view]
 //   - getTokenIdByIdentity(bytes32 identityHash) → uint256 [view]
@@ -27,7 +27,7 @@
 //
 // `as const` is required for viem's type inference — without it, viem
 // cannot narrow `useWriteContract({ functionName: 'hatch' })` arguments to
-// the single-bytes32 tuple.
+// the bytes32/uint32 tuple.
 //
 // Public references: `docs/onchain/contract.md`, `docs/network-config.md`.
 
@@ -36,7 +36,10 @@ export const BUDDY_NFT_ABI = [
     type: 'function',
     name: 'hatch',
     stateMutability: 'nonpayable',
-    inputs: [{ name: 'identityHash', type: 'bytes32' }],
+    inputs: [
+      { name: 'identityHash', type: 'bytes32' },
+      { name: 'prngSeed', type: 'uint32' },
+    ],
     outputs: [{ name: 'tokenId', type: 'uint256' }],
   },
   {

@@ -29,6 +29,8 @@ import { type PluginNetworkInfo } from "../src/network";
 import { NETWORKS } from "~shared/networks";
 
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
+const TEST_IDENTITY_HASH = "0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb";
+const TEST_PRNG_SEED = 2990586173;
 const PROD_ORIGIN = "https://buddies-onchain.xyz";
 const LOCAL_ORIGIN = "http://localhost:5173";
 const FAKE_DEPLOYED_ADDR = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9" as const;
@@ -169,13 +171,33 @@ describe("resolveDeepLink", () => {
 });
 
 describe("URL helpers", () => {
-  test("hatchUrl URL-encodes the UUID fragment and warmUrl uses tokenId", () => {
-    const trickUuid = "a/b c+d&e=f";
+  test("hatchUrl emits hash+seed fragment and warmUrl uses tokenId", () => {
+    const url = hatchUrl(PROD_ORIGIN, TEST_UUID);
 
     expect(warmUrl(PROD_ORIGIN, 123n)).toBe(`${PROD_ORIGIN}/view/123`);
-    expect(hatchUrl(PROD_ORIGIN, trickUuid)).toBe(
-      `${PROD_ORIGIN}/hatch#accountUuid=${encodeURIComponent(trickUuid)}`,
+    expect(url).toBe(
+      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}`,
     );
+    expect(url).not.toContain(TEST_UUID);
+    expect(url).not.toContain("accountUuid");
+    expect(url).toMatch(
+      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+$/,
+    );
+
+    const params = new URLSearchParams(url.split("#")[1]);
+    expect(params.get("identityHash")).toBe(TEST_IDENTITY_HASH);
+    const prngSeed = Number(params.get("prngSeed"));
+    expect(Number.isInteger(prngSeed)).toBe(true);
+    expect(prngSeed).toBeGreaterThanOrEqual(0);
+    expect(prngSeed).toBeLessThanOrEqual(0xffffffff);
+  });
+
+  test("hatchUrl canonicalizes valid UUID input but rejects placeholders", () => {
+    expect(hatchUrl(PROD_ORIGIN, ` ${TEST_UUID.toUpperCase()}\n`)).toBe(
+      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}`,
+    );
+    expect(() => hatchUrl(PROD_ORIGIN, "anon")).toThrow();
+    expect(() => hatchUrl(PROD_ORIGIN, "not-a-uuid")).toThrow();
   });
 });
 

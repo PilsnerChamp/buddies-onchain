@@ -6,7 +6,7 @@
  *
  * Each vector pins:
  *   - accountUuid input
- *   - bones derived via identityHash raw32 + SEED_DOMAIN + wyhash + Mulberry32
+ *   - bones derived via accountUuid + "friend-2026-401" + wyhash + Mulberry32
  *     (species, hat, eye index)
  *   - expectedFb rows after the contract's blink rules: row-0 hat injection,
  *     `0` -> `-`, right-trim

@@ -59,7 +59,7 @@ contract BuddyRendererStripFallbackTest is Test {
         traits.wisdom = 50;
         traits.snark = 74;
 
-        _setMockToken(1, traits, "", bytes32(uint256(0xCAC7051D)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xCAC7051D), IBuddyNFT.OwnershipStage.Custodial);
         string memory rich = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         string memory stripped = _stripStyleBlock(rich);
 
@@ -149,7 +149,7 @@ contract BuddyRendererStripFallbackTest is Test {
         traits.wisdom = 75;
         traits.snark = 35;
 
-        _setMockToken(1, traits, "", bytes32(uint256(0x5411144)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x5411144), IBuddyNFT.OwnershipStage.Custodial);
         string memory rich = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         string memory stripped = _stripStyleBlock(rich);
 
@@ -192,8 +192,8 @@ contract BuddyRendererStripFallbackTest is Test {
     // --- Test 3: background fallback short-arc hue midpoint ------------------------
 
     function test_renderer_backgroundFallback_midpoint() public {
-        // Pinned-fixture inputs. The traits below plus the hash seed the derivations
-        // `_baseHue(identityHash, species)` and `_baseSaturation(rarity, species)` per
+        // Pinned-fixture inputs. The traits below plus the seed-derived backdropHash
+        // drive `_baseHue(backdropHash, species)` and `_baseSaturation(rarity, species)` per
         // `BuddyRenderer.sol` and produce the HSL triple we recompute here.
         IBuddyNFT.BuddyTraits memory traits;
         traits.species = 0;  // Duck
@@ -207,14 +207,15 @@ contract BuddyRendererStripFallbackTest is Test {
         traits.wisdom = 40;
         traits.snark = 50;
 
-        bytes32 identityHash = bytes32(uint256(0xABCDEF0102030405));
-        _setMockToken(1, traits, "", identityHash, IBuddyNFT.OwnershipStage.Custodial);
+        uint32 prngSeed = 0x02030405;
+        bytes32 backdropHash = keccak256(abi.encode(prngSeed));
+        _setMockToken(1, traits, "", prngSeed, IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
         // Compute expected HSL midpoint off-chain — mirrors the `_backgroundFallbackColor`
         // formula (see `docs/onchain/renderer.md` § Background paint fallback).
-        uint256 startHue = _expectedBaseHue(identityHash, traits.species);
+        uint256 startHue = _expectedBaseHue(backdropHash, traits.species);
         uint256 startSat = _expectedBaseSaturation(traits.rarity, traits.species);
         uint256 endHue = (startHue + 42 + (uint256(traits.species) * 3)) % 360;
         uint256 endSat = startSat + 8;
@@ -255,7 +256,7 @@ contract BuddyRendererStripFallbackTest is Test {
             1,
             _defaultTraits(),
             "",
-            bytes32(uint256(0x13B0)),
+            uint32(0x13B0),
             IBuddyNFT.OwnershipStage.Custodial
         );
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
@@ -282,7 +283,7 @@ contract BuddyRendererStripFallbackTest is Test {
             1,
             _defaultTraits(),
             "",
-            bytes32(uint256(0x13A0)),
+            uint32(0x13A0),
             IBuddyNFT.OwnershipStage.Custodial
         );
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
@@ -327,7 +328,7 @@ contract BuddyRendererStripFallbackTest is Test {
             1,
             _defaultTraits(),
             "",
-            bytes32(uint256(0x13C0)),
+            uint32(0x13C0),
             IBuddyNFT.OwnershipStage.Custodial
         );
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
@@ -341,16 +342,9 @@ contract BuddyRendererStripFallbackTest is Test {
     ///      Preset 2 specifically emits `<linearGradient id="bg">` with NO trailing
     ///      space (proves the `_backgroundDefs` spacer cleanup landed).
     function test_renderer_gradientVectorSimplified() public {
-        // `identityHash[3]` drives the preset via `% 4`. Byte 3 of the hash is the
-        // fourth-from-MSB byte of the `bytes32` (bytes31 is LSB in Solidity layout).
-        // We need identityHash such that identityHash[3] % 4 == target preset.
-        // Construct hashes with byte 3 = 0x00 / 0x01 / 0x02 / 0x03.
-        bytes32[4] memory hashes = [
-            bytes32(uint256(0x00112200_00000000_00000000_00000000_00000000_00000000_00000000_00000000)),
-            bytes32(uint256(0x00112201_00000000_00000000_00000000_00000000_00000000_00000000_00000000)),
-            bytes32(uint256(0x00112202_00000000_00000000_00000000_00000000_00000000_00000000_00000000)),
-            bytes32(uint256(0x00112203_00000000_00000000_00000000_00000000_00000000_00000000_00000000))
-        ];
+        // `keccak256(abi.encode(uint32(seed)))[3]` drives the preset via `% 4`.
+        // These seeds pin one digest for each target preset.
+        uint32[4] memory seeds = [uint32(5), 0, 1, 4];
         string[4] memory expectedOpens = [
             '<linearGradient id="bg" y2="100%">',
             '<linearGradient id="bg" x1="100%" x2="0%" y2="100%">',
@@ -359,14 +353,14 @@ contract BuddyRendererStripFallbackTest is Test {
         ];
 
         for (uint256 i = 0; i < 4; ++i) {
-            // Sanity: byte 3 is indeed i, so `identityHash[3] % 4 == i`.
-            assertEq(uint256(uint8(hashes[i][3])), i);
+            bytes32 backdropHash = keccak256(abi.encode(seeds[i]));
+            assertEq(uint256(uint8(backdropHash[3])) % 4, i);
 
             _setMockToken(
                 1,
                 _defaultTraits(),
                 "",
-                hashes[i],
+                seeds[i],
                 IBuddyNFT.OwnershipStage.Custodial
             );
             string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
@@ -391,7 +385,7 @@ contract BuddyRendererStripFallbackTest is Test {
             1,
             _defaultTraits(),
             "",
-            bytes32(uint256(0x13E0)),
+            uint32(0x13E0),
             IBuddyNFT.OwnershipStage.Custodial
         );
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
@@ -406,7 +400,7 @@ contract BuddyRendererStripFallbackTest is Test {
     function test_renderer_shinyTspanHasNoClass() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.shiny = true;
-        _setMockToken(1, traits, "", bytes32(uint256(0x13F0)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x13F0), IBuddyNFT.OwnershipStage.Custodial);
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
         assertTrue(
@@ -427,7 +421,7 @@ contract BuddyRendererStripFallbackTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.shiny = true;
         traits.rarity = 4; // Legendary
-        _setMockToken(1, traits, "", bytes32(uint256(0x13F1)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x13F1), IBuddyNFT.OwnershipStage.Custodial);
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
         // `✦SHINY✦ ` with trailing space, followed by `LEGENDARY`.
@@ -450,7 +444,7 @@ contract BuddyRendererStripFallbackTest is Test {
         // the class on shiny render would escape a non-shiny smoke test.
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.shiny = true;
-        _setMockToken(1, traits, "", bytes32(uint256(0x13F2)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x13F2), IBuddyNFT.OwnershipStage.Custodial);
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
         // TEXT_STYLE_CSS content: check for both the CSS selector `.shiny-label{` and
@@ -479,15 +473,15 @@ contract BuddyRendererStripFallbackTest is Test {
         uint256 tokenId,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     )
         internal
     {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
-        mockBuddy.setIdentityHash(tokenId, identityHash);
-        mockBuddy.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("strip-fallback-identity", tokenId)));
+        mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, stage);
     }
 
@@ -841,11 +835,11 @@ contract BuddyRendererStripFallbackTest is Test {
 
     // ----- off-chain mirrors of BuddyRenderer derivations -------------------------
 
-    function _expectedBaseHue(bytes32 identityHash, uint8 species) internal pure returns (uint256) {
+    function _expectedBaseHue(bytes32 backdropHash, uint8 species) internal pure returns (uint256) {
         uint256 hue = (
-            (uint256(uint8(identityHash[0])) << 16)
-                | (uint256(uint8(identityHash[1])) << 8)
-                | uint256(uint8(identityHash[2]))
+            (uint256(uint8(backdropHash[0])) << 16)
+                | (uint256(uint8(backdropHash[1])) << 8)
+                | uint256(uint8(backdropHash[2]))
         ) % 360;
         return (hue + (uint256(species) * 11)) % 360;
     }

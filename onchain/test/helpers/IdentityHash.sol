@@ -5,6 +5,6 @@ pragma solidity ^0.8.24;
 /// @notice Test-only anchor for the hash-only hatch identity-hash preimage.
 library IdentityHash {
     function _computeIdentityHash(string memory uuidLower) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("buddies-onchain:identity:v1", bytes1(0x1f), uuidLower));
+        return keccak256(abi.encodePacked("buddies-onchain:identity:claude:v1", bytes1(0x1f), uuidLower));
     }
 }

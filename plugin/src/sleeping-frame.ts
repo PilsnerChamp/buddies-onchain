@@ -8,8 +8,8 @@
  *
  * Sync. No RPC. No disk. No cache.
  *
- * The seed path matches `BuddyNFT.hatch`: UUID -> identityHash -> raw32 plus
- * SEED_DOMAIN -> wyhash -> Mulberry32 traits.
+ * The seed path matches `BuddyNFT.hatch`: UUID + "friend-2026-401" -> wyhash
+ * -> Mulberry32 traits.
  */
 
 import { deriveBuddyFromAccount } from "./bone-deriver";

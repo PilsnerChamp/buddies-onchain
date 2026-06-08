@@ -42,9 +42,9 @@ contract BuddyRendererCircleDriftTest is Test {
     // --- 1. Only slow-pool primes appear as drift periods ---------------------------
 
     function test_tokenURI_driftPeriodsComeFromSlowPoolOnly() public {
-        // Spray 20 distinct identity hashes; every emitted (period) value must lie in slowPool.
+        // Spray 20 distinct backdrop seeds; every emitted (period) value must lie in slowPool.
         for (uint256 salt = 1; salt <= 20; ++salt) {
-            string memory svg = _renderSvg(salt, keccak256(abi.encodePacked("slow-pool-spread", salt)));
+            string memory svg = _renderSvg(salt, uint32(uint256(keccak256(abi.encodePacked("slow-pool-spread", salt)))));
             (uint256 p0, uint256 p1, uint256 p2,,,) = _parseAllDriftTriples(svg);
 
             assertTrue(_isInSlowPool(p0), "circle 0 period outside slow pool");
@@ -57,7 +57,7 @@ contract BuddyRendererCircleDriftTest is Test {
 
     function test_tokenURI_driftPeriodsAreDistinctPerToken() public {
         for (uint256 salt = 1; salt <= 20; ++salt) {
-            string memory svg = _renderSvg(salt, keccak256(abi.encodePacked("distinct-triple", salt)));
+            string memory svg = _renderSvg(salt, uint32(uint256(keccak256(abi.encodePacked("distinct-triple", salt)))));
             (uint256 p0, uint256 p1, uint256 p2,,,) = _parseAllDriftTriples(svg);
 
             assertTrue(p0 != p1, "circles 0 and 1 share a period");
@@ -69,20 +69,20 @@ contract BuddyRendererCircleDriftTest is Test {
     // --- 3. Drift triples vary across tokens ---------------------------------------
 
     function test_tokenURI_driftVariesAcrossTokens() public {
-        string memory svgA = _renderSvg(1, keccak256("drift-cross-token-a"));
-        string memory svgB = _renderSvg(2, keccak256("drift-cross-token-b"));
+        string memory svgA = _renderSvg(1, uint32(uint256(keccak256("drift-cross-token-a"))));
+        string memory svgB = _renderSvg(2, uint32(uint256(keccak256("drift-cross-token-b"))));
 
         (uint256 pa0, uint256 pa1, uint256 pa2, uint256 da0, uint256 da1, uint256 da2) = _parseAllDriftTriples(svgA);
         (uint256 pb0, uint256 pb1, uint256 pb2, uint256 db0, uint256 db1, uint256 db2) = _parseAllDriftTriples(svgB);
 
         bool differs = (pa0 != pb0) || (pa1 != pb1) || (pa2 != pb2) || (da0 != db0) || (da1 != db1) || (da2 != db2);
-        assertTrue(differs, "two distinct identity hashes produced identical drift triples");
+        assertTrue(differs, "two distinct backdrop seeds produced identical drift triples");
     }
 
     // --- 4. cx/cy remain as attributes on <circle> (degradation path) --------------
 
     function test_tokenURI_circleCxCyStayAsAttributes() public {
-        string memory svg = _renderSvg(1, keccak256("degradation-cx-cy"));
+        string memory svg = _renderSvg(1, uint32(uint256(keccak256("degradation-cx-cy"))));
 
         // Every circle carries cx= and cy= attributes, one per circle.
         assertEq(_countOccurrences(svg, "<circle"), 3);
@@ -99,7 +99,7 @@ contract BuddyRendererCircleDriftTest is Test {
 
     function test_tokenURI_driftDelayLessThanPeriod() public {
         for (uint256 salt = 1; salt <= 10; ++salt) {
-            string memory svg = _renderSvg(salt, keccak256(abi.encodePacked("delay-lt-period", salt)));
+            string memory svg = _renderSvg(salt, uint32(uint256(keccak256(abi.encodePacked("delay-lt-period", salt)))));
             (uint256 p0, uint256 p1, uint256 p2, uint256 d0, uint256 d1, uint256 d2) = _parseAllDriftTriples(svg);
 
             assertLt(d0, p0, "circle 0 delay >= period");
@@ -134,7 +134,7 @@ contract BuddyRendererCircleDriftTest is Test {
     // --- 7. Motion grammar invariant — exactly two timing functions ----------------
 
     function test_tokenURI_motionGrammarInvariant_exactlyTwoTimingFunctions() public {
-        string memory svg = _renderSvg(1, keccak256("motion-grammar"));
+        string memory svg = _renderSvg(1, uint32(uint256(keccak256("motion-grammar"))));
 
         // Sprite animations use step-start (4 frame groups → 4 occurrences).
         assertGt(_countOccurrences(svg, "step-start"), 0, "missing step-start (sprite grammar)");
@@ -165,7 +165,33 @@ contract BuddyRendererCircleDriftTest is Test {
         assertEq(_countOccurrences(svg, " ease-out "), 0, "ease-out timing function is forbidden");
     }
 
-    // --- 8. Python-parity fixture — pinned-value regression guard -----------------
+    // --- 8. Backdrop seed is hashed before byte indexing -------------------------
+
+    function test_backdropHashIndexesDigestNotEncodedSeed() public {
+        uint32 seed = 0x01020304;
+        bytes memory preimage = abi.encode(seed);
+        bytes32 digest = keccak256(preimage);
+
+        assertEq(
+            preimage,
+            hex"0000000000000000000000000000000000000000000000000000000001020304",
+            "abi.encode(uint32) preimage"
+        );
+        assertEq(digest, 0xa02207865b17615ea9959fa7f89358b05a14579e3b980c31eda2b3fafd5499a4, "digest");
+
+        // The seed lives in the low 4 bytes of the ABI word, so indexing the
+        // preimage at [4..9] would produce zeros and render c0 at (36,54).
+        assertEq(uint8(preimage[4]), 0, "preimage byte 4 is padded");
+        assertEq(uint8(preimage[5]), 0, "preimage byte 5 is padded");
+        assertEq(uint8(digest[4]), 0x5b, "digest byte 4 drives c0 x");
+        assertEq(uint8(digest[5]), 0x17, "digest byte 5 drives c0 y");
+
+        string memory svg = _renderSvg(1, seed);
+        assertTrue(_contains(svg, '<circle id="c0" cx="160" cy="73"'), "c0 must index digest bytes [4,5]");
+        assertFalse(_contains(svg, '<circle id="c0" cx="36" cy="54"'), "c0 must not index padded preimage bytes");
+    }
+
+    // --- 9. Python-parity fixture — pinned-value regression guard -----------------
     //
     // The earlier drift tests verify invariants (slow pool, distinct, no third grammar,
     // etc.) but an implementation that satisfies every invariant could still drift from
@@ -173,33 +199,37 @@ contract BuddyRendererCircleDriftTest is Test {
     // semantics or swapping Teschner primes for "equivalent" ones). This test locks
     // exact byte-level parity for one canonical input.
     //
-    // Inputs are crafted so that `identityHash[4..9]` have predictable values:
-    //   b4=0xFF, b5=0x00, b6=0x80, b7=0x40, b8=0xC0, b9=0x20
+    // Input seed 0x01020304 produces:
+    //   preimage = abi.encode(uint32(seed))
+    //            = 0x0000000000000000000000000000000000000000000000000000000001020304
+    //   backdropHash = keccak256(preimage)
+    //                = 0xa02207865b17615ea9959fa7f89358b05a14579e3b980c31eda2b3fafd5499a4
+    // so backdropHash[4..9] are:
+    //   b4=0x5B, b5=0x17, b6=0x61, b7=0x5E, b8=0xA9, b9=0x95
     //
     // Per the contract's `_shapeX`/`_shapeY` / `_circleCx`/`_circleCy`:
-    //   c0: (384, 54)   c1: (210, 107)   c2: (298, 80)
+    //   c0: (160, 73)   c1: (168, 132)   c2: (266, 179)
     //
     // Per the Teschner mix + order-preserving pool prune (pool starts (29,31,37,41,43,47,53,59,61,67,71)):
-    //   c0 → period=47, delay=1
-    //   c1 → period=43, delay=28
-    //   c2 → period=59, delay=28
+    //   c0 → period=59, delay=37
+    //   c1 → period=31, delay=22
+    //   c2 → period=61, delay=11
     //
     // These six values were cross-verified 2026-04-18 against the historical Python
     // injector with the same (cx, cy, i) triples — contract output == Python output
     // byte-for-byte. A reproducer is trivial: run the mix + pool-prune against
-    // (384,54,0), (210,107,1), (298,80,2).
+    // (160,73,0), (168,132,1), (266,179,2).
     //
     // A failure here means either:
     //   (a) a multiplier or pool change broke parity with the archived reference,
     //   (b) `_shapeX`/`_shapeY` changed (shifting circle centers), or
-    //   (c) `_circleCx`/`_circleCy` diverged from the identityHash[4..9] mapping.
+    //   (c) `_circleCx`/`_circleCy` diverged from the backdropHash[4..9] mapping.
     // Any of those needs conversation, not a fixture update.
 
-    bytes32 internal constant PARITY_FIXTURE_IDENTITY_HASH =
-        0x00000000FF008040C02000000000000000000000000000000000000000000000;
+    uint32 internal constant PARITY_FIXTURE_PRNG_SEED = 0x01020304;
 
     function test_tokenURI_pythonParity_pinnedFixture() public {
-        string memory svg = _renderSvg(1, PARITY_FIXTURE_IDENTITY_HASH);
+        string memory svg = _renderSvg(1, PARITY_FIXTURE_PRNG_SEED);
         (uint256 p0, uint256 p1, uint256 p2, uint256 d0, uint256 d1, uint256 d2) = _parseAllDriftTriples(svg);
 
         emit log_named_uint("fixture c0 period", p0);
@@ -211,23 +241,23 @@ contract BuddyRendererCircleDriftTest is Test {
 
         // DO NOT "fix" these by just updating numbers if they diverge. The whole
         // point of this test is that these exact values encode the reference
-        // Python injector's derivation for the given identityHash. A divergence
+        // Python injector's derivation for the given seed-derived backdropHash. A divergence
         // means drift derivation semantics changed — escalate before touching
         // the pin. See `docs/onchain/renderer.md` § Background circle drift for
         // the canonical mix and pool rules.
-        assertEq(p0, 47, "c0 period mismatch (Python parity fixture)");
-        assertEq(d0, 1, "c0 delay mismatch (Python parity fixture)");
-        assertEq(p1, 43, "c1 period mismatch (Python parity fixture)");
-        assertEq(d1, 28, "c1 delay mismatch (Python parity fixture)");
-        assertEq(p2, 59, "c2 period mismatch (Python parity fixture)");
-        assertEq(d2, 28, "c2 delay mismatch (Python parity fixture)");
+        assertEq(p0, 59, "c0 period mismatch (Python parity fixture)");
+        assertEq(d0, 37, "c0 delay mismatch (Python parity fixture)");
+        assertEq(p1, 31, "c1 period mismatch (Python parity fixture)");
+        assertEq(d1, 22, "c1 delay mismatch (Python parity fixture)");
+        assertEq(p2, 61, "c2 period mismatch (Python parity fixture)");
+        assertEq(d2, 11, "c2 delay mismatch (Python parity fixture)");
     }
 
     // =============================================================================
     //                                  Helpers
     // =============================================================================
 
-    function _renderSvg(uint256 tokenId, bytes32 identityHash) internal returns (string memory) {
+    function _renderSvg(uint256 tokenId, uint32 prngSeed) internal returns (string memory) {
         IBuddyNFT.BuddyTraits memory traits;
         traits.species = 0;
         traits.rarity = 1;
@@ -242,8 +272,8 @@ contract BuddyRendererCircleDriftTest is Test {
 
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, "");
-        mockBuddy.setIdentityHash(tokenId, identityHash);
-        mockBuddy.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("circle-drift-identity", tokenId)));
+        mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, IBuddyNFT.OwnershipStage.Custodial);
 
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), tokenId);

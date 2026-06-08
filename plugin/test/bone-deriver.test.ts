@@ -3,8 +3,6 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { concatBytes, hexToBytes, stringToBytes } from "viem";
-
 import {
   makeMulberry32,
   pick,
@@ -13,7 +11,7 @@ import {
   deriveTraitSeed,
   deriveBuddyFromAccount,
   wyhash,
-  SEED_DOMAIN,
+  SALT,
   SPECIES,
   EYES,
   STAT_NAMES,
@@ -24,23 +22,22 @@ import {
 
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const TEST_IDENTITY_HASH =
-  "0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6";
-const TEST_SEED_INPUT_HEX =
-  "0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6627564646965732d6f6e636861696e3a74726169742d736565643a7632";
+  "0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb";
+const TEST_SEED = TEST_UUID + SALT;
 
-const WYHASH_HASH = 4116242804;
+const WYHASH_HASH = 2990586173;
 const WYHASH_BONES: BuddyBones = {
-  rarity: "common",
-  species: "duck",
-  eye: "◉",
+  rarity: "epic",
+  species: "robot",
+  eye: "×",
   hat: "none",
   shiny: false,
   stats: {
-    DEBUGGING: 84,
-    PATIENCE: 24,
-    CHAOS: 4,
-    WISDOM: 36,
-    SNARK: 23,
+    DEBUGGING: 57,
+    PATIENCE: 49,
+    CHAOS: 33,
+    WISDOM: 68,
+    SNARK: 100,
   },
 };
 
@@ -50,11 +47,7 @@ const WYHASH_BONES: BuddyBones = {
 
 describe("wyhash (Bun.hash)", () => {
   test("produces correct 32-bit hash for test vector", () => {
-    const seedInput = concatBytes([
-      hexToBytes(TEST_IDENTITY_HASH),
-      stringToBytes(SEED_DOMAIN),
-    ]);
-    const hash = wyhash(seedInput);
+    const hash = wyhash(TEST_SEED);
     expect(hash).toBe(WYHASH_HASH);
   });
 
@@ -63,7 +56,7 @@ describe("wyhash (Bun.hash)", () => {
       "",
       "hello",
       "a".repeat(1000),
-      hexToBytes(TEST_SEED_INPUT_HEX),
+      TEST_SEED,
     ];
     for (const input of inputs) {
       const h = wyhash(input);
@@ -75,11 +68,11 @@ describe("wyhash (Bun.hash)", () => {
 });
 
 describe("deriveTraitSeed", () => {
-  test("uses the correct seed domain", () => {
-    expect(SEED_DOMAIN).toBe("buddies-onchain:trait-seed:v2");
+  test("uses the correct salt", () => {
+    expect(SALT).toBe("friend-2026-401");
   });
 
-  test("matches raw identityHash bytes plus seed-domain test vector", () => {
+  test("matches accountUuid plus salt test vector", () => {
     const seed = deriveTraitSeed(TEST_UUID);
     expect(seed).toBe(WYHASH_HASH);
   });
@@ -98,9 +91,6 @@ describe("deriveTraitSeed", () => {
     }
   });
 
-  test("rejects invalid UUIDs before seed derivation", () => {
-    expect(() => deriveTraitSeed("anon")).toThrow();
-  });
 });
 
 // ===========================================================================
@@ -232,12 +222,12 @@ describe("deriveBuddyFromAccount", () => {
 
     expect(identityHash).toBe(TEST_IDENTITY_HASH);
     expect(traitSeed).toBe(WYHASH_HASH);
-    expect(bones.rarity).toBe("common");
-    expect(bones.species).toBe("duck");
-    expect(bones.eye).toBe("◉");
+    expect(bones.rarity).toBe("epic");
+    expect(bones.species).toBe("robot");
+    expect(bones.eye).toBe("×");
     expect(bones.hat).toBe("none");
     expect(bones.shiny).toBe(false);
-    expect(bones.stats.DEBUGGING).toBe(84);
+    expect(bones.stats.SNARK).toBe(100);
   });
 
   test("same valid UUID is deterministic", () => {

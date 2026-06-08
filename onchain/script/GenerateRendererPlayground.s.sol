@@ -32,7 +32,7 @@ contract GenerateRendererPlayground is Script {
             "Axolotl hero / Legendary / Hatched",
             _traits(11, 4, 0, 7, false, 72, 68, 40, 84, 58),
             "",
-            bytes32(uint256(0xA110)),
+            uint32(0xA110),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -45,7 +45,7 @@ contract GenerateRendererPlayground is Script {
             "Duck / Common / Hatched",
             _traits(0, 0, 0, 0, false, 50, 50, 50, 50, 50),
             "",
-            bytes32(uint256(0xD001)),
+            uint32(0xD001),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -58,7 +58,7 @@ contract GenerateRendererPlayground is Script {
             "Dragon / Epic / Hatched",
             _traits(4, 3, 4, 5, false, 80, 44, 91, 61, 37),
             "",
-            bytes32(uint256(0xD402)),
+            uint32(0xD402),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -71,7 +71,7 @@ contract GenerateRendererPlayground is Script {
             "Robot / Rare / Hatched",
             _traits(14, 2, 5, 3, false, 46, 61, 30, 95, 58),
             "",
-            bytes32(uint256(0xD143)),
+            uint32(0xD143),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -84,7 +84,7 @@ contract GenerateRendererPlayground is Script {
             "Octopus / Uncommon / Hatched",
             _traits(5, 1, 1, 2, false, 57, 49, 72, 66, 35),
             "",
-            bytes32(uint256(0xD584)),
+            uint32(0xD584),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -97,7 +97,7 @@ contract GenerateRendererPlayground is Script {
             "Duck / Rare / star eyes",
             _traits(0, 2, 1, 3, false, 50, 50, 50, 50, 50),
             "",
-            bytes32(uint256(0xE011)),
+            uint32(0xE011),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -110,7 +110,7 @@ contract GenerateRendererPlayground is Script {
             "Duck / Rare / bullseye eyes",
             _traits(0, 2, 3, 3, false, 50, 50, 50, 50, 50),
             "",
-            bytes32(uint256(0xE033)),
+            uint32(0xE033),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -123,7 +123,7 @@ contract GenerateRendererPlayground is Script {
             "Duck / Rare / at eyes",
             _traits(0, 2, 4, 3, false, 50, 50, 50, 50, 50),
             "",
-            bytes32(uint256(0xE044)),
+            uint32(0xE044),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -136,7 +136,7 @@ contract GenerateRendererPlayground is Script {
             "Ghost / Uncommon / low stats",
             _traits(10, 1, 0, 3, false, 8, 14, 12, 18, 10),
             "",
-            bytes32(uint256(0x5101)),
+            uint32(0x5101),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -149,7 +149,7 @@ contract GenerateRendererPlayground is Script {
             "Cat / Rare / balanced stats",
             _traits(3, 2, 0, 3, false, 52, 57, 46, 61, 55),
             "",
-            bytes32(uint256(0x5202)),
+            uint32(0x5202),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -162,7 +162,7 @@ contract GenerateRendererPlayground is Script {
             "Dragon / Legendary / maxed stats",
             _traits(4, 4, 0, 6, false, 100, 100, 100, 100, 100),
             "",
-            bytes32(uint256(0x5303)),
+            uint32(0x5303),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -175,7 +175,7 @@ contract GenerateRendererPlayground is Script {
             "Ghost / Epic / shiny",
             _traits(10, 3, 2, 4, true, 84, 38, 92, 70, 66),
             "",
-            bytes32(uint256(0x6104)),
+            uint32(0x6104),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -188,7 +188,7 @@ contract GenerateRendererPlayground is Script {
             "Robot / Rare / Bonded stage",
             _traits(14, 2, 5, 3, false, 46, 61, 30, 95, 58),
             "Pilsner",
-            bytes32(uint256(0x6205)),
+            uint32(0x6205),
             IBuddyNFT.OwnershipStage.Bonded
         );
 
@@ -205,13 +205,13 @@ contract GenerateRendererPlayground is Script {
         string memory label,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal returns (uint256) {
         mock.setTraits(tokenId, traits);
         mock.setName(tokenId, name);
-        mock.setIdentityHash(tokenId, identityHash);
-        mock.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mock.setIdentityHash(tokenId, keccak256(abi.encodePacked("playground-card-identity:", section, ":", slug)));
+        mock.setPrngSeed(tokenId, prngSeed);
         mock.setStage(tokenId, stage);
 
         string memory uri = renderer.tokenURI(address(mock), tokenId);

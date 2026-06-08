@@ -23,5 +23,6 @@ interface IBuddyNFT {
     function buddyTraits(uint256 tokenId) external view returns (BuddyTraits memory);
     function buddyName(uint256 tokenId) external view returns (string memory);
     function buddyIdentityHash(uint256 tokenId) external view returns (bytes32);
+    function buddyPrngSeed(uint256 tokenId) external view returns (uint32);
     function getStage(uint256 tokenId) external view returns (OwnershipStage);
 }

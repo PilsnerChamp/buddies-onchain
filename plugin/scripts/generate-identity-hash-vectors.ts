@@ -27,7 +27,7 @@ interface IdentityHashFixture {
   vectors: IdentityHashVector[];
 }
 
-const DOMAIN_TAG = 'buddies-onchain:identity:v1';
+const DOMAIN_TAG = 'buddies-onchain:identity:claude:v1';
 const TAG = stringToBytes(DOMAIN_TAG);
 const SEP = Uint8Array.of(0x1f);
 
@@ -58,7 +58,7 @@ function createVector(uuid: string): IdentityHashVector {
   const uuidBytes = stringToBytes(uuidLower);
   const preimage = concatBytes([TAG, SEP, uuidBytes]);
 
-  if (TAG.length !== 27 || uuidBytes.length !== 36 || preimage.length !== 64) {
+  if (TAG.length !== 34 || uuidBytes.length !== 36 || preimage.length !== 71) {
     throw new Error(`preimage invariant for ${uuid}`);
   }
 

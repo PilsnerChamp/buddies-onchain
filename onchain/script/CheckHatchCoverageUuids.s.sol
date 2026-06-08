@@ -5,13 +5,12 @@ import {Script, console} from "forge-std/Script.sol";
 import {BuddyDomain} from "../contracts/libraries/BuddyDomain.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {WyHash} from "../contracts/libraries/WyHash.sol";
-import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Verifies committed hatch-coverage UUID manifest against Solidity derivation.
 /// @dev This is the Forge-side `coverage-uuids-check` gate.
 contract CheckHatchCoverageUuids is Script {
     string private constant MANIFEST_PATH = "contract-data/hatch-coverage/manifest.json";
-    bytes private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+    bytes private constant HATCH_SALT = "friend-2026-401";
 
     uint8 private constant SPECIES_COUNT = BuddyDomain.SPECIES_COUNT;
     uint8 private constant RARITY_COUNT = BuddyDomain.RARITY_COUNT;
@@ -98,7 +97,7 @@ contract CheckHatchCoverageUuids is Script {
     }
 
     function _checkRow(ManifestRow memory row, uint256 index) internal {
-        uint32 seed = WyHash.hash(abi.encodePacked(IdentityHash._computeIdentityHash(row.uuid)), SEED_DOMAIN);
+        uint32 seed = WyHash.hash(bytes(row.uuid), HATCH_SALT);
 
         _assertUintEq(row.uuid, "tokenId", row.tokenId, index + 1);
         _assertUintEq(row.uuid, "seed", row.seed, uint256(seed));

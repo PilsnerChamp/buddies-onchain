@@ -2,22 +2,18 @@
  * Bone derivation pipeline — exact parity with BuddyNFT.hatch.
  *
  * Pipeline:
- * accountUuid -> §2 keccak identityHash -> raw32 || SEED_DOMAIN -> wyhash
- * -> 32-bit trait seed -> Mulberry32 PRNG -> traits
+ * accountUuid + SALT -> wyhash -> 32-bit trait seed -> Mulberry32 PRNG -> traits
  *
  * CROSS-DOMAIN CONTRACT: The Mulberry32 implementation and trait derivation
- * order MUST stay in sync with the Solidity contract. The trait seed preimage
- * MUST stay byte-exact with BuddyNFT.hatch: raw identityHash bytes, not the
- * "0x…" string or hex characters.
+ * order MUST stay in sync with the Solidity contract. The trait seed is
+ * computed client-side and handed to BuddyNFT.hatch unchanged.
  */
-
-import { concatBytes, hexToBytes, stringToBytes } from "viem";
 
 import { computeIdentityHash } from "~shared/computeIdentityHash";
 
 // ---------- constants ------------------------------------------------------
 
-export const SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+export const SALT = "friend-2026-401";
 
 export const SPECIES = [
   "duck", "goose", "blob", "cat", "dragon", "octopus", "owl", "penguin",
@@ -123,18 +119,13 @@ export function wyhash(input: string | Uint8Array): number {
 /**
  * Derive the 32-bit trait seed from an account UUID.
  *
- * CROSS-DOMAIN: This matches BuddyNFT.hatch:
- * `WyHash.hash(abi.encodePacked(identityHash), bytes(SEED_DOMAIN))`.
+ * CROSS-DOMAIN: This matches the original body-preserving hatch formula:
+ * `WyHash.hash(bytes(accountUuid), bytes(SALT))`.
  *
  * @param accountUuid - Canonical v4 account UUID.
  */
 export function deriveTraitSeed(accountUuid: string): number {
-  const identityHash = computeIdentityHash(accountUuid);
-  const seedInput = concatBytes([
-    hexToBytes(identityHash),
-    stringToBytes(SEED_DOMAIN),
-  ]);
-  return wyhash(seedInput);
+  return wyhash(accountUuid + SALT);
 }
 
 // ---------- main derivation ------------------------------------------------
@@ -180,7 +171,9 @@ export function deriveBones(rng: RNG): BuddyBones {
 }
 
 /**
- * Full pipeline: accountUuid -> identityHash -> trait seed -> PRNG -> bones.
+ * Full pipeline: accountUuid -> trait seed (wyhash) + identityHash (keccak) -> PRNG -> bones.
+ * The seed and the identity hash are two independent derivations from the UUID
+ * (Decision 8); the seed drives bones, the hash is the privacy/lookup key.
  *
  * @param accountUuid - Canonical v4 account UUID.
  */

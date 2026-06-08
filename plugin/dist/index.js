@@ -9088,7 +9088,10 @@ var BUDDY_NFT_ABI = [
     type: "function",
     name: "hatch",
     stateMutability: "nonpayable",
-    inputs: [{ name: "identityHash", type: "bytes32" }],
+    inputs: [
+      { name: "identityHash", type: "bytes32" },
+      { name: "prngSeed", type: "uint32" }
+    ],
     outputs: [{ name: "tokenId", type: "uint256" }]
   },
   {
@@ -17738,21 +17741,21 @@ function assertCanonicalV4Uuid(uuidLower) {
 }
 
 // ../shared/computeIdentityHash.ts
-var TAG = stringToBytes("buddies-onchain:identity:v1");
+var TAG = stringToBytes("buddies-onchain:identity:claude:v1");
 var SEP = Uint8Array.of(31);
 function computeIdentityHash(uuid) {
   const u = uuid.toLowerCase();
   assertCanonicalV4Uuid(u);
   const uuidBytes = stringToBytes(u);
   const preimage = concatBytes2([TAG, SEP, uuidBytes]);
-  if (TAG.length !== 27 || uuidBytes.length !== 36 || preimage.length !== 64) {
+  if (TAG.length !== 34 || uuidBytes.length !== 36 || preimage.length !== 71) {
     throw new Error("preimage invariant");
   }
   return keccak256(preimage);
 }
 
 // src/bone-deriver.ts
-var SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+var SALT = "friend-2026-401";
 var SPECIES = [
   "duck",
   "goose",
@@ -17839,12 +17842,7 @@ function wyhash(input) {
   return Number(BigInt.asUintN(64, BigInt(Bun.hash(input))) & 0xffffffffn);
 }
 function deriveTraitSeed(accountUuid) {
-  const identityHash = computeIdentityHash(accountUuid);
-  const seedInput = concatBytes2([
-    hexToBytes(identityHash),
-    stringToBytes(SEED_DOMAIN)
-  ]);
-  return wyhash(seedInput);
+  return wyhash(accountUuid + SALT);
 }
 function deriveBones(rng) {
   const rarity = rollRarity(rng);
@@ -18114,8 +18112,15 @@ function deriveEffective(state, identity, envOverride) {
 function siteOriginForKey(key) {
   return key === "local" ? "http://localhost:5173" : "https://buddies-onchain.xyz";
 }
+var UINT32_MAX = 4294967295;
+var ZERO_IDENTITY_HASH = `0x${"0".repeat(64)}`;
 function hatchUrl(origin, uuid) {
-  return `${origin}/hatch#accountUuid=${encodeURIComponent(uuid)}`;
+  const canonicalUuid = uuid.trim().toLowerCase();
+  const { identityHash, traitSeed: prngSeed } = deriveBuddyFromAccount(canonicalUuid);
+  if (!/^0x[0-9a-f]{64}$/.test(identityHash) || identityHash === ZERO_IDENTITY_HASH || !Number.isInteger(prngSeed) || prngSeed < 0 || prngSeed > UINT32_MAX) {
+    throw new Error("invalid hatch fragment");
+  }
+  return `${origin}/hatch#identityHash=${identityHash}&prngSeed=${prngSeed}`;
 }
 function warmUrl(origin, tokenId) {
   return `${origin}/view/${tokenId.toString()}`;

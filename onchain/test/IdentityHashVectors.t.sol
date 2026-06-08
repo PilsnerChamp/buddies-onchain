@@ -32,7 +32,7 @@ contract IdentityHashVectorsTest is Test {
             bool isPrimaryRow = _eq(uuid, PRIMARY_UUID);
             bool isUppercaseRow = _eq(uuid, PRIMARY_UUID_UPPER);
 
-            assertEq(preimageLength, 64, string.concat("preimage length mismatch at ", prefix));
+            assertEq(preimageLength, 71, string.concat("preimage length mismatch at ", prefix));
 
             string memory uuidLower = _lowercaseAscii(uuid);
             bytes32 actualDigest = IdentityHash._computeIdentityHash(uuidLower);

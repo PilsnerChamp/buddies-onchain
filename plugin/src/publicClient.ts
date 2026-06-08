@@ -2,7 +2,7 @@
 //
 // Hardcoded HTTP publicClient for the active runtime chain. Wallet-free —
 // the plugin reads `getTokenIdByIdentity` over the public RPC to decide
-// between the cold (`/hatch#accountUuid=<uuid>`) and warm (`/view/<tokenId>`)
+// between the cold (`/hatch#identityHash=...&prngSeed=...`) and warm (`/view/<tokenId>`)
 // handoff URL.
 //
 // Lazy construction (`getPublicClient()` returns a singleton built on first

@@ -26,14 +26,14 @@ contract GenerateRendererCard is Script {
             string memory label,
             IBuddyNFT.BuddyTraits memory traits,
             string memory name,
-            bytes32 identityHash,
+            uint32 prngSeed,
             IBuddyNFT.OwnershipStage stage
         ) = _preset(preset);
 
         mock.setTraits(1, traits);
         mock.setName(1, name);
-        mock.setIdentityHash(1, identityHash);
-        mock.setPrngSeed(1, uint32(uint256(identityHash)));
+        mock.setIdentityHash(1, keccak256(abi.encodePacked("renderer-card-identity:", slug)));
+        mock.setPrngSeed(1, prngSeed);
         mock.setStage(1, stage);
 
         console.log(string.concat("RENDERER_CARD ", slug, "|", label));
@@ -48,7 +48,7 @@ contract GenerateRendererCard is Script {
             string memory label,
             IBuddyNFT.BuddyTraits memory traits,
             string memory name,
-            bytes32 identityHash,
+            uint32 prngSeed,
             IBuddyNFT.OwnershipStage stage
         )
     {
@@ -58,7 +58,7 @@ contract GenerateRendererCard is Script {
                 "Duck / Common / Hatched",
                 _traits(0, 0, 0, 0, false, 50, 50, 50, 50, 50),
                 "",
-                bytes32(uint256(0xD001)),
+                uint32(0xD001),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }
@@ -69,7 +69,7 @@ contract GenerateRendererCard is Script {
                 "Axolotl / Legendary / Hatched",
                 _traits(11, 4, 0, 7, false, 72, 68, 40, 84, 58),
                 "",
-                bytes32(uint256(0xA110)),
+                uint32(0xA110),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }
@@ -80,7 +80,7 @@ contract GenerateRendererCard is Script {
                 "Dragon / Epic / Hatched",
                 _traits(4, 3, 4, 5, false, 80, 44, 91, 61, 37),
                 "",
-                bytes32(uint256(0xD402)),
+                uint32(0xD402),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }
@@ -91,7 +91,7 @@ contract GenerateRendererCard is Script {
                 "Robot / Rare / Bonded",
                 _traits(14, 2, 5, 3, false, 46, 61, 30, 95, 58),
                 "Pilsner",
-                bytes32(uint256(0x6205)),
+                uint32(0x6205),
                 IBuddyNFT.OwnershipStage.Bonded
             );
         }
@@ -102,7 +102,7 @@ contract GenerateRendererCard is Script {
                 "Axolotl / Legendary / Hatched / Single Digit",
                 _traits(11, 4, 0, 7, false, 72, 68, 7, 84, 58),
                 "",
-                bytes32(uint256(0xA117)),
+                uint32(0xA117),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }
@@ -113,7 +113,7 @@ contract GenerateRendererCard is Script {
                 "Axolotl / Legendary / Hatched / Hundred",
                 _traits(11, 4, 0, 7, false, 72, 68, 100, 84, 58),
                 "",
-                bytes32(uint256(0xA199)),
+                uint32(0xA199),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }
@@ -124,7 +124,7 @@ contract GenerateRendererCard is Script {
                 "Mushroom / Legendary / Hatched / Shiny",
                 _traits(16, 4, 1, 0, true, 100, 54, 89, 88, 87),
                 "",
-                bytes32(uint256(0xD16A)),
+                uint32(0xD16A),
                 IBuddyNFT.OwnershipStage.Custodial
             );
         }

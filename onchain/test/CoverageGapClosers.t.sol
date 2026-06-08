@@ -92,7 +92,7 @@ contract CoverageGapClosersTest is Test, HatchHelper {
     function test_labelFallback_speciesUnknown_reachesFallbackBeforeSpriteRevert() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 18;
-        _setMockToken(1, traits, "", bytes32(uint256(0xF001)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xF001), IBuddyNFT.OwnershipStage.Custodial);
 
         vm.expectRevert(BuddySpriteData.InvalidBodyIndex.selector);
         renderer.tokenURI(address(mockBuddy), 1);
@@ -214,7 +214,7 @@ contract CoverageGapClosersTest is Test, HatchHelper {
         internal
         returns (string memory)
     {
-        _setMockToken(1, traits, "", bytes32(uint256(0xB0B)), stage);
+        _setMockToken(1, traits, "", uint32(0xB0B), stage);
         return renderer.tokenURI(address(mockBuddy), 1);
     }
 
@@ -222,12 +222,13 @@ contract CoverageGapClosersTest is Test, HatchHelper {
         uint256 tokenId,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
-        mockBuddy.setIdentityHash(tokenId, identityHash);
+        mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("coverage-gap-identity", tokenId)));
+        mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, stage);
     }
 

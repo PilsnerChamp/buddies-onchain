@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { encodeEventTopics } from 'viem';
-import { computeIdentityHash } from '~shared/computeIdentityHash';
 
 const chainIdRef = { current: 84532 };
 const accountRef: {
@@ -65,7 +64,9 @@ vi.mock('../../src/config/chains', () => ({
 import { BUDDY_NFT_ABI } from '../../src/config/contract';
 import { useHatchFlow } from '../../src/lib/hatch';
 
-const VALID_UUID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+const VALID_IDENTITY_HASH =
+  '0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6' as const;
+const VALID_PRNG_SEED = 4_116_242_804;
 const DEPLOYED_ADDRESS = '0x1f3a5e2b00000000000000000000000000000000' as const;
 const WALLET_ADDRESS = '0xabcdef0123456789abcdef0123456789abcdef01' as const;
 const TX_HASH = '0xabc1234567890000000000000000000000000000000000000000000000001234' as const;
@@ -73,16 +74,7 @@ const TX_HASH = '0xabc1234567890000000000000000000000000000000000000000000000001
 let latestFlow: ReturnType<typeof useHatchFlow>;
 
 function Probe(): JSX.Element {
-  latestFlow = useHatchFlow(VALID_UUID);
-  return (
-    <button type="button" onClick={latestFlow.onRunHatch}>
-      run {latestFlow.state.phase}
-    </button>
-  );
-}
-
-function InvalidProbe(): JSX.Element {
-  latestFlow = useHatchFlow('not-a-uuid');
+  latestFlow = useHatchFlow(VALID_IDENTITY_HASH, VALID_PRNG_SEED);
   return (
     <button type="button" onClick={latestFlow.onRunHatch}>
       run {latestFlow.state.phase}
@@ -118,7 +110,7 @@ function awakenedReceipt(tokenId = 247n): unknown {
     eventName: 'Awakened',
     args: {
       tokenId,
-      identityHash: computeIdentityHash(VALID_UUID),
+      identityHash: VALID_IDENTITY_HASH,
       hatcher: WALLET_ADDRESS,
     },
   });
@@ -189,7 +181,7 @@ describe('useHatchFlow', () => {
     expect(writeContractAsyncMock).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: 'hatch',
-        args: [computeIdentityHash(VALID_UUID)],
+        args: [VALID_IDENTITY_HASH, VALID_PRNG_SEED],
       }),
     );
     expect(latestFlow.state).toMatchObject({
@@ -389,19 +381,4 @@ describe('useHatchFlow', () => {
     unmount();
   });
 
-  it('invalid-uuid is a client-side pre-write validation failure', async () => {
-    accountRef.current = { isConnected: true, address: WALLET_ADDRESS };
-    render(<InvalidProbe />);
-
-    act(() => clickRun());
-    await flushAsync();
-
-    expect(writeContractAsyncMock).not.toHaveBeenCalled();
-    expect(latestFlow.state).toMatchObject({
-      phase: 'failed',
-      category: 'invalid-uuid',
-      txHash: null,
-      submissionChainId: null,
-    });
-  });
 });

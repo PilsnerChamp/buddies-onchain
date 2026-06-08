@@ -1,8 +1,8 @@
 // site/test/unit/appRouting.test.tsx
 //
 // Covers routing behavior documented in docs/site/architecture.md § Routes:
-//   - missing/malformed fragment `accountUuid` on `/hatch` redirects to `/`
-//   - invalid-param event is emitted before redirect
+//   - missing/malformed fragment handoff on `/hatch` redirects to `/`
+//   - invalid-handoff warning is emitted before redirect without raw values
 //   - unknown paths redirect to `/`
 //
 // Mounted through `<MemoryRouter>` with `initialEntries`. `Home` is mocked
@@ -24,13 +24,25 @@ vi.mock('../../src/routes/Home', () => ({
 // Stub Hatch so the router test doesn't drag in wagmi hooks (`useChainId`,
 // `useReadContract`, `useWriteContract`) — they require `<WagmiProvider>`
 // in context, which this test deliberately omits. The stub receives the
-// scrubbed gate-owned UUID prop.
+// scrubbed gate-owned handoff props.
 //
 // `vi.mock` intercepts both static AND dynamic imports of the path, so the
 // `lazy(() => import('./routes/Hatch'))` boundary in App.tsx resolves to this stub.
 vi.mock('../../src/routes/Hatch', () => {
-  const Hatch = ({ accountUuid }: { accountUuid: string }): JSX.Element => (
-    <main data-testid="hatch-stub">hatch placeholder for {accountUuid}</main>
+  const Hatch = ({
+    identityHash,
+    prngSeed,
+  }: {
+    identityHash: `0x${string}`;
+    prngSeed: number;
+  }): JSX.Element => (
+    <main
+      data-testid="hatch-stub"
+      data-identity-hash={identityHash}
+      data-prng-seed={String(prngSeed)}
+    >
+      hatch placeholder
+    </main>
   );
   return { Hatch };
 });
@@ -54,6 +66,22 @@ vi.mock('../../src/routes/Bond', () => ({
 }));
 
 import App from '../../src/App';
+
+const VALID_IDENTITY_HASH =
+  '0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6' as const;
+const ZERO_IDENTITY_HASH =
+  '0x0000000000000000000000000000000000000000000000000000000000000000';
+const VALID_PRNG_SEED = 4_116_242_804;
+
+function hatchFragment({
+  identityHash = VALID_IDENTITY_HASH,
+  prngSeed = String(VALID_PRNG_SEED),
+}: {
+  identityHash?: string;
+  prngSeed?: string;
+} = {}): string {
+  return `identityHash=${identityHash}&prngSeed=${prngSeed}`;
+}
 
 function renderAt(path: string): void {
   render(
@@ -90,46 +118,80 @@ describe('App routing — routing-collapse contract', () => {
   // it stays cached, so subsequent assertions in the same `it` are sync-
   // safe; we only need `findBy` for the first assertion in each lazy path.
 
-  it('`/hatch` with no `accountUuid` param redirects to `/` and warns with reason=missing', async () => {
+  function expectInvalidHandoffWarning(reason: 'missing' | 'malformed'): void {
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[hatch] invalid handoff, redirecting to /',
+      expect.objectContaining({ reason }),
+    );
+  }
+
+  function expectNoRawHandoffLogged(...rawValues: string[]): void {
+    const logged = warnSpy.mock.calls.map((call) => JSON.stringify(call)).join('\n');
+    for (const rawValue of rawValues) {
+      expect(logged).not.toContain(rawValue);
+    }
+    expect(logged).not.toContain('raw');
+    expect(logged).not.toContain('identityHash');
+    expect(logged).not.toContain('prngSeed');
+  }
+
+  it('`/hatch` with no fragment redirects to `/` and warns with reason=missing', async () => {
     renderAt('/hatch');
     expect(await screen.findByTestId('home-stub')).toBeTruthy();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[hatch] invalid accountUuid, redirecting to /',
-      expect.objectContaining({ reason: 'missing', raw: null }),
-    );
+    expectInvalidHandoffWarning('missing');
+    expectNoRawHandoffLogged();
   });
 
-  it('`/hatch#accountUuid=garbage` redirects to `/` and warns with reason=malformed + truncated raw', async () => {
-    renderAt('/hatch#accountUuid=garbage');
+  it.each([
+    ['missing prngSeed', `identityHash=${VALID_IDENTITY_HASH}`],
+    ['missing identityHash', `prngSeed=${VALID_PRNG_SEED}`],
+    ['empty identityHash', `identityHash=&prngSeed=${VALID_PRNG_SEED}`],
+    ['empty prngSeed', `identityHash=${VALID_IDENTITY_HASH}&prngSeed=`],
+  ])('`/hatch#%s` redirects to `/` and warns with reason=missing', async (_, fragment) => {
+    renderAt(`/hatch#${fragment}`);
     expect(await screen.findByTestId('home-stub')).toBeTruthy();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[hatch] invalid accountUuid, redirecting to /',
-      expect.objectContaining({ reason: 'malformed', raw: 'garbage' }),
-    );
+    expectInvalidHandoffWarning('missing');
+    expectNoRawHandoffLogged(fragment);
   });
 
-  it('`/hatch#accountUuid=<valid-v4>` stays on the hatch placeholder (no redirect)', async () => {
-    renderAt('/hatch#accountUuid=f47ac10b-58cc-4372-a567-0e02b2c3d479');
-    // The placeholder surface echoes the uuid; assert presence to lock the
-    // shape without over-coupling to the placeholder text. `findByText`
-    // also serves as the suspense-resolved checkpoint.
-    expect(
-      await screen.findByText(/hatch placeholder for f47ac10b/i),
-    ).toBeTruthy();
+  it.each([
+    ['wrong length', `${VALID_IDENTITY_HASH}0`],
+    ['uppercase', VALID_IDENTITY_HASH.toUpperCase()],
+    ['zero', ZERO_IDENTITY_HASH],
+  ])('malformed identityHash (%s) redirects to `/` without logging raw values', async (_, identityHash) => {
+    const fragment = hatchFragment({ identityHash });
+    renderAt(`/hatch#${fragment}`);
+    expect(await screen.findByTestId('home-stub')).toBeTruthy();
+    expectInvalidHandoffWarning('malformed');
+    expectNoRawHandoffLogged(identityHash, fragment);
+  });
+
+  it.each([
+    ['out of range', '4294967296'],
+    ['negative', '-1'],
+    ['decimal point', '1.5'],
+    ['hex-looking', '0x10'],
+  ])('malformed prngSeed (%s) redirects to `/` without logging raw values', async (_, prngSeed) => {
+    const fragment = hatchFragment({ prngSeed });
+    renderAt(`/hatch#${fragment}`);
+    expect(await screen.findByTestId('home-stub')).toBeTruthy();
+    expectInvalidHandoffWarning('malformed');
+    expectNoRawHandoffLogged(prngSeed, fragment);
+  });
+
+  it('`/hatch#identityHash=<hash>&prngSeed=<uint32>` stays on the hatch placeholder', async () => {
+    renderAt(`/hatch#${hatchFragment()}`);
+    const hatch = await screen.findByTestId('hatch-stub');
+    expect(hatch.dataset.identityHash).toBe(VALID_IDENTITY_HASH);
+    expect(hatch.dataset.prngSeed).toBe(String(VALID_PRNG_SEED));
     expect(screen.queryByTestId('home-stub')).toBeNull();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  // Mixed-case `accountUuid` — uppercase UUIDs (hand-constructed dev URLs,
-  // address-bar paste) must pass the App-level gate so the route can
-  // lowercase + render. See `docs/site/terminal-ui.md` § `/hatch`
-  // mixed-case UUID handling. Regression guard against an accidental
-  // case-sensitive flag flip on the regex.
-  it('`/hatch#accountUuid=<UPPERCASE valid-v4>` stays on the hatch placeholder (case-insensitive regex)', async () => {
-    renderAt('/hatch#accountUuid=F47AC10B-58CC-4372-A567-0E02B2C3D479');
-    // `findByTestId` waits for the lazy hatch-stub to mount — confirms
-    // the route progressed past the gate without redirecting.
-    expect(await screen.findByTestId('hatch-stub')).toBeTruthy();
+  it('`prngSeed=0` is accepted', async () => {
+    renderAt(`/hatch#${hatchFragment({ prngSeed: '0' })}`);
+    const hatch = await screen.findByTestId('hatch-stub');
+    expect(hatch.dataset.prngSeed).toBe('0');
     expect(screen.queryByTestId('home-stub')).toBeNull();
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -147,26 +209,15 @@ describe('App routing — routing-collapse contract', () => {
     expect(screen.queryByTestId('home-stub')).toBeNull();
   });
 
-  it('truncates an oversized raw `accountUuid` to 64 chars in the telemetry log', async () => {
-    const long = 'x'.repeat(200);
-    renderAt(`/hatch#accountUuid=${long}`);
-    expect(await screen.findByTestId('home-stub')).toBeTruthy();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[hatch] invalid accountUuid, redirecting to /',
-      expect.objectContaining({
-        reason: 'malformed',
-        raw: 'x'.repeat(64),
-      }),
-    );
-  });
-
-  it('scrubs the UUID fragment synchronously before the hatch surface mounts', async () => {
-    const uuid = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-    window.history.replaceState(null, '', `/hatch#accountUuid=${uuid}`);
-    renderAt(`/hatch#accountUuid=${uuid}`);
+  it('scrubs the handoff fragment synchronously before the hatch surface mounts', async () => {
+    const fragment = hatchFragment();
+    window.history.replaceState(null, '', `/hatch#${fragment}`);
+    renderAt(`/hatch#${fragment}`);
     expect(await screen.findByTestId('hatch-stub')).toBeTruthy();
     expect(window.location.pathname).toBe('/hatch');
     expect(window.location.hash).toBe('');
-    expect(window.location.href).not.toContain(uuid);
+    expect(window.location.href).not.toContain(VALID_IDENTITY_HASH);
+    expect(window.location.href).not.toContain(String(VALID_PRNG_SEED));
+    expect(window.location.href).not.toContain('prngSeed');
   });
 });

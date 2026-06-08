@@ -73,7 +73,9 @@ import { Hatch } from '../../src/routes/Hatch';
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-const VALID_UUID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+const VALID_IDENTITY_HASH =
+  '0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6' as const;
+const VALID_PRNG_SEED = 4_116_242_804;
 const DEPLOYED_ADDRESS = '0x1f3a5e2b00000000000000000000000000000000' as const;
 const WALLET_ADDRESS = '0xabcdef0123456789abcdef0123456789abcdef01' as const;
 const TX_HASH = '0xabc1234567890000000000000000000000000000000000000000000000001234' as const;
@@ -98,7 +100,15 @@ function renderHatchAt(path: string): { container: HTMLElement } {
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/" element={<main data-testid="home-stub">home-stub</main>} />
-        <Route path="/hatch" element={<Hatch accountUuid={VALID_UUID} />} />
+        <Route
+          path="/hatch"
+          element={
+            <Hatch
+              identityHash={VALID_IDENTITY_HASH}
+              prngSeed={VALID_PRNG_SEED}
+            />
+          }
+        />
         <Route
           path="/view/:tokenId"
           element={<main data-testid="view-token-stub">view-token-stub</main>}
@@ -135,14 +145,21 @@ describe('/hatch — terminal frame + structure', () => {
     );
   });
 
-  it('echoes `> /hatch --help` in the page header and the full UUID in the action prompt cmd', () => {
+  it('echoes `> /hatch --help` in the page header and a bare hatch action prompt', () => {
     const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.route-command__accent')?.textContent).toBe(
       '/hatch --help',
     );
     expect(container.querySelector('.hatch-action__command')?.textContent).toBe(
-      `/hatch ${VALID_UUID}`,
+      '/hatch',
     );
+  });
+
+  it('does not render the pre-mint identityHash or prngSeed values', () => {
+    const { container } = renderHatchAt('/hatch');
+    const text = container.textContent ?? '';
+    expect(text).not.toContain(VALID_IDENTITY_HASH);
+    expect(text).not.toContain(String(VALID_PRNG_SEED));
   });
 
   it('renders sections in exact order: STATUS, DESCRIPTION, REQUIREMENTS, NEXT STEP, AUTHOR, SEE ALSO', () => {
@@ -372,13 +389,15 @@ describe('/hatch — state matrix', () => {
   });
 });
 
-describe('/hatch — REQUIREMENTS rows + truncation', () => {
+describe('/hatch — REQUIREMENTS rows', () => {
   beforeEach(applyDefaults);
   afterEach(cleanup);
 
-  it('account-uuid row shows 8…7 truncation + · connected', () => {
+  it('handoff row confirms the scrubbed hash/seed pair without exposing values', () => {
     renderHatchAt('/hatch');
-    expect(screen.getByText('f47ac10b…2c3d479')).toBeTruthy();
+    expect(screen.getByText('handoff')).toBeTruthy();
+    expect(screen.getByText('identity hash + trait seed')).toBeTruthy();
+    expect(screen.getAllByText('connected').length).toBeGreaterThan(0);
   });
 
   it('wallet row shows browser-wallet description + · not connected when disconnected', () => {
@@ -408,6 +427,12 @@ describe('/hatch — preflight + confirmed redirects', () => {
       error: null,
     });
     renderHatchAt('/hatch');
+    expect(useReadContractMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: 'getTokenIdByIdentity',
+        args: [VALID_IDENTITY_HASH],
+      }),
+    );
     expect(screen.getByTestId('view-token-stub')).toBeTruthy();
   });
 

@@ -4,12 +4,11 @@ pragma solidity ^0.8.24;
 import {Script, console} from "forge-std/Script.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {WyHash} from "../contracts/libraries/WyHash.sol";
-import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Emits seed and trait rows for a shell-provided canonical UUID list.
 /// @dev Expects `HATCH_COVERAGE_UUIDS` as a comma-delimited UUID list.
 contract EmitHatchCoverageManifest is Script {
-    bytes private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
+    bytes private constant HATCH_SALT = "friend-2026-401";
 
     function run() external view {
         string memory rawUuids = vm.envString("HATCH_COVERAGE_UUIDS");
@@ -28,7 +27,7 @@ contract EmitHatchCoverageManifest is Script {
     }
 
     function _emitManifestRow(string memory uuid, uint256 tokenId) internal pure {
-        uint32 seed = WyHash.hash(abi.encodePacked(IdentityHash._computeIdentityHash(uuid)), SEED_DOMAIN);
+        uint32 seed = WyHash.hash(bytes(uuid), HATCH_SALT);
         (
             uint8 species,
             uint8 rarity,

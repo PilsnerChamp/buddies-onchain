@@ -14,7 +14,7 @@ import {MockBuddyNFTForRenderer} from "../test/helpers/MockBuddyNFTForRenderer.s
 ///         `onchain/contract-data/reference-cards/` and serves as the permanent
 ///         visual-truth reference for renderer output.
 /// @dev Runs entirely in forge's in-memory EVM. Deterministic by construction:
-///      trait tuples, names, identity hashes, and stages are pinned so
+///      trait tuples, names, backdrop seeds, and stages are pinned so
 ///      byte-identical regeneration is possible whenever the renderer changes.
 ///      Consumed by `onchain/tools/renderer/regen-reference-cards.sh`.
 contract GenerateReferenceCards is Script {
@@ -37,7 +37,7 @@ contract GenerateReferenceCards is Script {
             "Common / Duck / Beanie",
             _traits(0, 0, 0, 6, false, 12, 28, 15, 32, 20),
             "",
-            keccak256("reference-card:common-duck-hat"),
+            uint32(uint256(keccak256("reference-card:common-duck-hat"))),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -51,7 +51,7 @@ contract GenerateReferenceCards is Script {
             "Uncommon / Mushroom / Hatless",
             _traits(16, 1, 1, 0, false, 22, 44, 38, 27, 31),
             "",
-            keccak256("reference-card:uncommon-mushroom-hatless"),
+            uint32(uint256(keccak256("reference-card:uncommon-mushroom-hatless"))),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -64,7 +64,7 @@ contract GenerateReferenceCards is Script {
             "Rare / Axolotl / Tophat",
             _traits(11, 2, 3, 2, false, 48, 62, 35, 54, 41),
             "",
-            keccak256("reference-card:rare-axolotl-hat"),
+            uint32(uint256(keccak256("reference-card:rare-axolotl-hat"))),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -77,7 +77,7 @@ contract GenerateReferenceCards is Script {
             "Epic / Dragon / Wizard",
             _traits(4, 3, 4, 5, false, 78, 45, 88, 62, 38),
             "",
-            keccak256("reference-card:epic-dragon-hat"),
+            uint32(uint256(keccak256("reference-card:epic-dragon-hat"))),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -90,7 +90,7 @@ contract GenerateReferenceCards is Script {
             "Legendary / Ghost / Hatless / Shiny",
             _traits(10, 4, 2, 0, true, 92, 58, 74, 88, 66),
             "",
-            keccak256("reference-card:legendary-ghost-hatless"),
+            uint32(uint256(keccak256("reference-card:legendary-ghost-hatless"))),
             IBuddyNFT.OwnershipStage.Custodial
         );
 
@@ -106,13 +106,13 @@ contract GenerateReferenceCards is Script {
         string memory label,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal returns (uint256) {
         mock.setTraits(tokenId, traits);
         mock.setName(tokenId, name);
-        mock.setIdentityHash(tokenId, identityHash);
-        mock.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mock.setIdentityHash(tokenId, keccak256(abi.encodePacked("reference-card-identity:", slug)));
+        mock.setPrngSeed(tokenId, prngSeed);
         mock.setStage(tokenId, stage);
 
         string memory uri = renderer.tokenURI(address(mock), tokenId);

@@ -155,7 +155,7 @@ contract GasCeilingsTest is Test, HatchHelper {
     }
 
     function test_gasCeiling_BuddyRenderer_tokenURI() public {
-        _setMockToken(1, _defaultTraits(), BOND_NAME, bytes32(uint256(0xD16A)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(1, _defaultTraits(), BOND_NAME, uint32(0xD16A), IBuddyNFT.OwnershipStage.Bonded);
 
         uint256 gasBefore = gasleft();
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), 1);
@@ -220,13 +220,13 @@ contract GasCeilingsTest is Test, HatchHelper {
         uint256 tokenId,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
-        mockBuddy.setIdentityHash(tokenId, identityHash);
-        mockBuddy.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("gas-ceiling-identity", tokenId)));
+        mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, stage);
     }
 }

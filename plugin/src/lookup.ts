@@ -23,6 +23,7 @@
 
 import { BUDDY_NFT_ABI } from '~shared/buddyNftAbi';
 import { computeIdentityHash } from '~shared/computeIdentityHash';
+import { deriveBuddyFromAccount } from './bone-deriver';
 import { getActiveNetwork, type PluginNetworkInfo } from './network';
 import { getPublicClient } from './publicClient';
 import type { NetworkKey } from '~shared/networks';
@@ -45,8 +46,24 @@ export interface LookupResult {
   tokenId: bigint | null;
 }
 
+const UINT32_MAX = 0xffffffff;
+const ZERO_IDENTITY_HASH = `0x${'0'.repeat(64)}`;
+
 export function hatchUrl(origin: string, uuid: string): string {
-  return `${origin}/hatch#accountUuid=${encodeURIComponent(uuid)}`;
+  const canonicalUuid = uuid.trim().toLowerCase();
+  const { identityHash, traitSeed: prngSeed } = deriveBuddyFromAccount(canonicalUuid);
+
+  if (
+    !/^0x[0-9a-f]{64}$/.test(identityHash) ||
+    identityHash === ZERO_IDENTITY_HASH ||
+    !Number.isInteger(prngSeed) ||
+    prngSeed < 0 ||
+    prngSeed > UINT32_MAX
+  ) {
+    throw new Error('invalid hatch fragment');
+  }
+
+  return `${origin}/hatch#identityHash=${identityHash}&prngSeed=${prngSeed}`;
 }
 
 export function warmUrl(origin: string, tokenId: bigint): string {

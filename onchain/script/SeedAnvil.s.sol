@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+import {WyHash} from "../contracts/libraries/WyHash.sol";
 import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Seeds a fresh local anvil deployment with a small curated set of
@@ -21,6 +22,7 @@ import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 ///      `script/FindSpeciesUuids.s.sol`.
 contract SeedAnvil is Script {
     uint256 internal constant ANVIL_CHAIN_ID = 31337;
+    bytes internal constant HATCH_SALT = "friend-2026-401";
 
     error WrongChain(uint256 actual);
     error MissingDeployment();
@@ -65,7 +67,7 @@ contract SeedAnvil is Script {
                 ++skipped;
                 continue;
             }
-            uint256 tokenId = buddyNft.hatch(identityHash);
+            uint256 tokenId = buddyNft.hatch(identityHash, WyHash.hash(bytes(uuid), HATCH_SALT));
             console.log(string.concat("SEED_HATCHED ", uuid));
             console.log("  tokenId=%d", tokenId);
             console.log(string.concat("  /view/", uuid));

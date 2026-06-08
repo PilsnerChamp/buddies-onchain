@@ -39,7 +39,7 @@ contract BuddyRendererTest is Test {
     }
 
     function test_tokenURI_metadataStructureAndSvgPrefixes() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x1234)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x1234), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), 1);
         assertTrue(_startsWith(tokenUri, JSON_PREFIX));
@@ -72,7 +72,7 @@ contract BuddyRendererTest is Test {
             snark: 87
         });
 
-        _setMockToken(1, traits, "", bytes32(uint256(0xD16A)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xD16A), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), 1);
         assertTrue(_startsWith(tokenUri, JSON_PREFIX));
@@ -117,7 +117,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 0;
         traits.hat = 0;
-        _setMockToken(1, traits, "", bytes32(uint256(0x601)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x601), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -134,7 +134,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 0;
         traits.hat = 1;
-        _setMockToken(1, traits, "", bytes32(uint256(0x602)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x602), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -151,7 +151,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 4;
         traits.hat = 0;
-        _setMockToken(1, traits, "", bytes32(uint256(0x603)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x603), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -167,7 +167,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 4;
         traits.hat = 1;
-        _setMockToken(1, traits, "", bytes32(uint256(0x604)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x604), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -182,7 +182,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         string memory name = unicode"<>&\"'\\友";
         string memory expectedDisplayName = string.concat(name, unicode" · Buddy Onchain #1");
-        _setMockToken(1, traits, name, bytes32(uint256(0xBEEF)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(1, traits, name, uint32(0xBEEF), IBuddyNFT.OwnershipStage.Bonded);
 
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), 1);
         string memory json = _decodeJson(tokenUri);
@@ -195,7 +195,7 @@ contract BuddyRendererTest is Test {
     function test_tokenURI_supportsUnicodeNames() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         string memory name = unicode"友達";
-        _setMockToken(1, traits, name, bytes32(uint256(0xCAFE)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(1, traits, name, uint32(0xCAFE), IBuddyNFT.OwnershipStage.Bonded);
 
         string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -205,19 +205,19 @@ contract BuddyRendererTest is Test {
     function test_tokenURI_stageHandlingForHatchedAndBonded() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
 
-        _setMockToken(1, traits, "", bytes32(uint256(0xA1)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xA1), IBuddyNFT.OwnershipStage.Custodial);
         string memory custodialJson = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
         assertEq(custodialJson.readString(".name"), "Buddy Onchain #1");
         assertEq(custodialJson.readString(".attributes[5].value"), "Hatched");
 
-        _setMockToken(1, traits, "Pilsner", bytes32(uint256(0xA2)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(1, traits, "Pilsner", uint32(0xA2), IBuddyNFT.OwnershipStage.Bonded);
         string memory bondedJson = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
         assertEq(bondedJson.readString(".name"), unicode"Pilsner · Buddy Onchain #1");
         assertEq(bondedJson.readString(".attributes[5].value"), "Bonded");
     }
 
     function test_tokenURI_rootTitleMetadata() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x4444)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x4444), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -238,7 +238,7 @@ contract BuddyRendererTest is Test {
         // x>420 visibly outside the logical square. The fix is an explicit
         // <clipPath id="vp"> wrapping the background group; this clips to the
         // viewBox rectangle in all render contexts (standalone, inline, <img>).
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x7070)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x7070), IBuddyNFT.OwnershipStage.Custodial);
         string memory custodialSvg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         assertTrue(_contains(custodialSvg, '<clipPath id="vp"><rect width="420" height="420"/></clipPath>'));
         assertTrue(_contains(custodialSvg, '<g clip-path="url(#vp)">'));
@@ -254,7 +254,7 @@ contract BuddyRendererTest is Test {
             _contains(custodialSvg, '</g><g font-family="monospace" fill="#cbd5e1"><text class="stat" x="16" y="28"')
         );
 
-        _setMockToken(2, _defaultTraits(), "Pilsner", bytes32(uint256(0x7171)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(2, _defaultTraits(), "Pilsner", uint32(0x7171), IBuddyNFT.OwnershipStage.Bonded);
         string memory bondedSvg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 2));
         assertTrue(_contains(bondedSvg, '<clipPath id="vp"><rect width="420" height="420"/></clipPath>'));
         assertTrue(_contains(bondedSvg, '<g clip-path="url(#vp)">'));
@@ -269,13 +269,13 @@ contract BuddyRendererTest is Test {
     function test_tokenURI_titleAndMetadataNameContractForBothStages() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
 
-        _setMockToken(1, traits, "", bytes32(uint256(0x6161)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x6161), IBuddyNFT.OwnershipStage.Custodial);
         string memory custodialSvg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
         assertTrue(_contains(custodialSvg, "<title>Buddy #1 - Duck, Uncommon, Hatched</title>"));
 
         string memory bondedName = "Pilsner";
-        _setMockToken(2, traits, bondedName, bytes32(uint256(0x6262)), IBuddyNFT.OwnershipStage.Bonded);
+        _setMockToken(2, traits, bondedName, uint32(0x6262), IBuddyNFT.OwnershipStage.Bonded);
         string memory bondedTokenUri = renderer.tokenURI(address(mockBuddy), 2);
         string memory bondedJson = _decodeJson(bondedTokenUri);
         string memory bondedSvg = _decodeSvg(bondedJson.readString(".image"));
@@ -285,7 +285,7 @@ contract BuddyRendererTest is Test {
     }
 
     function test_tokenURI_emitsEmbeddedFontCssAndDeterministicSpriteRows() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x5151)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x5151), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -317,7 +317,7 @@ contract BuddyRendererTest is Test {
     }
 
     function test_tokenURI_svgKeepsBackgroundShapes() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x8888)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x8888), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         // Rect now carries an SVG paint-fallback (see `docs/onchain/renderer.md`
@@ -329,7 +329,7 @@ contract BuddyRendererTest is Test {
     }
 
     function test_tokenURI_emitsFourAnimationFrameGroupsWithCorrectVisibility() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x7777)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x7777), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -349,7 +349,7 @@ contract BuddyRendererTest is Test {
     }
 
     function test_tokenURI_emitsAnimationCssInExistingStyleBlock() public {
-        _setMockToken(1, _defaultTraits(), "", bytes32(uint256(0x7778)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, _defaultTraits(), "", uint32(0x7778), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -378,7 +378,7 @@ contract BuddyRendererTest is Test {
         traits.rarity = 1;
         traits.eyes = 1; // ✦ glyph
         traits.hat = 1; // crown, so row 0 is the hat (not blank) and halfHeightTopSlot is false
-        _setMockToken(1, traits, "", bytes32(uint256(0xB11)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xB11), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -409,7 +409,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 16;
         traits.hat = 0;
-        _setMockToken(1, traits, "", bytes32(uint256(0xA11A)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xA11A), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -428,7 +428,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 0; // duck → four-row-eligible species
         traits.hat = 0; // halfHeightTopSlot=true
-        _setMockToken(1, traits, "", bytes32(uint256(0x9A15)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x9A15), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         string[5] memory expectedBaselines = ["125", "150", "200", "250", "300"];
@@ -447,7 +447,7 @@ contract BuddyRendererTest is Test {
         traits.species = 0; // duck
         traits.hat = 1; // keep row 0 occupied by crown; compare body row deltas lower in the sprite
         traits.eyes = 0; // default eye glyph to avoid blink-specific coupling
-        _setMockToken(1, traits, "", bytes32(uint256(0xD1F1)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xD1F1), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
         string memory f0Group = _extractGroup(svg, "f0");
@@ -470,7 +470,7 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.species = 16; // mushroom
         traits.hat = 1; // crown
-        _setMockToken(1, traits, "", bytes32(uint256(0xF71A)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xF71A), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -491,7 +491,7 @@ contract BuddyRendererTest is Test {
     function test_tokenURI_nonShinyTitleOmitsShinyLabelTspan() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         traits.shiny = false;
-        _setMockToken(1, traits, "", bytes32(uint256(0xA455)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0xA455), IBuddyNFT.OwnershipStage.Custodial);
 
         string memory svg = _decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1));
 
@@ -510,11 +510,11 @@ contract BuddyRendererTest is Test {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
 
         traits.shiny = false;
-        _setMockToken(1, traits, "", bytes32(uint256(0x501)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x501), IBuddyNFT.OwnershipStage.Custodial);
         assertFalse(_contains(_decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1)), "url(#shine)"));
 
         traits.shiny = true;
-        _setMockToken(1, traits, "", bytes32(uint256(0x502)), IBuddyNFT.OwnershipStage.Custodial);
+        _setMockToken(1, traits, "", uint32(0x502), IBuddyNFT.OwnershipStage.Custodial);
         assertFalse(_contains(_decodeSvgFromTokenUri(renderer.tokenURI(address(mockBuddy), 1)), "url(#shine)"));
     }
 
@@ -535,13 +535,13 @@ contract BuddyRendererTest is Test {
         uint256 tokenId,
         IBuddyNFT.BuddyTraits memory traits,
         string memory name,
-        bytes32 identityHash,
+        uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
-        mockBuddy.setIdentityHash(tokenId, identityHash);
-        mockBuddy.setPrngSeed(tokenId, uint32(uint256(identityHash)));
+        mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("renderer-test-identity", tokenId)));
+        mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, stage);
     }
 

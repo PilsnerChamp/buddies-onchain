@@ -42,7 +42,7 @@ contract MockBuddyNFTForRenderer is IBuddyNFT {
         return _identityHashes[tokenId];
     }
 
-    function buddyPrngSeed(uint256 tokenId) external view returns (uint32) {
+    function buddyPrngSeed(uint256 tokenId) external view override returns (uint32) {
         return _prngSeeds[tokenId];
     }
 

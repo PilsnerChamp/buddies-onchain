@@ -148,7 +148,7 @@ describe("applyColdNudge", () => {
 
   test("fire=true pre-fills first three joke cells without changing rows", () => {
     const rows = ["row 0", "row 1", "row 2", "row 3", "row 4"];
-    const url = "https://example.test/hatch#accountUuid=abc-123";
+    const url = "https://example.test/hatch#identityHash=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&prngSeed=123";
 
     const out = applyColdNudge(rows, true, url);
 
@@ -171,7 +171,7 @@ describe("applyColdNudge", () => {
   });
 
   test("passes hatch URL through verbatim", () => {
-    const url = "https://buddiesonchain.dev/hatch#accountUuid=abc-123";
+    const url = "https://buddiesonchain.dev/hatch#identityHash=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&prngSeed=123";
 
     const out = applyColdNudge(["row 0", "row 1", "row 2"], true, url);
 
