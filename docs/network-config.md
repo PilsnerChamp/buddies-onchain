@@ -55,7 +55,7 @@ Missing manifest for the active chain is soft — `getActiveNetwork()` returns `
 
 ### Hash-only hatch requires a fresh deploy
 
-The hash-only `hatch(bytes32 identityHash)` signature changes the `hatch` function selector. Any manifest pointing at an older `hatch(string)` contract is incompatible — the site and plugin built against the new ABI will fail to hatch against it. Ship a fresh contract deploy and a new `<chainId>.json` manifest before publishing the new site/plugin. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash are unchanged, so wallet/marketplace interface detection is unaffected.
+The hash-only `hatch(bytes32 identityHash, uint32 prngSeed)` signature changes the `hatch` function selector. Any manifest pointing at an older single-arg `hatch(bytes32)` (or the earlier `hatch(string)`) contract is incompatible — the site and plugin built against the new ABI will fail to hatch against it. The curated ABI in `shared/buddyNftAbi.ts` carries the two-arg `hatch`; both site and plugin import it. The `buddyPrngSeed(uint256)` view lives in the on-chain `IBuddyNFT` interface, not the curated subset — no client reads it. Ship a fresh contract deploy and a new `<chainId>.json` manifest before publishing the new site/plugin. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash are unchanged, so wallet/marketplace interface detection is unaffected.
 
 ### Commit policy
 

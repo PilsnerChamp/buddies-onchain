@@ -4,32 +4,31 @@ The dApp is a terminal pretending to be a website. Every route reuses one man-pa
 
 ## Routes and command echoes
 
-Every man-page route opens with a `>` echo line — the literal command the page represents. Full UUIDs are never truncated in route headers.
+Every man-page route opens with a `>` echo line — the literal command the page represents.
 
 | Route | Echo line |
 |---|---|
 | `/` | `> /buddy-onchain --help` (route header); cold-hero action prompt below is `> claude ▊` |
-| `/hatch#accountUuid=<uuid>` | `> /hatch --help` (route header); action prompt below is `> /hatch <full-uuid> ▊` |
+| `/hatch` | `> /hatch --help` (route header); action prompt below is `> /hatch ▊` |
 | `/view` | `> /view --help` |
 | `/view/<tokenId>` miss | `> /view <tokenId>` |
 | `/view/<tokenId>` hit | no man-page header — renders the SVG card only |
 | `/bond` | `> /bond --help` |
 
-The echo line is terminal-verbatim. Truncation belongs to REQUIREMENTS and stream lines, not the command header.
+`/hatch` is bare — no UUID or identity hash in the header or the action prompt. The plugin handoff arrives in the fragment and is scrubbed before render (see [`/hatch` handoff](#hatch-handoff-source)). The echo line is terminal-verbatim. Truncation belongs to REQUIREMENTS and stream lines, not the command header.
 
 ## Truncation rules
 
-Three forms, one per identifier kind. Visual rhythm distinguishes them at a glance.
+Two forms, one per identifier kind. Visual rhythm distinguishes them at a glance.
 
 | Kind | Form | Example |
 |---|---|---|
-| UUID (REQUIREMENTS row) | 8 + ellipsis + 7 | `f47ac10b…2c3d479` |
 | Wallet address | first 10 (`0x` + 8 hex) + ellipsis + 4 | `0x1f3a5e2b…b209` |
 | Tx hash | 6 + ellipsis + 4 | `0xabc1…1234` |
 
 Ellipsis is the Unicode single-codepoint `…` (U+2026), never `...`.
 
-The post-hatch redirect line targets `/view/<tokenId>` and carries no UUID, so UUID truncation does not apply to it. The tokenId is small and shown in full.
+No surface truncates a UUID — the typed `/view` UUID stays in component state unrendered, and `/hatch` carries no UUID at all. The `/hatch` REQUIREMENTS handoff row shows `identity hash + trait seed` as a presence label, not a truncated value. The post-hatch redirect line targets `/view/<tokenId>` and carries no UUID. The tokenId is small and shown in full.
 
 ## STATUS state matrix
 
@@ -236,11 +235,19 @@ The warn pill (`! ...`) carries the long form on `/bond` itself. SEE ALSO rows o
 
 STATUS reads `not found · no buddy for this token on this network`. DESCRIPTION separates validity from existence — the tokenId is numeric and well-formed; the contract lookup just missed. NEXT STEPS stays plugin-first for the holder path with manual retry through `/view`.
 
-### `/hatch` UUID source and mixed-case handling
+### `/hatch` handoff source
 
-The UUID arrives in the URL fragment (`/hatch#accountUuid=<uuid>`), never the query string. `HatchGate` (in `App.tsx`) owns parse, validate, and scrub: on arrival it reads the fragment, validates, synchronously `replaceState`s the URL to `/hatch`, and passes the UUID to the hatch surface as a prop. The surface never re-reads the URL — after the scrub it carries no UUID.
+The plugin handoff arrives in the URL fragment, never the query string and never as a raw UUID:
 
-The UUID is `trim().toLowerCase()`-normalized before validation and submission. Uppercase or mixed-case UUIDs in the fragment render fine — `HatchGate` lowercases and proceeds. Missing or syntactically invalid (fails `isValidUuid`) → redirect to `/`.
+```
+/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>
+```
+
+The fragment-parse/validate/scrub owner is in `App.tsx`, not the hatch surface. On arrival it reads the fragment, validates `identityHash` (`0x` + 64 hex) and `prngSeed` (a `uint32`), synchronously `replaceState`s the URL to bare `/hatch`, and passes both values to the surface as props. The surface never re-reads the URL — after the scrub it carries no fragment.
+
+Missing or malformed `identityHash`/`prngSeed`, or the legacy `#accountUuid=` form → redirect to `/`. The surface forwards both values to `hatch(bytes32, uint32)` unchanged; it derives nothing.
+
+The REQUIREMENTS section shows a `handoff` row valued `identity hash + trait seed` with status `connected` — a presence indicator. Neither value is echoed into copy. See [`docs/site/architecture.md`](architecture.md#hatch-fragment).
 
 ## Cold hero (`/`)
 
@@ -258,7 +265,7 @@ Single full-width row of `-` glyphs between the NEXT STEP block and the route me
 
 ## Per-route gaps
 
-Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <tokenId>` for miss cards, and `> /bond --help`. The active hatch action prompt carries `> /hatch <full-uuid> ▊` below NEXT STEP.
+Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <tokenId>` for miss cards, and `> /bond --help`. The active hatch action prompt carries bare `> /hatch ▊` below NEXT STEP — no UUID, no identity hash.
 
 ## OG card
 

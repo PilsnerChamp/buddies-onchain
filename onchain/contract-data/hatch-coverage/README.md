@@ -3,7 +3,7 @@
 **Status:** Regression gate (as-built)
 **Mirrors:** `onchain/script/CheckHatchCoverageUuids.s.sol`, `onchain/tools/renderer/regen-hatch-coverage-uuids.sh`, `onchain/test/helpers/HatchCoverageUuids.sol`, `onchain/test/BuddyNFTHatchCoverage.t.sol`
 
-Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, not a coverage matrix: one UUID per axis value where practical, covering species, rarity, eyes, hats, shiny, and hatless state without Cartesian or pairwise expansion. The gate has two parts: Solidity re-derives UUID → identityHash → seed → traits from `manifest.json`, and the Foundry test walks the real hash-only hatch path `BuddyNFT.hatch(identityHash)` → `tokenURI(tokenId)` with structural rendering assertions. No committed tokenURI/JSON/SVG byte fixtures live here.
+Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, not a coverage matrix: one UUID per axis value where practical, covering species, rarity, eyes, hats, shiny, and hatless state without Cartesian or pairwise expansion. The gate has two parts: Solidity re-derives UUID → seed → traits (and UUID → identityHash) from `manifest.json`, and the Foundry test walks the real hash-only hatch path `BuddyNFT.hatch(identityHash, prngSeed)` → `tokenURI(tokenId)` with structural rendering assertions. No committed tokenURI/JSON/SVG byte fixtures live here.
 
 ## Suite contents
 
@@ -11,9 +11,9 @@ Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, 
 
 ## Manifest fields
 
-- `uuid` — canonical UUID string used by tests/scripts to compute the hatch `identityHash`.
+- `uuid` — canonical UUID string used by tests/scripts to compute the hatch `identityHash` and the trait `seed`.
 - `tokenId` — canonical array index + 1. Reordering UUIDs is a fixture change.
-- `seed` — `WyHash.hash(identityHashRaw32, bytes("buddies-onchain:trait-seed:v2"))`, equal to `BuddyNFT.buddyPrngSeed(tokenId)`.
+- `seed` — `WyHash.hash(bytes(uuid), bytes("friend-2026-401"))`, the caller-supplied seed passed to `hatch`, equal to `BuddyNFT.buddyPrngSeed(tokenId)`.
 - `traits.species` — derived species index.
 - `traits.rarity` — derived rarity tier.
 - `traits.eyes` — derived eye glyph index.
@@ -28,7 +28,7 @@ Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, 
 ## Regeneration
 
 ```bash
-# After PRNG, domain count, identity hash, or seed-domain changes:
+# After PRNG, domain count, identity hash, or hatch-salt changes:
 just coverage-uuids-gen
 
 # Every sprites-verify run:
@@ -37,7 +37,7 @@ just coverage-uuids-check
 
 `coverage-uuids-gen` runs the Solidity UUID scanners, rewrites `onchain/test/helpers/HatchCoverageUuids.sol`, and rewrites `manifest.json`.
 
-`coverage-uuids-check` re-derives `WyHash.hash(identityHashRaw32, SEED_DOMAIN)` and `Mulberry32.deriveTraits(seed)` in Solidity, then checks seeds, full traits, and axis coverage.
+`coverage-uuids-check` re-derives `WyHash.hash(bytes(uuid), bytes("friend-2026-401"))` and `Mulberry32.deriveTraits(seed)` in Solidity, then checks seeds, full traits, and axis coverage.
 
 `BuddyNFTHatchCoverage.t.sol` consumes the same canonical UUID list and manifest, hatches every UUID through the real `BuddyNFT`, checks stored seed + full traits, decodes `tokenURI`, and asserts JSON/SVG structure derived from manifest values.
 
@@ -45,8 +45,8 @@ just coverage-uuids-check
 
 Regenerate UUIDs when any of these change:
 
-- `BuddyNFT.SEED_DOMAIN`
-- `WyHash` or the UUID → identityHash → seed pipeline
+- the hatch salt (`friend-2026-401`)
+- `WyHash` or the UUID → seed pipeline (`wyhash(uuid + salt)`)
 - `Mulberry32` trait derivation
 - `BuddyDomain` trait counts
 

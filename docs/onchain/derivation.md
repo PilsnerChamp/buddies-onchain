@@ -1,32 +1,41 @@
 # Trait derivation
 
-Deterministic pipeline from `accountUuid` to identity hash and traits. Same input, same output, every time, on every machine.
+Deterministic pipeline from `accountUuid` to a trait seed, then to traits. Same input, same output, every time, on every machine. The seed is computed off-chain and passed into `hatch`; the contract derives traits from the stored seed.
 
 ## Pipeline
 
 ```
 lowercase accountUuid
-  -> keccak identityHash
-  -> raw32 || "buddies-onchain:trait-seed:v2"
-  -> wyhash             -> 32-bit prngSeed
-  -> Mulberry32         -> floats in [0, 1)
-  -> deriveTraits       -> { rarity, species, eye, hat, shiny, stats }
+  -> wyhash(uuid || "friend-2026-401")  -> 32-bit prngSeed   (client-side)
+  -> hatch(identityHash, prngSeed)       -> seed stored on-chain
+  -> Mulberry32                          -> floats in [0, 1)
+  -> deriveTraits                        -> { rarity, species, eye, hat, shiny, stats }
 ```
 
-Two parity domains: TypeScript at `plugin/src/bone-deriver.ts`, Solidity at `onchain/contracts/libraries/WyHash.sol` + `onchain/contracts/libraries/Mulberry32.sol` called from `BuddyNFT.hatch`. Output must match byte-for-byte. The contract accepts only the already-computed `bytes32 identityHash`; callers validate/canonicalize UUIDs and compute the identity hash off-chain.
+`identityHash` is a separate, parallel derivation off the same UUID — the privacy, lookup, and uniqueness key. It plays no part in trait derivation. See [Identity hash vs PRNG seed](#identity-hash-vs-prng-seed).
+
+The seed is computed once, client-side, and stored verbatim. The contract holds no seed-derivation logic — no WyHash, no domain tag, no UUID. `Mulberry32.deriveTraits` is the only on-chain derivation step, and it reads the stored `prngSeed`. Off-chain TS and on-chain Solidity must match byte-for-byte:
+
+| Step | TS source | Solidity source |
+|---|---|---|
+| seed (`wyhash`) | `plugin/src/bone-deriver.ts` | client-only — not on chain |
+| `Mulberry32` | `plugin/src/bone-deriver.ts` | `onchain/contracts/libraries/Mulberry32.sol` |
+
+## Consistency, not authenticity
+
+The chain proves `traits == Mulberry32.deriveTraits(storedSeed)`. Anyone can recompute it — that is consistency. It does not prove the seed came from your identity — that would be authenticity, and the hash-only contract cannot enforce it.
+
+Safe claims: deterministic and reproducible (same account → same buddy on every deployment), deployment-stable preservation, UUID kept off the wire. Authenticity is re-established only at Stage 2 (`bond()`, dormant in v1). Do not claim the buddy is self-verifying or that the contract derives traits from your identity.
 
 ## Seed construction
 
 ```ts
-const identityHash = computeIdentityHash(accountUuid);
-const seedInput = concatBytes([
-  hexToBytes(identityHash),
-  stringToBytes("buddies-onchain:trait-seed:v2"),
-]);
-const seed32 = Number(BigInt.asUintN(64, Bun.hash(seedInput)) & 0xffffffffn);
+const seed32 = Number(
+  BigInt.asUintN(64, wyhash(stringToBytes(lowercase(accountUuid) + "friend-2026-401"))) & 0xffffffffn,
+);
 ```
 
-Rules: `identityHash` is 32 raw bytes in the WyHash preimage, not a `"0x…"` string and not 64 hex characters. The seed domain is `buddies-onchain:trait-seed:v2`.
+Rules: the WyHash preimage is the lowercased UUID string concatenated with the salt `friend-2026-401`, hashed as UTF-8 bytes. `identityHash` is not part of the seed preimage. The plugin computes this and passes `seed32` into `hatch`; the dApp never recomputes it (see [`docs/site/architecture.md`](../site/architecture.md#hatch-fragment)).
 
 ## Mulberry32
 
@@ -60,12 +69,14 @@ The rejection loop for the secondary stat is load-bearing.
 
 ## Identity hash vs PRNG seed
 
+Two independent derivations off the same UUID. Neither feeds the other.
+
 ```text
-identityHash = keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(accountUuid))
-prngSeed     = wyhash(raw32(identityHash) || "buddies-onchain:trait-seed:v2") & 0xFFFFFFFF
+identityHash = keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(accountUuid))
+prngSeed     = wyhash(lowercase(accountUuid) || "friend-2026-401") & 0xFFFFFFFF
 ```
 
-Uniqueness is enforced on `identityHash`, not `prngSeed`. Two different UUIDs that happen to collide on `prngSeed` get the same traits but distinct tokens.
+`identityHash` is the privacy, lookup, and uniqueness key — never an input to traits. `prngSeed` is the sole trait input. Uniqueness is enforced on `identityHash`, not `prngSeed`. Two different UUIDs that happen to collide on `prngSeed` get the same traits but distinct tokens.
 
 ## UUID validation
 
@@ -82,9 +93,11 @@ Pinned fixtures:
 
 Rendered visual references (human-eyeball showroom): `onchain/contract-data/reference-cards/`.
 
-Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → identityHash `0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6` → seed32 `4116242804` → common duck, eye `◉`, no hat, not shiny, stats `DEBUGGING=84 PATIENCE=24 CHAOS=4 WISDOM=36 SNARK=23`.
+Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → identityHash `0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb` → seed32 `2990586173` → epic robot, eye `×`, no hat, not shiny, stats `DEBUGGING=57 PATIENCE=49 CHAOS=33 WISDOM=68 SNARK=100`.
 
 ## Verifying parity
+
+WyHash now guards the client-side seed only — `hatch` no longer calls it. `WyHash.t.sol` tests the primitive against `wyhash-vectors.json` (preimage `lowercase(uuid) + "friend-2026-401"`). Mulberry32 parity guards the on-chain trait step.
 
 ```bash
 # Regenerate TypeScript-side vectors

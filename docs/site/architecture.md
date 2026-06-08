@@ -43,7 +43,15 @@ Routes in `site/src/config/routes.ts`. The `/view/:uuid` route is removed; no UU
 
 ### Hatch fragment
 
-`HatchGate` reads `accountUuid` from the URL fragment (`/hatch#accountUuid=<uuid>`). Fragments never cross the HTTP wire. `HatchGate` owns parse, validate (`assertCanonicalV4Uuid`), and scrub: on arrival it synchronously `replaceState`s to `/hatch` before `<Hatch>` mounts, then passes the UUID down as a prop. `<Hatch>` never re-reads `location`. Missing or malformed UUID → redirect to `/`. The legacy `?accountUuid=` query form redirects home.
+`HatchGate` reads `identityHash` and `prngSeed` from the URL fragment:
+
+```
+/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>
+```
+
+Fragments never cross the HTTP wire. The raw UUID is never in the fragment — the plugin already derived both args (see [`docs/plugin/architecture.md`](../plugin/architecture.md)). On the mint path the dApp is pure pass-through: it forwards `identityHash` and `prngSeed` to `hatch(bytes32, uint32)` and derives nothing.
+
+`HatchGate` owns parse, validate, and scrub: on arrival it synchronously `replaceState`s to `/hatch` before `<Hatch>` mounts, then passes both values down as props. `<Hatch>` never re-reads `location`. Reject if `identityHash` is not `0x` + 64 hex, if `prngSeed` is not a `uint32`, or if either is absent → redirect to `/`. The legacy `#accountUuid=` and `?accountUuid=` forms redirect home.
 
 No third-party script (analytics, error reporter) may read `location.href` or the unscrubbed fragment on `/hatch`. The scrub runs before any reporter can capture it.
 
@@ -65,7 +73,7 @@ No third-party script (analytics, error reporter) may read `location.href` or th
 
 `useBuddyLookup` (`site/src/lib/useBuddyLookup.ts`) splits into two TanStack Query calls against `publicClient`: a UUID → `tokenId` resolver (`getTokenIdByIdentity`) for manual `/view`, and a `tokenId` → SVG loader (`tokenURI`) for `/view/<tokenId>`. The token page loads by `tokenId` directly and skips the identity-hash step. Both run with no wallet connected.
 
-Identity hash matches the plugin via the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(uuid))`. Cache key includes `chainId`. Stale time 30s.
+Identity hash matches the plugin via the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`. This runs for manual `/view` lookup only — the `/hatch` mint path takes a pre-computed `identityHash` from the fragment and never hashes a UUID. Cache key includes `chainId`. Stale time 30s.
 
 ## Network config
 

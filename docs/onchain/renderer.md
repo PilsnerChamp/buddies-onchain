@@ -157,6 +157,16 @@ When `traits.shiny == true`, the title line prefix `✦SHINY✦ ` renders in yel
 
 No shiny CSS class is emitted. The inline `fill` + `font-weight` pair is the styling source in both rich and stripped renders. The trailing space inside the tspan is what `xml:space="preserve"` protects.
 
+### Background entropy
+
+The backdrop derives from a per-token digest, not the identity hash:
+
+```solidity
+bytes32 backdropHash = keccak256(abi.encode(seed));   // seed = stored uint32 prngSeed
+```
+
+`backdropHash` drives the gradient vector, base hue, and circle centers (`backdropHash[4..9]`). `identityHash` never enters the renderer — it is a pure privacy, lookup, and uniqueness key. Two tokens with the same `prngSeed` paint identical backdrops, matching their identical traits.
+
 ### Background circle drift
 
 Three decorative HSL-tinted background circles drift continuously via CSS `@keyframes` + `transform: translate()`. Periods come from a coprime prime pool deliberately outside the sprite's 7.5 s / 15 s / 22.5 s harmonics:
@@ -224,7 +234,7 @@ Three chrome lines carry `textLength="388" lengthAdjust="spacingAndGlyphs"` (388
 - Bottom rule (`y=372`)
 - Footer stats (`y=398`)
 
-Natural width matches 388 under our on-chain font, so the adjust is a no-op in rich mode. Under substitute monospace (Menlo, Consolas), the browser compresses horizontally so the line stays inside the viewBox — slightly condensed but readable. The prompt, title, and sprite rows are intentionally unpinned — pinning shorter content would stretch it into ugly gaps.
+Natural width matches 388 under the on-chain font, so the adjust is a no-op in rich mode. Under substitute monospace (Menlo, Consolas), the browser compresses horizontally so the line stays inside the viewBox — slightly condensed but readable. The prompt, title, and sprite rows are intentionally unpinned — pinning shorter content would stretch it into ugly gaps.
 
 ### Chrome `font-size` placement
 

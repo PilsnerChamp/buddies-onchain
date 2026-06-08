@@ -1,6 +1,6 @@
 # BuddyNFT contract
 
-Soulbound on-chain identity record. Permissionless `hatch(identityHash)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
+Soulbound on-chain identity record. Permissionless `hatch(identityHash, prngSeed)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
 
 ## Stage labels
 
@@ -9,21 +9,22 @@ User-facing: `Hatched`, `Bonded`. Enum identifiers (internal): `Custodial`, `Bon
 ## Hatch
 
 ```solidity
-function hatch(bytes32 identityHash) external returns (uint256 tokenId);
+function hatch(bytes32 identityHash, uint32 prngSeed) external returns (uint256 tokenId);
 ```
 
-No authorization signature. Anyone can call `hatch()` and pay gas to hatch any non-zero identity hash. On-chain steps:
+No authorization signature. Anyone can call `hatch()` and pay gas to hatch any non-zero identity hash. Caller supplies both args. The contract stores `prngSeed` and derives traits from it; it does not derive the seed itself. Compute both client-side — see [`docs/onchain/derivation.md`](derivation.md). On-chain steps:
 
-1. Revert `InvalidIdentityHash` if `identityHash == bytes32(0)`.
+1. Revert `InvalidIdentityHash` if `identityHash == bytes32(0)`. `prngSeed == 0` is valid.
 2. Revert `AlreadyHatched` if `_minted[identityHash]`.
-3. `prngSeed = WyHash.hash(abi.encodePacked(identityHash), bytes("buddies-onchain:trait-seed:v2"))`.
-4. `traits = Mulberry32.deriveTraits(prngSeed)`.
-5. `tokenId = _nextTokenId++`.
-6. Write all per-token mappings before mint. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
-7. `_mint(address(this), tokenId)` — the contract mints the token to itself.
-8. Emit `Awakened(tokenId, identityHash, msg.sender)`.
+3. `traits = Mulberry32.deriveTraits(prngSeed)`.
+4. `tokenId = _nextTokenId++`.
+5. Write all per-token mappings before mint, including `_tokenPrngSeeds[tokenId] = prngSeed`. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
+6. `_mint(address(this), tokenId)` — the contract mints the token to itself.
+7. Emit `Awakened(tokenId, identityHash, msg.sender)`.
 
-Token name is empty at hatch and never written here.
+Token name is empty at hatch and never written here. Gas ~212,462.
+
+The chain proves `traits == Mulberry32.deriveTraits(storedSeed)` — consistency anyone can recompute, not authenticity. It does not prove the seed came from any particular identity. `identityHash` is the privacy, lookup, and uniqueness key only; uniqueness keys on `_minted[identityHash]` alone. Authenticity is re-established at Stage 2 (`bond()`, dormant in v1).
 
 ## Bond (dormant in v1)
 
@@ -62,6 +63,8 @@ Identity: `_identityHashToTokenId` (`bytes32 -> uint256`, returns `0` on miss), 
 
 Global: `_rendererAddress` (own slot), `_attestationSigner` + `bondingEnabled` (packed in one slot — `address` 20 bytes + `bool` 1 byte fits within 32), `_nextTokenId` (token ids start at 1).
 
+View accessor: `IBuddyNFT.buddyPrngSeed(uint256) returns (uint32)` reads the stored seed back. Recompute traits off-chain with `Mulberry32.deriveTraits(buddyPrngSeed(id))` to confirm consistency.
+
 ## Maintainer-only functions
 
 API surface only — trust posture and scope are in [`SECURITY.md`](../../SECURITY.md#maintainer-powers).
@@ -86,9 +89,9 @@ Fonts ship as WOFF2 payloads embedded on-chain. The SVG embeds Iosevka and DejaV
 BuddyNFT is hash-only and never sees the raw UUID. Callers compute:
 
 ```text
-identityHash = keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(accountUuid))
+identityHash = keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(accountUuid))
 ```
 
-Shared impl: `shared/computeIdentityHash.ts`. The domain tag omits chain id and contract address, so one account hashes to the same `identityHash` on every network (local, Sepolia, mainnet).
+Shared impl: `shared/computeIdentityHash.ts`. The domain tag omits chain id and contract address, so one account hashes to the same `identityHash` on every network (local, Sepolia, mainnet). The trait seed is a separate client-side derivation off the same UUID — see [`docs/onchain/derivation.md`](derivation.md#seed-construction).
 
 Shared callers validate RFC 4122 v4 UUID shape before hashing. That check is advisory and off-chain only — the contract accepts any non-zero `bytes32` and never validates a UUID. See [`docs/onchain/derivation.md`](derivation.md#uuid-validation).
