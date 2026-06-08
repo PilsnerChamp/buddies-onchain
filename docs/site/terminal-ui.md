@@ -68,12 +68,11 @@ Hatch error category copy:
 |---|---|
 | `user-rejected` | `! tx cancelled — try again when ready` |
 | `already-hatched` | `! already hatched — see /view` |
-| `invalid-uuid` | `! invalid account uuid — rerun /buddy-onchain` |
 | `no-contract` | `! no contract on this network` |
 | `event-parse-failed` | `! hatch confirmed — open /view to find your buddy` |
 | `wallet-not-found` | `! wallet not found — install a Base-compatible wallet` |
 | `wallet-rejected` | `! wallet connection cancelled` |
-| `wrong-network` | `! wrong network — switch to Base Sepolia` |
+| `wrong-network` | `! wrong network — switch to <network> (<chainId>)` — derived from the build's active network (e.g. `base sepolia (84532)`, `local (31337)`) |
 | `generic` | `! hatch failed — no buddy created` |
 
 ## Section order

@@ -54,6 +54,7 @@ import { RouteMetadata, type SeeAlsoRoute } from '../components/RouteMetadata';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import '../components/BlinkingCursor.css';
 import { getNetwork } from '../config/chains';
+import { ACTIVE_NETWORK } from '../config/network';
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { ROUTES, viewTokenPath } from '../config/routes';
 import {
@@ -133,7 +134,7 @@ function failureLineFor(category: HatchErrorCategory): string {
     case 'wallet-rejected':
       return 'wallet connection cancelled';
     case 'wrong-network':
-      return 'wrong network — switch to Base Sepolia';
+      return `wrong network — switch to ${ACTIVE_NETWORK.displayName} (${ACTIVE_NETWORK.chainId})`;
     case 'generic':
       return 'hatch failed — no buddy created';
   }
