@@ -9,7 +9,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IBuddyNFT} from "./interfaces/IBuddyNFT.sol";
 import {IBuddyRenderer} from "./interfaces/IBuddyRenderer.sol";
 import {AuthorAttestation} from "./libraries/AuthorAttestation.sol";
-import {BuddyDomain} from "./libraries/BuddyDomain.sol";
 import {Mulberry32} from "./libraries/Mulberry32.sol";
 import {WyHash} from "./libraries/WyHash.sol";
 
@@ -35,7 +34,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
     error RendererNotSet();
     error ZeroAddress();
     error NameTooLong(uint256 length);
-    error InvalidUuidFormat();
+    error InvalidIdentityHash();
     error AlreadyHatched();
     error BondingNotEnabled();
     error BondingAlreadyEnabled();
@@ -71,7 +70,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
     bytes32 private constant BOND_ATTESTATION_TYPEHASH =
         keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
 
-    string private constant HATCH_SALT = "friend-2026-401";
+    string private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
 
     // -------------------------------------------------------------------------
     // Storage
@@ -209,16 +208,16 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
     // Hatch & Bond
     // -------------------------------------------------------------------------
 
-    function hatch(string calldata accountUuid) external returns (uint256 tokenId) {
-        _validateUuid(accountUuid);
+    function hatch(bytes32 identityHash) external returns (uint256 tokenId) {
+        if (identityHash == bytes32(0)) {
+            revert InvalidIdentityHash();
+        }
 
-        bytes memory accountUuidBytes = bytes(accountUuid);
-        bytes32 identityHash = keccak256(accountUuidBytes);
         if (_minted[identityHash]) {
             revert AlreadyHatched();
         }
 
-        uint32 prngSeed = WyHash.hash(accountUuidBytes, bytes(HATCH_SALT));
+        uint32 prngSeed = WyHash.hash(abi.encodePacked(identityHash), bytes(SEED_DOMAIN));
         IBuddyNFT.BuddyTraits memory traits = _deriveTraits(prngSeed);
 
         tokenId = _nextTokenId++;
@@ -356,52 +355,6 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
             wisdom: wisdom,
             snark: snark
         });
-    }
-
-    function _validateUuid(string calldata uuid) internal pure {
-        // RFC 4122 v4 only. Position 14 must be '4' (0x34); position 19 must
-        // be one of {'8','9','a','b'} = {0x38,0x39,0x61,0x62}. Future UUID
-        // schemes require a new deploy generation.
-        bytes memory uuidBytes = bytes(uuid);
-        if (uuidBytes.length != 36) {
-            revert InvalidUuidFormat();
-        }
-
-        for (uint256 i = 0; i < 36; ++i) {
-            bytes1 char = uuidBytes[i];
-
-            if (i == 8 || i == 13 || i == 18 || i == 23) {
-                if (char != BuddyDomain.ASCII_HYPHEN) {
-                    revert InvalidUuidFormat();
-                }
-                continue;
-            }
-
-            if (i == 14) {
-                if (char != BuddyDomain.ASCII_DIGIT_4) {
-                    revert InvalidUuidFormat();
-                }
-                continue;
-            }
-
-            if (i == 19) {
-                // Explicit set: '8','9','a','b'. Naive range 0x38..0x3B
-                // would silently admit ':' (0x3A) and ';' (0x3B).
-                if (
-                    char != BuddyDomain.ASCII_DIGIT_8 && char != BuddyDomain.ASCII_DIGIT_9
-                        && char != BuddyDomain.ASCII_LOWER_A && char != BuddyDomain.ASCII_LOWER_B
-                ) {
-                    revert InvalidUuidFormat();
-                }
-                continue;
-            }
-
-            bool isDigit = char >= BuddyDomain.ASCII_DIGIT_0 && char <= BuddyDomain.ASCII_DIGIT_9;
-            bool isLowerHex = char >= BuddyDomain.ASCII_LOWER_A && char <= BuddyDomain.ASCII_LOWER_F;
-            if (!isDigit && !isLowerHex) {
-                revert InvalidUuidFormat();
-            }
-        }
     }
 
     function _hashBondAttestation(BondAttestation calldata attestation) internal pure returns (bytes32) {

@@ -12,7 +12,7 @@ Claude Code plugin that emits `/buddy-onchain` deep-links based on on-chain stat
 - `lookup-payload.ts` — formats the rendered deep-link block.
 - `network.ts` — reads `BUDDY_NETWORK` and merges `shared/networks.ts` with `plugin/deployments/<chainId>.json`. Lazy.
 - `publicClient.ts` — viem `publicClient` over the active network's RPC. Lazy singleton.
-- `bone-deriver.ts` — TS-side trait derivation. Cross-domain parity with the contract.
+- `bone-deriver.ts` — TS-side trait derivation. `deriveTraitSeed(identityHash)` feeds WyHash; cross-domain parity with the contract. The `bytes32` identity hash itself comes from the shared `computeIdentityHash`, not from here.
 - `config-reader.ts` — reads `~/.claude.json`. Extracts `oauthAccount.accountUuid`.
 - `session-start.ts`, `stop-hook.ts`, `ambient.ts`, `sleeping-frame.ts`, `sprite-decorations.ts` — ambient-render pipeline.
 - `buddy-state.ts`, `effective-state.ts`, `safe-json-store.ts`, `drift-flag.ts` — local state at `~/.claude/plugins/buddy-onchain/.buddy-state` (override base with `CLAUDE_CONFIG_DIR`).
@@ -30,11 +30,11 @@ For `/buddy-onchain` with no args:
    - `tokenId === 0n` → `cold-miss`.
    - `tokenId > 0n` → `warm-hatched`.
 3. `lookup-payload.ts` formats the deep-link:
-   - cold → `https://buddies-onchain.xyz/hatch?accountUuid=<uuid>`
-   - warm → `https://buddies-onchain.xyz/view/<uuid>`
+   - cold → `https://buddies-onchain.xyz/hatch#accountUuid=<uuid>` (fragment, not query — the UUID never crosses the HTTP wire)
+   - warm → `https://buddies-onchain.xyz/view/<tokenId>` (numeric; no UUID in the URL)
 4. The hook emits `additionalContext` JSON. Claude Code injects it into the session.
 
-Identity hash on-chain: `keccak256(toBytes(uuid.toLowerCase()))`. UUID is `trim().toLowerCase()` before hashing and URL construction. Site origin: `local` → `http://localhost:5173`; everything else → `https://buddies-onchain.xyz`.
+Identity hash on-chain: shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(uuid))`. The plugin passes the resulting `bytes32` to `getTokenIdByIdentity`; the raw UUID stays client-side and only ever leaves in the `/hatch` fragment. UUID is `trim().toLowerCase()` before hashing and URL construction. Only a UUID that passes shared v4 validation (`assertCanonicalV4Uuid`) is hashed — never a fallback or placeholder. Site origin: `local` → `http://localhost:5173`; everything else → `https://buddies-onchain.xyz`.
 
 ## Cross-domain parity
 

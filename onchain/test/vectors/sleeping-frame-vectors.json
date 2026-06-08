@@ -5,9 +5,35 @@
   "vectors": [
     {
       "accountUuid": "00000000-0000-4000-8000-000000000001",
+      "speciesIndex": 13,
+      "hatIndex": 2,
+      "eyesIndex": 2,
+      "expectedFb": [
+        "      [___]",
+        "    n  ____  n",
+        "    | |-  -| |",
+        "    |_|    |_|",
+        "      |    |"
+      ]
+    },
+    {
+      "accountUuid": "00000000-0000-4000-8000-000000000002",
+      "speciesIndex": 7,
+      "hatIndex": 1,
+      "eyesIndex": 3,
+      "expectedFb": [
+        "      \\^^^/",
+        "      .---.",
+        "      (->-)",
+        "     /(   )\\",
+        "      `---´"
+      ]
+    },
+    {
+      "accountUuid": "00000000-0000-4000-8000-000000000003",
       "speciesIndex": 7,
       "hatIndex": 0,
-      "eyesIndex": 4,
+      "eyesIndex": 0,
       "expectedFb": [
         "",
         "      .---.",
@@ -17,49 +43,23 @@
       ]
     },
     {
-      "accountUuid": "00000000-0000-4000-8000-000000000002",
-      "speciesIndex": 4,
-      "hatIndex": 1,
+      "accountUuid": "00000000-0000-4000-8000-000000000004",
+      "speciesIndex": 16,
+      "hatIndex": 0,
       "eyesIndex": 5,
       "expectedFb": [
-        "      \\^^^/",
-        "     /^\\  /^\\",
-        "    <  -  -  >",
-        "    (   ~~   )",
-        "     `-vvvv-´"
-      ]
-    },
-    {
-      "accountUuid": "00000000-0000-4000-8000-000000000003",
-      "speciesIndex": 14,
-      "hatIndex": 2,
-      "eyesIndex": 2,
-      "expectedFb": [
-        "      [___]",
-        "      .[||].",
-        "     [ -  - ]",
-        "     [ ==== ]",
-        "     `------´"
-      ]
-    },
-    {
-      "accountUuid": "00000000-0000-4000-8000-000000000004",
-      "speciesIndex": 1,
-      "hatIndex": 1,
-      "eyesIndex": 4,
-      "expectedFb": [
-        "      \\^^^/",
-        "        (->",
-        "        ||",
-        "      _(__)_",
-        "       ^^^^"
+        "",
+        "    .-o-OO-o-.",
+        "   (__________)",
+        "      |-  -|",
+        "      |____|"
       ]
     },
     {
       "accountUuid": "00000000-0000-4000-8000-000000000005",
       "speciesIndex": 9,
       "hatIndex": 0,
-      "eyesIndex": 5,
+      "eyesIndex": 4,
       "expectedFb": [
         "",
         "    -    .--.",

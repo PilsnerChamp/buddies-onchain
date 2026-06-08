@@ -13,12 +13,13 @@ import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 /// @dev Operator playbook on failure: each test asserts an empirical ceiling +~20% above the
 ///      observed baseline. If a test fails: (1) if the change is intentional, bump the constant
 ///      + update the baseline comment + commit; (2) otherwise investigate the drift. The 20%
 ///      headroom absorbs typical Solc/optimizer drift; a 25%+ regression signals a real change.
-contract GasCeilingsTest is Test {
+contract GasCeilingsTest is Test, HatchHelper {
     // Baseline: 229_357 gas; ~20% headroom rounded up for hatch storage/write-path drift.
     uint256 private constant HATCH_GAS_CEILING = 280_000;
     // Baseline: 92_507 gas (cold-slot, post `vm.cool`); ~10% headroom rounded up for EIP-712 verification drift.
@@ -72,7 +73,7 @@ contract GasCeilingsTest is Test {
 
     function test_gasCeiling_hatch() public {
         uint256 gasBefore = gasleft();
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         uint256 gasUsed = gasBefore - gasleft();
 
         assertEq(tokenId, 1, "unexpected hatch tokenId");
@@ -80,7 +81,7 @@ contract GasCeilingsTest is Test {
     }
 
     function test_gasCeiling_bond() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         BuddyNFT.BondAttestation memory attestation = _bondAttestation(tokenId, TEST_UUID, recipient);
         bytes memory signature = _signBondAttestation(attestation);
 
@@ -101,7 +102,7 @@ contract GasCeilingsTest is Test {
     }
 
     function test_gasCeiling_tokenURI_custodial() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         uint256 gasBefore = gasleft();
         string memory tokenUri = nft.tokenURI(tokenId);
@@ -176,7 +177,7 @@ contract GasCeilingsTest is Test {
     }
 
     function _hatchAndBond() internal returns (uint256 tokenId) {
-        tokenId = nft.hatch(TEST_UUID);
+        tokenId = _hatchUuid(nft, TEST_UUID);
         BuddyNFT.BondAttestation memory attestation = _bondAttestation(tokenId, TEST_UUID, recipient);
         bytes memory signature = _signBondAttestation(attestation);
 
@@ -191,7 +192,7 @@ contract GasCeilingsTest is Test {
     {
         return BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(uuid)),
+            identityHash: _identityHash(uuid),
             recipient: recipient_,
             expiry: uint64(block.timestamp + 1 hours)
         });

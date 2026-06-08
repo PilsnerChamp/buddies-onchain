@@ -8,8 +8,8 @@ function makeLookupPayload(
 ): LookupPayload {
   return {
     cardLines: [],
-    viewUrl: "https://buddies-onchain.xyz/view/abc",
-    hatchUrl: "https://buddies-onchain.xyz/hatch?accountUuid=abc",
+    viewUrl: "https://buddies-onchain.xyz/view/123",
+    hatchUrl: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
     openseaCollectionUrl: null,
     effectiveMode: "lite",
     persistedMode: "lite",
@@ -28,19 +28,19 @@ describe("formatLookupBlock", () => {
       name: "warm uses view copy and view URL",
       buddyStatus: "warm" as const,
       message: "go see your buddy onchain:",
-      url: "https://buddies-onchain.xyz/view/abc",
+      url: "https://buddies-onchain.xyz/view/123",
     },
     {
       name: "cold uses hatch copy and hatch URL",
       buddyStatus: "cold" as const,
       message: "your buddy is sleeping - hatch it onchain:",
-      url: "https://buddies-onchain.xyz/hatch?accountUuid=abc",
+      url: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
     },
     {
       name: "unknown uses retry copy and hatch URL",
       buddyStatus: "unknown" as const,
       message: "unable to verify onchain status - try online:",
-      url: "https://buddies-onchain.xyz/hatch?accountUuid=abc",
+      url: "https://buddies-onchain.xyz/hatch#accountUuid=abc",
     },
   ];
 
@@ -77,7 +77,7 @@ describe("formatLookupBlock", () => {
         "===",
         "```",
         "go see your buddy onchain:",
-        "https://buddies-onchain.xyz/view/abc",
+        "https://buddies-onchain.xyz/view/123",
         "",
         LITE_LINE,
         CHANGE_HINT,
@@ -90,8 +90,8 @@ describe("formatLookupBlock", () => {
     for (const buddyStatus of ["cold", "unknown"] as const) {
       const out = formatLookupBlock(makeLookupPayload({ buddyStatus }));
 
-      expect(out).toContain("https://buddies-onchain.xyz/hatch?accountUuid=abc");
-      expect(out).not.toContain("https://buddies-onchain.xyz/view/abc");
+      expect(out).toContain("https://buddies-onchain.xyz/hatch#accountUuid=abc");
+      expect(out).not.toContain("https://buddies-onchain.xyz/view/123");
     }
   });
 
@@ -199,7 +199,7 @@ describe("formatLookupBlock", () => {
       const expected = [
         "BUDDY_RENDER_BEGIN",
         "your buddy is sleeping - hatch it onchain:",
-        "https://buddies-onchain.xyz/hatch?accountUuid=abc",
+        "https://buddies-onchain.xyz/hatch#accountUuid=abc",
         "",
         ...cell.expectedLines,
         "BUDDY_RENDER_END",

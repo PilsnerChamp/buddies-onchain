@@ -1,6 +1,6 @@
 # Site architecture
 
-Static dApp at `https://buddies-onchain.xyz/`. Vercel-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:uuid`, `/bond`) don't pull it.
+Static dApp at `https://buddies-onchain.xyz/`. Vercel-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:tokenId`, `/bond`) don't pull it.
 
 ## Stack
 
@@ -19,7 +19,7 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 
 - `main.tsx` — root mount. Hosts `<QueryClientProvider>` (stays in entry chunk).
 - `App.tsx` — router shell. Lazy-imports `HatchLayout` and `Hatch`.
-- `routes/` — `Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewUuid.tsx`, `Bond.tsx`.
+- `routes/` — `Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Bond.tsx`.
 - `layouts/HatchLayout.tsx` — wraps `/hatch` in `<WagmiProvider>` + `<RainbowKitProvider>`. Lazy-loaded.
 - `components/` — `TerminalFrame`, `TerminalRouteShell`, `ManPageRow`, `ManPageSection`, `ColdHeroTerminal`, `BlinkingCursor`, `DotGridBackground`, `ViewLookupAction`, `RouteMetadata` (shared separator + AUTHOR + SEE ALSO + contract row).
 - `lib/` — `useBuddyLookup.ts`, `decodeTokenUri.ts`, `hatch.ts`, `seeAlsoContractRow.ts`, `useArrowRowNav.ts`, `repoLinks.ts`, `pluginCommands.ts`, `authorLinks.ts`, `onchainConstants.ts`.
@@ -35,27 +35,37 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 | `/` | `<Home />` | no |
 | `/hatch` | `<HatchGate />` inside `<HatchLayout>` | yes (lazy) |
 | `/view` | `<View />` (manual UUID lookup) | no |
-| `/view/:uuid` | `<ViewUuid />` | no |
+| `/view/:tokenId` | `<ViewToken />` | no |
 | `/bond` | `<Bond />` | no |
 | `*` | `<Navigate to="/" replace />` | no |
 
-`HatchGate` reads `accountUuid` from the query string. Missing or malformed (fails `isValidUuid`) → redirect to `/`.
+Routes in `site/src/config/routes.ts`. The `/view/:uuid` route is removed; no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric or `tokenId <= 0` renders NotFound, not a redirect.
+
+### Hatch fragment
+
+`HatchGate` reads `accountUuid` from the URL fragment (`/hatch#accountUuid=<uuid>`). Fragments never cross the HTTP wire. `HatchGate` owns parse, validate (`assertCanonicalV4Uuid`), and scrub: on arrival it synchronously `replaceState`s to `/hatch` before `<Hatch>` mounts, then passes the UUID down as a prop. `<Hatch>` never re-reads `location`. Missing or malformed UUID → redirect to `/`. The legacy `?accountUuid=` query form redirects home.
+
+No third-party script (analytics, error reporter) may read `location.href` or the unscrubbed fragment on `/hatch`. The scrub runs before any reporter can capture it.
+
+### Manual `/view`
+
+`<View />` resolves the typed UUID to a `tokenId` client-side, then `navigate('/view/<tokenId>', { replace: true })`. The UUID stays in component state and never enters a URL.
 
 ## Wagmi-chunk split
 
-`<WagmiProvider>` and `<RainbowKitProvider>` mount only inside `HatchLayout`, which `App.tsx` references via `React.lazy`. Vite emits a separate chunk for the wagmi + RainbowKit graph. Cold loads of `/`, `/view`, `/view/<uuid>`, `/bond` skip it entirely.
+`<WagmiProvider>` and `<RainbowKitProvider>` mount only inside `HatchLayout`, which `App.tsx` references via `React.lazy`. Vite emits a separate chunk for the wagmi + RainbowKit graph. Cold loads of `/`, `/view`, `/view/<tokenId>`, `/bond` skip it entirely.
 
 `Hatch` is also lazy. `App.tsx` is statically loaded, so a static `Hatch` import would pull wagmi hooks into the entry bundle and nullify the layout split. A single `<Suspense fallback={null}>` covers both lazy boundaries on the `/hatch` parent route.
 
 `@rainbow-me/rainbowkit/styles.css` is imported from `HatchLayout.tsx`, not `main.tsx` — Vite chunks CSS with the JS module that imports it.
 
-`<QueryClientProvider>` stays in `main.tsx` because `useBuddyLookup` (used by `/view/<uuid>`) depends on it. The wagmi split is what's lazy, not React Query.
+`<QueryClientProvider>` stays in `main.tsx` because `useBuddyLookup` (used by `/view`) depends on it. The wagmi split is what's lazy, not React Query.
 
 ## Wallet-free `/view`
 
-`useBuddyLookup` (`site/src/lib/useBuddyLookup.ts`) wraps `getTokenIdByIdentity` + `tokenURI` in a TanStack Query call against `publicClient`. Returns a tagged union — `loading`, `error` (with `kind: 'tokenId' | 'tokenUri'`), or `success` with `pre-deploy` / `miss` / `hit` data. `/view/<uuid>` consumes this hook with no wallet connected.
+`useBuddyLookup` (`site/src/lib/useBuddyLookup.ts`) splits into two TanStack Query calls against `publicClient`: a UUID → `tokenId` resolver (`getTokenIdByIdentity`) for manual `/view`, and a `tokenId` → SVG loader (`tokenURI`) for `/view/<tokenId>`. The token page loads by `tokenId` directly and skips the identity-hash step. Both run with no wallet connected.
 
-Identity hash matches the plugin: `keccak256(toBytes(uuid.toLowerCase()))`. Cache key includes `chainId`. Stale time 30s.
+Identity hash matches the plugin via the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(uuid))`. Cache key includes `chainId`. Stale time 30s.
 
 ## Network config
 

@@ -1,0 +1,15 @@
+{
+  // LOAD-BEARING — do not delete. Bun resolves a `shared/*.ts` file's bare
+  // `viem` import using the NEAREST tsconfig (this one), not plugin/tsconfig.json.
+  // `shared/` has no node_modules and there is no root node_modules/viem, so
+  // without this pin `bun test` fails with:
+  //   "Cannot find package 'viem' from shared/computeIdentityHash.ts".
+  // The site toolchain (Vite/Vitest/tsc) never reads this file — it resolves
+  // `viem` via its own alias → site's viem. So this path only governs the Bun
+  // (plugin) consumer, where pointing at the plugin's own viem is correct.
+  "compilerOptions": {
+    "paths": {
+      "viem": ["../plugin/node_modules/viem"]
+    }
+  }
+}

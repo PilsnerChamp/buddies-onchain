@@ -24,8 +24,8 @@ const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 const DIST = join(PLUGIN_ROOT, "dist", "index.js");
 const RULESET_PREFIX = "BUDDIES ONCHAIN AMBIENT ACTIVE.";
-const LOCAL_HATCH_URL = `http://localhost:5173/hatch?accountUuid=${TEST_UUID}`;
-const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch?accountUuid=${TEST_UUID}`;
+const LOCAL_HATCH_URL = `http://localhost:5173/hatch#accountUuid=${TEST_UUID}`;
+const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#accountUuid=${TEST_UUID}`;
 
 interface RunResult {
   exitCode: number | null;
@@ -321,8 +321,8 @@ function readContractCount(stderr: string): number {
   return Number(match![1]);
 }
 
-// Asserted sprite rows correspond to the robot sleeping frame for TEST_UUID
-// (wyhash → species "robot", hat "none"). If TEST_UUID changes species, these
+// Asserted sprite rows correspond to the duck sleeping frame for TEST_UUID
+// (hash-only trait seed → species "duck", hat "none"). If TEST_UUID changes species, these
 // row assertions must change with it.
 function expectSleepingAmbient(stdout: string): void {
   const context = additionalContext(stdout);
@@ -332,9 +332,10 @@ function expectSleepingAmbient(stdout: string): void {
   // Ambient block dedents the common left margin and adds one space of left
   // padding (matching the ` | ` joke separator), so sprite rows render flush
   // with one leading space rather than the on-chain centering padding.
-  expect(context).toContain(" [ -  - ] | ");
-  expect(context).toContain(" [ ==== ] | ");
-  expect(context).toContain(" `------´ | ");
+  expect(context).toContain("   __     | ");
+  expect(context).toContain(" <(- )___ | ");
+  expect(context).toContain("  (  ._>  | ");
+  expect(context).toContain("   `--´   | ");
   expect(context).not.toContain("BUDDY_RENDER_BEGIN");
   expect(context).toContain(" | ");
 }
@@ -370,7 +371,7 @@ describe("hook — lookup route", () => {
     expect(result.stderr).toBe("");
     expect(context).toContain("BUDDY_RENDER_BEGIN");
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/${TEST_UUID}`);
+    expect(context).toContain(`http://localhost:5173/view/42`);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
     expect(JSON.parse(readFileSync(statePath(claudeDir), "utf8")).turnCounter).toBe(1);
@@ -381,7 +382,7 @@ describe("hook — lookup route", () => {
     const result = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "cold");
     const context = additionalContext(result.stdout);
 
-    expect(context).toContain(`http://localhost:5173/hatch?accountUuid=${TEST_UUID}`);
+    expect(context).toContain(`http://localhost:5173/hatch#accountUuid=${TEST_UUID}`);
     expect(context).toContain("your buddy is sleeping - hatch it onchain:");
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
@@ -396,7 +397,7 @@ describe("hook — lookup route", () => {
     expect(result.exitCode).toBe(0);
     expect(context).toContain("BUDDY_RENDER_BEGIN");
     expect(context).toContain("your buddy is sleeping - hatch it onchain:");
-    expect(context).toContain(`http://localhost:5173/hatch?accountUuid=${TEST_UUID}`);
+    expect(context).toContain(`http://localhost:5173/hatch#accountUuid=${TEST_UUID}`);
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toContain("ZZzzz...");
   });
@@ -407,7 +408,7 @@ describe("hook — lookup route", () => {
     const context = additionalContext(result.stdout);
 
     expect(context).toContain("unable to verify onchain status - try online:");
-    expect(context).toContain(`http://localhost:5173/hatch?accountUuid=${TEST_UUID}`);
+    expect(context).toContain(`http://localhost:5173/hatch#accountUuid=${TEST_UUID}`);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
   });
@@ -423,7 +424,7 @@ describe("hook — lookup route", () => {
     expect(context).not.toContain("ZZzzz...");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toBe("");
-    expect(bodyRows[1]).toContain(".[||].");
+    expect(bodyRows[1]).toContain("__");
   });
 
   test("cached warm + RPC throw emits warm decision and view URL", async () => {
@@ -443,8 +444,8 @@ describe("hook — lookup route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/${TEST_UUID}`);
-    expect(context).not.toContain("/hatch?");
+    expect(context).toContain(`http://localhost:5173/view/42`);
+    expect(context).not.toContain("/hatch#");
     expect(context).toContain("your buddy appears every 3rd prompt (mode: `lite`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
     expect(context).toContain("      .[||].");
@@ -464,7 +465,7 @@ describe("hook — lookup route", () => {
     expect(result.exitCode).toBe(0);
     expect(state.hatch).toBe("warm");
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/${TEST_UUID}`);
+    expect(context).toContain(`http://localhost:5173/view/42`);
     expect(context).not.toContain("ZZzzz...");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toBe("");
@@ -613,7 +614,7 @@ describe("hook — mutate route", () => {
     expect(readContractCount(result.stderr)).toBe(0);
     expect(context).not.toContain("unable to verify buddy onchain");
     expect(context).not.toContain("found your buddy onchain");
-    expect(context).not.toContain("/hatch?");
+    expect(context).not.toContain("/hatch#");
     expect(state.mode).toBe("lite");
     expect(state.hatch).toBe("warm");
     expect(state.tokenId).toBe("0x2a");

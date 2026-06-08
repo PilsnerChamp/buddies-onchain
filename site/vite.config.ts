@@ -9,6 +9,10 @@ import react from '@vitejs/plugin-react';
 //
 // Reference: docs/network-config.md.
 const sharedDir = fileURLToPath(new URL('../shared', import.meta.url));
+// `viem` alias pins `shared/*` imports to the site's own hoisted viem. Safe only
+// while viem stays a single hoisted copy (wagmi has no nested viem); a second
+// nested viem would silently force the wrong version into shared code.
+const viemDir = fileURLToPath(new URL('./node_modules/viem', import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,6 +20,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '~shared': sharedDir,
+      viem: viemDir,
     },
   },
   server: {

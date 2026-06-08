@@ -106,12 +106,10 @@ describe("resolveDeepLink", () => {
   });
 
   test("uppercase UUID resolves to the same identity hash as lowercase form", async () => {
-    // The contract's `_validateUuid` (BuddyNFT.sol § _validateUuid) only
-    // accepts the lowercase canonical form. Without trim+lowercase before
-    // the keccak input, an uppercase `--uuid F47AC10B-...` would compute a
-    // different identity hash than the same UUID in lowercase, and the
-    // plugin would silently route to the cold path even when an on-chain
-    // record exists. Site equivalents already canonicalize
+    // Without trim+lowercase before the keccak input, an uppercase
+    // `--uuid F47AC10B-...` would compute a different identity hash than the
+    // same UUID in lowercase, and the plugin would silently route to the cold
+    // path even when an on-chain record exists. Site equivalents already canonicalize
     // (`useBuddyLookup.ts`, `Hatch.tsx`); this test guards the plugin side.
     const lowerUuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
     const upperUuid = "F47AC10B-58CC-4372-A567-0E02B2C3D479";
@@ -171,14 +169,12 @@ describe("resolveDeepLink", () => {
 });
 
 describe("URL helpers", () => {
-  test("hatchUrl and warmUrl URL-encode the accountUuid", () => {
+  test("hatchUrl URL-encodes the UUID fragment and warmUrl uses tokenId", () => {
     const trickUuid = "a/b c+d&e=f";
 
-    expect(warmUrl(PROD_ORIGIN, trickUuid)).toBe(
-      `${PROD_ORIGIN}/view/${encodeURIComponent(trickUuid)}`,
-    );
+    expect(warmUrl(PROD_ORIGIN, 123n)).toBe(`${PROD_ORIGIN}/view/123`);
     expect(hatchUrl(PROD_ORIGIN, trickUuid)).toBe(
-      `${PROD_ORIGIN}/hatch?accountUuid=${encodeURIComponent(trickUuid)}`,
+      `${PROD_ORIGIN}/hatch#accountUuid=${encodeURIComponent(trickUuid)}`,
     );
   });
 });

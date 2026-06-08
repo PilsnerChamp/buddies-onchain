@@ -1,16 +1,23 @@
 /**
  * Bone derivation pipeline — exact parity with BuddyNFT.hatch.
  *
- * Pipeline: accountUuid + salt -> wyhash -> 32-bit -> Mulberry32 PRNG -> traits
+ * Pipeline:
+ * accountUuid -> §2 keccak identityHash -> raw32 || SEED_DOMAIN -> wyhash
+ * -> 32-bit trait seed -> Mulberry32 PRNG -> traits
  *
  * CROSS-DOMAIN CONTRACT: The Mulberry32 implementation and trait derivation
- * order MUST stay in sync with the Solidity contract. Any change here
- * requires a matching change on-chain.
+ * order MUST stay in sync with the Solidity contract. The trait seed preimage
+ * MUST stay byte-exact with BuddyNFT.hatch: raw identityHash bytes, not the
+ * "0x…" string or hex characters.
  */
+
+import { concatBytes, hexToBytes, stringToBytes } from "viem";
+
+import { computeIdentityHash } from "~shared/computeIdentityHash";
 
 // ---------- constants ------------------------------------------------------
 
-export const SALT = "friend-2026-401";
+export const SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
 
 export const SPECIES = [
   "duck", "goose", "blob", "cat", "dragon", "octopus", "owl", "penguin",
@@ -107,29 +114,33 @@ export function rollRarity(rng: RNG): Rarity {
 
 /**
  * wyhash — used by compiled Bun binary installs of Claude Code.
- * Delegates to Bun.hash, truncated to 32 bits.
+ * Delegates to Bun.hash over the byte-exact input, truncated to 32 bits.
  */
-export function wyhash(s: string): number {
-  return Number(BigInt(Bun.hash(s)) & 0xffffffffn);
+export function wyhash(input: string | Uint8Array): number {
+  return Number(BigInt.asUintN(64, BigInt(Bun.hash(input))) & 0xffffffffn);
 }
 
 /**
- * Compute the 32-bit identity hash from an account UUID.
+ * Derive the 32-bit trait seed from an account UUID.
  *
- * CROSS-DOMAIN: This is the same hash the hatch flow validates
- * and the contract stores on-chain.
+ * CROSS-DOMAIN: This matches BuddyNFT.hatch:
+ * `WyHash.hash(abi.encodePacked(identityHash), bytes(SEED_DOMAIN))`.
  *
- * @param accountUuid - The account UUID (or "anon" fallback)
+ * @param accountUuid - Canonical v4 account UUID.
  */
-export function computeIdentityHash(accountUuid: string): number {
-  const seed = accountUuid + SALT;
-  return wyhash(seed);
+export function deriveTraitSeed(accountUuid: string): number {
+  const identityHash = computeIdentityHash(accountUuid);
+  const seedInput = concatBytes([
+    hexToBytes(identityHash),
+    stringToBytes(SEED_DOMAIN),
+  ]);
+  return wyhash(seedInput);
 }
 
 // ---------- main derivation ------------------------------------------------
 
 /**
- * Derive a buddy's bones (traits) from a 32-bit identity hash.
+ * Derive a buddy's bones (traits) from a 32-bit trait seed.
  * The derivation order is fixed and must never change.
  */
 export function deriveBones(rng: RNG): BuddyBones {
@@ -169,16 +180,18 @@ export function deriveBones(rng: RNG): BuddyBones {
 }
 
 /**
- * Full pipeline: accountUuid -> identity hash -> PRNG -> bones.
+ * Full pipeline: accountUuid -> identityHash -> trait seed -> PRNG -> bones.
  *
- * @param accountUuid - The account UUID (or "anon" fallback)
+ * @param accountUuid - Canonical v4 account UUID.
  */
 export function deriveBuddyFromAccount(accountUuid: string): {
-  identityHash: number;
+  identityHash: `0x${string}`;
+  traitSeed: number;
   bones: BuddyBones;
 } {
   const identityHash = computeIdentityHash(accountUuid);
-  const rng = makeMulberry32(identityHash);
+  const traitSeed = deriveTraitSeed(accountUuid);
+  const rng = makeMulberry32(traitSeed);
   const bones = deriveBones(rng);
-  return { identityHash, bones };
+  return { identityHash, traitSeed, bones };
 }

@@ -8,19 +8,13 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
-contract BuddyNFTFuzzTest is Test {
+contract BuddyNFTFuzzTest is Test, HatchHelper {
     event AttestationSignerUpdated(address indexed signer);
 
     bytes16 private constant HEX_SYMBOLS = "0123456789abcdef";
     bytes1 private constant ASCII_HYPHEN = 0x2d;
-    bytes1 private constant ASCII_DIGIT_0 = 0x30;
-    bytes1 private constant ASCII_DIGIT_4 = 0x34;
-    bytes1 private constant ASCII_DIGIT_8 = 0x38;
-    bytes1 private constant ASCII_DIGIT_9 = 0x39;
-    bytes1 private constant ASCII_LOWER_A = 0x61;
-    bytes1 private constant ASCII_LOWER_B = 0x62;
-    bytes1 private constant ASCII_LOWER_F = 0x66;
 
     uint256 internal constant SIGNER_KEY = uint256(keccak256("hatch-coverage-fuzz-signer"));
     uint256 private constant START_TIME = 1_700_000_000;
@@ -44,20 +38,13 @@ contract BuddyNFTFuzzTest is Test {
         nft = _newBondingNft();
     }
 
-    function testFuzz_hatch_uuidValidation(string memory uuid) public {
-        vm.assume(!_isValidUuidV4(uuid));
-
-        vm.expectRevert(BuddyNFT.InvalidUuidFormat.selector);
-        nft.hatch(uuid);
-    }
-
     function testFuzz_hatch_validV4UuidSucceeds(bytes16 entropy) public {
         string memory uuid = _uuidV4(entropy);
-        bytes32 identityHash = keccak256(bytes(uuid));
+        bytes32 identityHash = _identityHash(uuid);
         vm.assume(!nft.isMinted(identityHash));
 
         uint256 previousSupply = nft.totalSupply();
-        uint256 tokenId = nft.hatch(uuid);
+        uint256 tokenId = _hatchUuid(nft, uuid);
 
         assertEq(tokenId, previousSupply + 1);
         assertEq(nft.ownerOf(tokenId), address(nft));
@@ -160,8 +147,8 @@ contract BuddyNFTFuzzTest is Test {
         public
     {
         BuddyNFT freshNft = _newBondingNft();
-        freshNft.hatch(TEST_UUID);
-        freshNft.hatch(SECOND_UUID);
+        _hatchUuid(freshNft, TEST_UUID);
+        _hatchUuid(freshNft, SECOND_UUID);
 
         uint256 tokenId = bound(tokenIdSeed, 1, 2);
         vm.assume(caller != address(0));
@@ -228,8 +215,8 @@ contract BuddyNFTFuzzTest is Test {
         internal
         returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory attestation)
     {
-        tokenId = target.hatch(uuid);
-        identityHash = keccak256(bytes(uuid));
+        tokenId = _hatchUuid(target, uuid);
+        identityHash = _identityHash(uuid);
         attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId, identityHash: identityHash, recipient: bondRecipient, expiry: expiry
         });
@@ -304,45 +291,5 @@ contract BuddyNFTFuzzTest is Test {
         }
 
         return string(uuid);
-    }
-
-    function _isValidUuidV4(string memory uuid) internal pure returns (bool) {
-        bytes memory uuidBytes = bytes(uuid);
-        if (uuidBytes.length != 36) {
-            return false;
-        }
-
-        for (uint256 i = 0; i < 36; ++i) {
-            bytes1 char = uuidBytes[i];
-
-            if (i == 8 || i == 13 || i == 18 || i == 23) {
-                if (char != ASCII_HYPHEN) {
-                    return false;
-                }
-                continue;
-            }
-
-            if (i == 14) {
-                if (char != ASCII_DIGIT_4) {
-                    return false;
-                }
-                continue;
-            }
-
-            if (i == 19) {
-                if (char != ASCII_DIGIT_8 && char != ASCII_DIGIT_9 && char != ASCII_LOWER_A && char != ASCII_LOWER_B) {
-                    return false;
-                }
-                continue;
-            }
-
-            bool isDigit = char >= ASCII_DIGIT_0 && char <= ASCII_DIGIT_9;
-            bool isLowerHex = char >= ASCII_LOWER_A && char <= ASCII_LOWER_F;
-            if (!isDigit && !isLowerHex) {
-                return false;
-            }
-        }
-
-        return true;
     }
 }

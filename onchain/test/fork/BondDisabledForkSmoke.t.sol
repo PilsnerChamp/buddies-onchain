@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 
 import {BuddyNFT} from "../../contracts/BuddyNFT.sol";
+import {HatchHelper} from "../helpers/HatchHelper.sol";
 import {IBuddyNFT} from "../../contracts/interfaces/IBuddyNFT.sol";
 
 /// @title BondDisabledForkSmoke
@@ -28,7 +29,7 @@ import {IBuddyNFT} from "../../contracts/interfaces/IBuddyNFT.sol";
 ///           SEPOLIA_RPC_URL  — Base Sepolia RPC (e.g. https://sepolia.base.org)
 ///
 ///         Run: forge test --match-contract BondDisabledForkSmoke -vv
-contract BondDisabledForkSmokeTest is Test {
+contract BondDisabledForkSmokeTest is Test, HatchHelper {
     using stdJson for string;
 
     uint256 internal constant BASE_SEPOLIA_CHAIN_ID = 84532;
@@ -63,19 +64,17 @@ contract BondDisabledForkSmokeTest is Test {
         // owned, Custodial token — proving the revert is the bonding gate, not a missing
         // token or wrong stage.
         string memory uuid = _freshUuid(nftAddr);
-        require(!nft.isMinted(keccak256(bytes(uuid))), "smoke uuid already minted; rerun");
+        require(!nft.isMinted(_identityHash(uuid)), "smoke uuid already minted; rerun");
 
-        uint256 tokenId = nft.hatch(uuid);
-        assertEq(
-            uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Custodial), "hatched stage not Custodial"
-        );
+        uint256 tokenId = _hatchUuid(nft, uuid);
+        assertEq(uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Custodial), "hatched stage not Custodial");
 
         // `bondingEnabled` is the FIRST check in bond() (before ownership/stage/attestation),
         // so a well-formed-but-irrelevant attestation still reverts here. expiry in the
         // future keeps the revert unambiguously the bonding gate.
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(uuid)),
+            identityHash: _identityHash(uuid),
             recipient: address(this),
             expiry: uint64(block.timestamp + 1 hours)
         });

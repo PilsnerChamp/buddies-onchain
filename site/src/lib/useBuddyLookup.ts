@@ -1,33 +1,19 @@
-// React Query hook wrapping two sequential `publicClient.readContract` calls
-// for a UUID → tokenId → tokenURI lookup. Powers `/view/<uuid>` without any
-// wagmi dependency — the publicClient (`config/publicClient`) holds a
-// hardcoded HTTP transport, so the hook works with no wallet connected.
+// React Query hooks wrapping wallet-free public reads for `/view`.
 //
-// Tagged-union return shape:
-//   { status: 'loading' }
-//   { status: 'error', error: Error, kind: 'tokenId' | 'tokenUri' }
-//   { status: 'success', data: BuddyData }
-//
-// `BuddyData.state` discriminates pre-deploy (no contract for the chain),
-// miss (`getTokenIdByIdentity` returned 0), hit (tokenId > 0 and tokenURI
-// decoded to SVG). Hit payload is SVG-only — metadata stays internal to the
-// decoder; the on-chain SVG owns trait/stat chrome.
-//
-// Identity hash: `keccak256(toBytes(uuid))` matches the contract's
-// `keccak256(bytes(accountUuid))` exactly. UUID is lowercased before
-// hashing — the contract canonicalizes lowercase only.
+// Split flow:
+//   - manual `/view`: UUID stays in component state, resolves via
+//     computeIdentityHash(uuid) → getTokenIdByIdentity, then navigates to the
+//     canonical `/view/<tokenId>` URL on hit.
+//   - token page `/view/:tokenId`: loads tokenURI(tokenId) directly and never
+//     re-derives from UUID/hash.
 
 import { useQuery } from '@tanstack/react-query';
-import { keccak256, toBytes } from 'viem';
+import { computeIdentityHash } from '~shared/computeIdentityHash';
 import { publicClient } from '../config/publicClient';
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
 import { decodeTokenUriToSvg } from './decodeTokenUri';
 
-// Discriminator for which on-chain read failed. `tokenId` failure means
-// `getTokenIdByIdentity` threw (RPC down, malformed response, contract
-// missing); `tokenUri` failure means tokenId resolved successfully but the
-// follow-up `tokenURI(tokenId)` read threw.
 type BuddyLookupErrorKind = 'tokenId' | 'tokenUri';
 
 type BuddyLookupErrorState = {
@@ -36,24 +22,26 @@ type BuddyLookupErrorState = {
   kind: BuddyLookupErrorKind;
 };
 
-// Surfaced on success. `state` discriminates the three terminal branches
-// the caller needs to render. Hit payloads expose only canonical SVG.
-type BuddyData =
+type BuddyLookupData =
   | { state: 'pre-deploy' }
   | { state: 'miss' }
-  | {
-      state: 'hit';
-      svg: string;
-    };
+  | { state: 'hit'; tokenId: bigint };
 
-type BuddyLookupResult =
+type BuddyTokenData =
+  | { state: 'pre-deploy' }
+  | { state: 'hit'; svg: string };
+
+export type BuddyLookupResult =
+  | { status: 'idle' }
   | { status: 'loading' }
   | BuddyLookupErrorState
-  | { status: 'success'; data: BuddyData };
+  | { status: 'success'; data: BuddyLookupData };
 
-// Internal error wrapper carrying the discriminator. react-query throws
-// raw errors back as `query.error`, so the hook's queryFn embeds the
-// `kind` on a thrown subclass and the public layer re-shapes it.
+export type BuddyTokenResult =
+  | { status: 'loading' }
+  | BuddyLookupErrorState
+  | { status: 'success'; data: BuddyTokenData };
+
 class BuddyLookupError extends Error {
   readonly kind: BuddyLookupErrorKind;
   constructor(kind: BuddyLookupErrorKind, cause: unknown) {
@@ -68,24 +56,35 @@ class BuddyLookupError extends Error {
   }
 }
 
+function reshapeError(error: Error): BuddyLookupErrorState {
+  if (error instanceof BuddyLookupError) {
+    return { status: 'error', error, kind: error.kind };
+  }
+  return {
+    status: 'error',
+    error,
+    kind: 'tokenId',
+  };
+}
+
 export function useBuddyLookup(
-  uuid: string,
+  uuid: string | null,
   chainId: number,
 ): BuddyLookupResult {
-  // Error type stays as `Error` (the react-query default) so the
-  // post-query `instanceof BuddyLookupError` narrow works correctly. TS
-  // would over-narrow to `never` after the first instanceof check if we
-  // typed the error as `BuddyLookupError` here.
-  const query = useQuery<BuddyData, Error>({
-    // Include chainId so misses/hits don't bleed across build-time networks.
-    queryKey: ['buddy', chainId, uuid.toLowerCase()],
-    queryFn: async (): Promise<BuddyData> => {
+  const canonicalUuid = uuid?.toLowerCase() ?? null;
+  const query = useQuery<BuddyLookupData, Error>({
+    queryKey: ['buddy-lookup', chainId, canonicalUuid],
+    enabled: canonicalUuid !== null,
+    queryFn: async (): Promise<BuddyLookupData> => {
+      if (canonicalUuid === null) {
+        throw new BuddyLookupError('tokenId', 'missing uuid');
+      }
       const net = getNetwork(chainId);
       if (!net?.buddyNft) {
         return { state: 'pre-deploy' };
       }
-      // Contract-mandated: lowercase before hashing.
-      const identityHash = keccak256(toBytes(uuid.toLowerCase()));
+
+      const identityHash = computeIdentityHash(canonicalUuid);
 
       let tokenId: bigint;
       try {
@@ -99,10 +98,38 @@ export function useBuddyLookup(
         throw new BuddyLookupError('tokenId', cause);
       }
 
-      // BuddyNFT token IDs start at 1; `0` is the canonical lookup-miss
-      // sentinel.
       if (tokenId === 0n) {
         return { state: 'miss' };
+      }
+
+      return { state: 'hit', tokenId };
+    },
+    staleTime: 30_000,
+    retry: (failureCount) => failureCount < 2,
+  });
+
+  if (canonicalUuid === null) {
+    return { status: 'idle' };
+  }
+  if (query.isPending) {
+    return { status: 'loading' };
+  }
+  if (query.isError) {
+    return reshapeError(query.error);
+  }
+  return { status: 'success', data: query.data as BuddyLookupData };
+}
+
+export function useBuddyToken(
+  tokenId: bigint,
+  chainId: number,
+): BuddyTokenResult {
+  const query = useQuery<BuddyTokenData, Error>({
+    queryKey: ['buddy-token', chainId, tokenId.toString()],
+    queryFn: async (): Promise<BuddyTokenData> => {
+      const net = getNetwork(chainId);
+      if (!net?.buddyNft) {
+        return { state: 'pre-deploy' };
       }
 
       let tokenUri: string;
@@ -117,25 +144,13 @@ export function useBuddyLookup(
         throw new BuddyLookupError('tokenUri', cause);
       }
 
-      // Decode SVG inside the queryFn so the caller renders synchronously
-      // off the success state. Decoder shape errors (missing prefix, bad
-      // base64, etc.) bubble as a `tokenUri`-kind error, treated identically
-      // to an RPC failure from the caller's perspective.
-      let svg: string;
       try {
-        svg = decodeTokenUriToSvg(tokenUri);
+        return { state: 'hit', svg: decodeTokenUriToSvg(tokenUri) };
       } catch (cause) {
         throw new BuddyLookupError('tokenUri', cause);
       }
-
-      return { state: 'hit', svg };
     },
-    // 30s for all states: miss/pre-deploy stale for 5min would strand a
-    // freshly-hatched user on the wrong branch. Slight cache-miss cost on
-    // hits is acceptable — buddy data is fetched once per page nav anyway.
     staleTime: 30_000,
-    // One retry is plenty for a transient RPC blip; more would delay the
-    // error-state render on a genuinely-down endpoint.
     retry: (failureCount) => failureCount < 2,
   });
 
@@ -143,17 +158,7 @@ export function useBuddyLookup(
     return { status: 'loading' };
   }
   if (query.isError) {
-    const err = query.error;
-    if (err instanceof BuddyLookupError) {
-      return { status: 'error', error: err, kind: err.kind };
-    }
-    // Unknown query errors are lookup failures by convention.
-    return {
-      status: 'error',
-      error: err instanceof Error ? err : new Error(String(err)),
-      kind: 'tokenId',
-    };
+    return reshapeError(query.error);
   }
-  // `isSuccess` — `query.data` is BuddyData.
-  return { status: 'success', data: query.data as BuddyData };
+  return { status: 'success', data: query.data as BuddyTokenData };
 }

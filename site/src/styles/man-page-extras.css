@@ -14,7 +14,7 @@
  * step numbering, status sentence layout) stays in each route's own file.
  */
 
-/* ── SEE ALSO grid (used by /, /hatch, /view, /view/<uuid>, /bond) ────── */
+/* ── SEE ALSO grid (used by /, /hatch, /view, /view/<tokenId>, /bond) ─── */
 /*
  * Row-anchor markup: `<div class="see-also">` holds `<Link
  * class="see-also__row">` children (or `<div>` for the inert pre-deploy

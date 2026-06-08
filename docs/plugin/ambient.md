@@ -117,7 +117,7 @@ Env wins over persisted state. When env differs from persisted, slash status out
 
 The state file, art cache, and ambient render all key on `(accountUuidHash, chainId, contractAddress)`, and art cache also keys on `tokenId`. If any identity leg changes (account switch, network swap, redeploy), SessionStart updates `.buddy-state`, stale art is cleared or ignored, and the ambient surface goes silent until a warm slash lookup refreshes frames.
 
-`accountUuidHash = sha256(lowercased uuid)` for state-file keying. On-chain identity hash is `keccak256(toBytes(uuid.toLowerCase()))`; the two are distinct on purpose — the file-key hash avoids leaking the on-chain hash on disk.
+`accountUuidHash = sha256(lowercased uuid)` for state-file keying. On-chain identity hash is the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(uuid))`; the two are distinct on purpose — the file-key hash avoids leaking the on-chain hash on disk.
 
 ## File map
 

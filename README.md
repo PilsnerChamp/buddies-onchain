@@ -8,8 +8,10 @@ A soulbound (non-transferable) identity artifact for Claude Code developers. Hat
 
 - Soulbound on-chain identity artifact. Non-transferable by design.
 - Fully on-chain SVG. The renderer lives in contract bytecode; nothing is hosted off-chain.
-- Deterministic trait derivation. UUID → wyhash → Mulberry32 → traits. Same input, same buddy, every time.
-- One Claude account, one buddy. The token is held at the contract, bound to the account UUID — not to a wallet.
+- Deterministic trait derivation, backed by inspectable math. UUID → identity hash → wyhash seed → Mulberry32 → traits. Same input, same buddy, every time.
+- Self-verifying derivation. The contract stores only an identity hash and derives every buddy's traits from it, so anyone can check the hash-to-traits step on-chain. The raw UUID never touches the chain — you re-derive the hash from your own UUID client-side to show it came from your account. The chain never checked your UUID against Anthropic, so nothing about authenticity is lost; the UUID just stays off-chain.
+- One Claude account, one buddy. The token is held at the contract, bound to the identity hash — not to a wallet.
+- The identity hash is the same on every deployment. It is derived only from your Claude account, not from any chain, contract, or deployment, so the same account always resolves to the same buddy. Binding it to a deployment would let a redeploy quietly change your buddy; the canonical record means nobody can.
 - Two public stages: `Hatched` (the token sits at the contract address) and `Bonded` (dormant in v1).
 
 Stage 1 (`Hatched`) is implemented; the contract ships pre-Sepolia at this commit. Mainnet address appears below once it lands on Base.
@@ -32,7 +34,7 @@ Short reference — full canonical table with usage rules at [`CLAUDE.md`](CLAUD
 | `buddy-onchain` | Claude Code plugin name |
 | `/buddy-onchain` | the slash command you type in Claude Code |
 | `/hatch` | the dApp route that mints the buddy for a UUID |
-| `/view` | the dApp manual UUID lookup page; `/view/<uuid>` is the canonical buddy URL |
+| `/view` | manual lookup page — resolves a UUID to a tokenId client-side; `/view/<tokenId>` is the canonical buddy URL (no UUID in the path) |
 
 ## Use it
 

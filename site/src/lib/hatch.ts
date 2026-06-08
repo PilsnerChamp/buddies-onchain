@@ -12,6 +12,8 @@ import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { decodeEventLog, type Hex, type Log } from 'viem';
 import { useAccount, useChainId, useConfig, useConnect, useWriteContract } from 'wagmi';
+import { computeIdentityHash } from '~shared/computeIdentityHash';
+import { isValidUuid } from '~shared/isValidUuid';
 
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
@@ -312,9 +314,6 @@ function categorizeWriteError(err: unknown): HatchErrorCategory {
   if (names.some((entry) => entry.includes('alreadyhatched'))) {
     return 'already-hatched';
   }
-  if (names.some((entry) => entry.includes('invaliduuidformat'))) {
-    return 'invalid-uuid';
-  }
   if (
     names.some(
       (entry) =>
@@ -377,6 +376,16 @@ export function useHatchFlow(accountUuid: string): {
 
   const walletAddress = address ?? null;
   const metaMaskConnector = connectors.find((connector) => connector.id === 'metaMask');
+  // Defense-in-depth: `App.tsx` HatchGate already validates the UUID before
+  // passing it as a prop, so on the live path this is never null. The guard
+  // (and the `invalid-uuid` failure dispatch below) is an independent
+  // second check so a future change to the gate can't push an unvalidated
+  // value into a `hatch(bytes32)` write. `computeIdentityHash` never returns
+  // bytes32(0), so the contract's `InvalidIdentityHash` revert is unreachable.
+  const identityHash = useMemo((): `0x${string}` | null => {
+    const canonicalUuid = accountUuid.trim().toLowerCase();
+    return isValidUuid(canonicalUuid) ? computeIdentityHash(canonicalUuid) : null;
+  }, [accountUuid]);
 
   const triggerConnect = useCallback((): boolean => {
     if (IS_LOCAL_DEV && metaMaskConnector) {
@@ -401,6 +410,19 @@ export function useHatchFlow(accountUuid: string): {
 
       const pinnedChainId = activeChainId;
       const pinnedAddress = getNetwork(pinnedChainId)?.buddyNft ?? null;
+      if (identityHash === null) {
+        dispatch({
+          type: 'failed',
+          runId,
+          category: 'invalid-uuid',
+          txHash: null,
+          submissionChainId: null,
+          raw: { reason: 'invalid-account-uuid' },
+          hadConnectStep,
+          walletAddress: submittingWalletAddress,
+        });
+        return;
+      }
       if (pinnedAddress === null) {
         dispatch({
           type: 'failed',
@@ -431,7 +453,7 @@ export function useHatchFlow(accountUuid: string): {
             address: pinnedAddress,
             chainId: pinnedChainId,
             functionName: 'hatch',
-            args: [accountUuid],
+            args: [identityHash],
           });
           dispatch({
             type: 'pending',
@@ -498,7 +520,7 @@ export function useHatchFlow(accountUuid: string): {
         }
       })();
     },
-    [accountUuid, activeChainId, config, resetWrite, writeContractAsync],
+    [activeChainId, config, identityHash, resetWrite, writeContractAsync],
   );
 
   const onRunHatch = useCallback((): void => {

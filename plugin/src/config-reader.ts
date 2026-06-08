@@ -123,12 +123,16 @@ export async function readClaudeConfig(): Promise<{
 
 /**
  * Extract the identity seed components from config.
- * Returns the accountUuid (preferred) or falls back to "anon".
+ * Returns the accountUuid (preferred) or Claude's legacy identity fallback.
+ * Callers that derive buddy identity must validate this as a v4 UUID before
+ * hashing; fallback values mean "no hashable buddy identity".
  */
 export function extractIdentity(config: ClaudeConfig): {
   accountUuid: string;
 } {
-  // Match Claude Code's identity fallback: oauthAccount.accountUuid → userID → "anon"
+  // Match Claude Code's identity fallback: oauthAccount.accountUuid → userID → "anon".
+  // The fallback is never a hash input unless a caller has first validated it
+  // as a v4 account UUID.
   const accountUuid = config.oauthAccount?.accountUuid ?? config.userID ?? "anon";
   return { accountUuid };
 }

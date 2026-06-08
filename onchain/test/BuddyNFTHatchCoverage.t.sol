@@ -12,8 +12,9 @@ import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {HatchCoverageUuids} from "./helpers/HatchCoverageUuids.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
-contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
+contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids, HatchHelper {
     string internal constant MANIFEST_PATH = "contract-data/hatch-coverage/manifest.json";
     string internal constant JSON_PREFIX = "data:application/json;base64,";
     string internal constant SVG_PREFIX = "data:image/svg+xml;base64,";
@@ -71,7 +72,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
 
             assertEq(expected.uuid, uuid, string.concat("manifest uuid mismatch for ", uuid));
 
-            uint256 tokenId = nft.hatch(uuid);
+            uint256 tokenId = _hatchUuid(nft, uuid);
             assertEq(tokenId, expected.tokenId, string.concat("tokenId mismatch for ", uuid));
 
             assertEq(uint256(nft.buddyPrngSeed(tokenId)), expected.seed, string.concat("seed mismatch for ", uuid));
@@ -92,7 +93,7 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids {
             string memory uuid = uuids[i];
             ManifestEntry storage expected = manifest[i];
 
-            uint256 tokenId = nft.hatch(uuid);
+            uint256 tokenId = _hatchUuid(nft, uuid);
             _assertTokenUriSvg(uuid, nft.tokenURI(tokenId), expected.traits);
         }
     }

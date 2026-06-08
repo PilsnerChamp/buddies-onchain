@@ -9088,7 +9088,7 @@ var BUDDY_NFT_ABI = [
     type: "function",
     name: "hatch",
     stateMutability: "nonpayable",
-    inputs: [{ name: "accountUuid", type: "string" }],
+    inputs: [{ name: "identityHash", type: "bytes32" }],
     outputs: [{ name: "tokenId", type: "uint256" }]
   },
   {
@@ -9136,7 +9136,7 @@ var BUDDY_NFT_ABI = [
   },
   {
     type: "error",
-    name: "InvalidUuidFormat",
+    name: "InvalidIdentityHash",
     inputs: []
   }
 ];
@@ -17413,7 +17413,7 @@ async function readIdentityTuple() {
   try {
     const { config } = await readClaudeConfig();
     const accountUuid = extractIdentity(config).accountUuid.trim().toLowerCase();
-    accountUuidHash = createHash2("sha256").update(accountUuid).digest("hex");
+    accountUuidHash = isValidUuid(accountUuid) ? createHash2("sha256").update(accountUuid).digest("hex") : null;
   } catch {
     accountUuidHash = null;
   }
@@ -17697,8 +17697,62 @@ async function renderAmbientFrame(args) {
   return null;
 }
 
+// ../shared/assertCanonicalV4Uuid.ts
+var UUID_LENGTH = 36;
+var HYPHEN_0 = 8;
+var HYPHEN_1 = 13;
+var HYPHEN_2 = 18;
+var HYPHEN_3 = 23;
+function isHyphenIndex(index2) {
+  return index2 === HYPHEN_0 || index2 === HYPHEN_1 || index2 === HYPHEN_2 || index2 === HYPHEN_3;
+}
+function isLowerHexCode(code) {
+  return code >= 48 && code <= 57 || code >= 97 && code <= 102;
+}
+function assertCanonicalV4Uuid(uuidLower) {
+  if (uuidLower.length !== UUID_LENGTH) {
+    throw new Error("invalid canonical v4 uuid");
+  }
+  for (let i = 0;i < UUID_LENGTH; i++) {
+    const code = uuidLower.charCodeAt(i);
+    if (code > 127) {
+      throw new Error("invalid canonical v4 uuid");
+    }
+    if (isHyphenIndex(i)) {
+      if (code !== 45) {
+        throw new Error("invalid canonical v4 uuid");
+      }
+      continue;
+    }
+    if (!isLowerHexCode(code)) {
+      throw new Error("invalid canonical v4 uuid");
+    }
+  }
+  if (uuidLower[14] !== "4") {
+    throw new Error("invalid canonical v4 uuid");
+  }
+  const variant = uuidLower[19];
+  if (variant !== "8" && variant !== "9" && variant !== "a" && variant !== "b") {
+    throw new Error("invalid canonical v4 uuid");
+  }
+}
+
+// ../shared/computeIdentityHash.ts
+var TAG = stringToBytes("buddies-onchain:identity:v1");
+var SEP = Uint8Array.of(31);
+function computeIdentityHash(uuid) {
+  const u = uuid.toLowerCase();
+  assertCanonicalV4Uuid(u);
+  const uuidBytes = stringToBytes(u);
+  const preimage = concatBytes2([TAG, SEP, uuidBytes]);
+  if (TAG.length !== 27 || uuidBytes.length !== 36 || preimage.length !== 64) {
+    throw new Error("preimage invariant");
+  }
+  return keccak256(preimage);
+}
+
 // src/bone-deriver.ts
-var SALT = "friend-2026-401";
+var SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
 var SPECIES = [
   "duck",
   "goose",
@@ -17781,12 +17835,16 @@ function rollRarity(rng) {
   }
   return "common";
 }
-function wyhash(s) {
-  return Number(BigInt(Bun.hash(s)) & 0xffffffffn);
+function wyhash(input) {
+  return Number(BigInt.asUintN(64, BigInt(Bun.hash(input))) & 0xffffffffn);
 }
-function computeIdentityHash(accountUuid) {
-  const seed = accountUuid + SALT;
-  return wyhash(seed);
+function deriveTraitSeed(accountUuid) {
+  const identityHash = computeIdentityHash(accountUuid);
+  const seedInput = concatBytes2([
+    hexToBytes(identityHash),
+    stringToBytes(SEED_DOMAIN)
+  ]);
+  return wyhash(seedInput);
 }
 function deriveBones(rng) {
   const rarity = rollRarity(rng);
@@ -17813,9 +17871,10 @@ function deriveBones(rng) {
 }
 function deriveBuddyFromAccount(accountUuid) {
   const identityHash = computeIdentityHash(accountUuid);
-  const rng = makeMulberry32(identityHash);
+  const traitSeed = deriveTraitSeed(accountUuid);
+  const rng = makeMulberry32(traitSeed);
   const bones = deriveBones(rng);
-  return { identityHash, bones };
+  return { identityHash, traitSeed, bones };
 }
 
 // src/sleeping-atlas.ts
@@ -18056,10 +18115,10 @@ function siteOriginForKey(key) {
   return key === "local" ? "http://localhost:5173" : "https://buddies-onchain.xyz";
 }
 function hatchUrl(origin, uuid) {
-  return `${origin}/hatch?accountUuid=${encodeURIComponent(uuid)}`;
+  return `${origin}/hatch#accountUuid=${encodeURIComponent(uuid)}`;
 }
-function warmUrl(origin, uuid) {
-  return `${origin}/view/${encodeURIComponent(uuid)}`;
+function warmUrl(origin, tokenId) {
+  return `${origin}/view/${tokenId.toString()}`;
 }
 async function resolveDeepLink(uuid, netOverride) {
   const canonicalUuid = uuid.trim().toLowerCase();
@@ -18070,7 +18129,7 @@ async function resolveDeepLink(uuid, netOverride) {
       tokenId: null
     };
   }
-  const identityHash = keccak256(toBytes(canonicalUuid));
+  const identityHash = computeIdentityHash(canonicalUuid);
   let tokenId;
   try {
     tokenId = await getPublicClient().readContract({
@@ -18137,6 +18196,16 @@ function resultToChainStatus(reason) {
 }
 function tokenHex2(tokenId) {
   return `0x${tokenId.toString(16)}`;
+}
+function warmViewUrlFromState(origin, tokenIdHex) {
+  if (tokenIdHex === null) {
+    return `${origin}/view`;
+  }
+  try {
+    return warmUrl(origin, BigInt(tokenIdHex));
+  } catch {
+    return `${origin}/view`;
+  }
 }
 function identityCanCacheArt(identity) {
   return identity.accountUuidHash !== null && identity.chainId !== null && identity.contractAddress !== null;
@@ -18241,7 +18310,6 @@ async function resolveLookupPayload(args = {}) {
     });
     const net = args.netOverride ?? getActiveNetwork();
     const origin = siteOriginForKey(net.key);
-    const viewUrl = warmUrl(origin, canonicalUuid);
     const concreteHatchUrl = hatchUrl(origin, canonicalUuid);
     const persistedMode = result.state.mode;
     const envMode = getEnvMode();
@@ -18272,6 +18340,7 @@ async function resolveLookupPayload(args = {}) {
       }
     }
     const buddyStatus = result.state.hatch;
+    const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
     return {
       buddyStatus,
       cardLines,

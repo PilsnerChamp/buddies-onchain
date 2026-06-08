@@ -202,7 +202,7 @@ describe("processStop", () => {
     const out = await run({
       last_assistant_message: [
         "go see your buddy onchain:",
-        "https://buddies-onchain.xyz/view/abc",
+        "https://buddies-onchain.xyz/view/123",
         "your buddy appears on every user prompt (mode: `full`).",
       ].join("\n"),
     });

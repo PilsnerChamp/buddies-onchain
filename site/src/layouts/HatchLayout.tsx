@@ -3,7 +3,7 @@
 // Wallet-stack layout for `/hatch`. Pulled out of the root tree so
 // `WagmiProvider` + `RainbowKitProvider` only mount when a user actually
 // navigates to `/hatch`. Other routes (`/`,
-// `/view`, `/view/<uuid>`, `/bond`) don't pay the wallet-stack context tax
+// `/view`, `/view/<tokenId>`, `/bond`) don't pay the wallet-stack context tax
 // AND don't pay the wallet-stack download cost — `App.tsx` references this
 // module via `React.lazy`, so Vite emits a separate chunk for the wagmi +
 // RainbowKit graph that loads on demand only.

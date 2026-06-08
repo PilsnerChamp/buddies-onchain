@@ -7,6 +7,7 @@ import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 
 import {BuddyFont} from "../contracts/BuddyFont.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
 import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
@@ -21,12 +22,13 @@ import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 ///      A drift on either side (sprite source change without atlas regen,
 ///      hash algorithm divergence, hat-injection rule, eye sub) fails
 ///      exactly one suite loudly.
-contract SleepingFrameParityTest is Test {
+contract SleepingFrameParityTest is Test, HatchHelper {
     using stdJson for string;
 
     string internal constant JSON_PREFIX = "data:application/json;base64,";
     string internal constant SVG_PREFIX = "data:image/svg+xml;base64,";
     bytes1 internal constant ASCII_GT = 0x3e;
+    bytes1 internal constant BLINK_BYTE = 0x2d;
 
     BuddySpriteData internal spriteData;
     BuddyFont internal buddyFont;
@@ -55,7 +57,7 @@ contract SleepingFrameParityTest is Test {
             string memory accountUuid = abi.decode(vm.parseJson(json, string.concat(prefix, ".accountUuid")), (string));
             string[] memory expectedFb = abi.decode(vm.parseJson(json, string.concat(prefix, ".expectedFb")), (string[]));
 
-            uint256 tokenId = nft.hatch(accountUuid);
+            uint256 tokenId = _hatchUuid(nft, accountUuid);
             string memory tokenUri = nft.tokenURI(tokenId);
             string memory svg = _decodeSvgFromTokenUri(tokenUri);
             string memory fbGroup = _extractGroup(svg, "fb");
@@ -89,9 +91,10 @@ contract SleepingFrameParityTest is Test {
             string memory prefix = string.concat(".vectors[", vm.toString(i), "]");
             string memory accountUuid = abi.decode(vm.parseJson(json, string.concat(prefix, ".accountUuid")), (string));
             uint256 eyesIndex = abi.decode(vm.parseJson(json, string.concat(prefix, ".eyesIndex")), (uint256));
+            // forge-lint: disable-next-line(unsafe-typecast)
             string memory eyeGlyph = _eyeGlyphForIndex(uint8(eyesIndex));
 
-            uint256 tokenId = nft.hatch(accountUuid);
+            uint256 tokenId = _hatchUuid(nft, accountUuid);
             string memory svg = _decodeSvgFromTokenUri(nft.tokenURI(tokenId));
             string[] memory f0Rows = _extractSpriteRows(_extractGroup(svg, "f0"));
             string[] memory fbRows = _extractSpriteRows(_extractGroup(svg, "fb"));
@@ -102,11 +105,12 @@ contract SleepingFrameParityTest is Test {
                 string.concat("f0/fb row count mismatch at ", prefix, " (", accountUuid, ")")
             );
 
+            uint256 replacementCount;
             for (uint256 r = 0; r < f0Rows.length; r++) {
-                string memory normalized = _replaceAll(f0Rows[r], eyeGlyph, "-");
-                assertEq(
-                    normalized,
+                replacementCount += _assertBlinkDiffRow(
+                    f0Rows[r],
                     fbRows[r],
+                    eyeGlyph,
                     string.concat(
                         "eyes-only invariant broken at row ",
                         vm.toString(r),
@@ -118,6 +122,7 @@ contract SleepingFrameParityTest is Test {
                     )
                 );
             }
+            assertGt(replacementCount, 0, string.concat("blink did not replace any eyes at ", prefix));
         }
     }
 
@@ -133,45 +138,45 @@ contract SleepingFrameParityTest is Test {
         return "?";
     }
 
-    /// @dev Byte-level replaceAll. Works on multi-byte UTF-8 needles because the
-    ///      renderer emits eye glyphs as contiguous bytes and never splits them.
-    function _replaceAll(string memory haystack, string memory needle, string memory replacement)
+    /// @dev Byte-level f0/fb diff. Allows non-eye body glyphs that happen to
+    ///      equal the selected eye glyph to remain unchanged, while still
+    ///      proving every f0/fb byte delta is `eyeGlyph -> "-"`.
+    function _assertBlinkDiffRow(string memory openRow, string memory blinkRow, string memory eyeGlyph, string memory ctx)
         internal
         pure
-        returns (string memory)
+        returns (uint256 replacements)
     {
-        bytes memory h = bytes(haystack);
-        bytes memory n = bytes(needle);
-        bytes memory rep = bytes(replacement);
-        if (n.length == 0 || h.length < n.length) return haystack;
+        bytes memory openBytes = bytes(openRow);
+        bytes memory blinkBytes = bytes(blinkRow);
+        bytes memory eyeBytes = bytes(eyeGlyph);
 
-        uint256 count;
-        {
-            uint256 i;
-            while (i + n.length <= h.length) {
-                if (_hasNeedleAt(h, n, i)) {
-                    count++;
-                    i += n.length;
-                } else {
-                    i++;
+        uint256 i;
+        uint256 j;
+        while (i < openBytes.length) {
+            if (eyeBytes.length != 0 && i + eyeBytes.length <= openBytes.length && _hasNeedleAt(openBytes, eyeBytes, i))
+            {
+                if (j < blinkBytes.length && blinkBytes[j] == BLINK_BYTE) {
+                    replacements++;
+                    i += eyeBytes.length;
+                    j++;
+                    continue;
                 }
-            }
-        }
-        if (count == 0) return haystack;
 
-        bytes memory out = new bytes(h.length + count * rep.length - count * n.length);
-        uint256 w;
-        uint256 k;
-        while (k < h.length) {
-            if (k + n.length <= h.length && _hasNeedleAt(h, n, k)) {
-                for (uint256 j = 0; j < rep.length; j++) out[w++] = rep[j];
-                k += n.length;
+                require(j + eyeBytes.length <= blinkBytes.length, ctx);
+                for (uint256 k; k < eyeBytes.length; k++) {
+                    require(blinkBytes[j + k] == eyeBytes[k], ctx);
+                }
+                i += eyeBytes.length;
+                j += eyeBytes.length;
             } else {
-                out[w++] = h[k];
-                k++;
+                require(j < blinkBytes.length, ctx);
+                require(openBytes[i] == blinkBytes[j], ctx);
+                i++;
+                j++;
             }
         }
-        return string(out);
+
+        require(j == blinkBytes.length, ctx);
     }
 
     function _hasNeedleAt(bytes memory h, bytes memory n, uint256 at) internal pure returns (bool) {

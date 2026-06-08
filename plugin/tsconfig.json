@@ -15,7 +15,8 @@
     "rootDir": "..",
     "types": ["bun"],
     "paths": {
-      "~shared/*": ["../shared/*"]
+      "~shared/*": ["../shared/*"],
+      "viem": ["./node_modules/viem"]
     }
   },
   "include": ["src/**/*.ts", "../shared/**/*.ts"],

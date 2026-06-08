@@ -7,8 +7,9 @@ import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Deploy} from "../script/Deploy.s.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
-contract DeploySmokeTest is Test {
+contract DeploySmokeTest is Test, HatchHelper {
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string internal constant BOND_NAME = "buddy";
     string internal constant JSON_PREFIX = "data:application/json;base64,";
@@ -33,13 +34,13 @@ contract DeploySmokeTest is Test {
         assertEq(d.nft.attestationSigner(), signer, "attestation signer not set");
         assertTrue(d.nft.bondingEnabled(), "bonding not enabled");
 
-        uint256 tokenId = d.nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(d.nft, TEST_UUID);
         assertEq(tokenId, 1, "first hatch tokenId mismatch");
 
         address recipient = makeAddr("deploy-smoke-recipient");
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(TEST_UUID)),
+            identityHash: _identityHash(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

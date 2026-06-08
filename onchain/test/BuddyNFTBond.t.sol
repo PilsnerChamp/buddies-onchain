@@ -8,8 +8,9 @@ import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.s
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
-contract BuddyNFTBondTest is Test {
+contract BuddyNFTBondTest is Test, HatchHelper {
     event BuddyBonded(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name);
 
     BuddyNFT internal nft;
@@ -59,8 +60,8 @@ contract BuddyNFTBondTest is Test {
         internal
         returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory att)
     {
-        tokenId = nft.hatch(TEST_UUID);
-        identityHash = keccak256(bytes(TEST_UUID));
+        tokenId = _hatchUuid(nft, TEST_UUID);
+        identityHash = _identityHash(TEST_UUID);
         att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
@@ -117,8 +118,8 @@ contract BuddyNFTBondTest is Test {
     function test_bond_revertsBondingNotEnabled() public {
         // Deploy fresh contract without enabling bonding
         BuddyNFT freshNft = new BuddyNFT(owner, address(0));
-        uint256 tokenId = freshNft.hatch(TEST_UUID);
-        bytes32 identityHash = keccak256(bytes(TEST_UUID));
+        uint256 tokenId = _hatchUuid(freshNft, TEST_UUID);
+        bytes32 identityHash = _identityHash(TEST_UUID);
 
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId,

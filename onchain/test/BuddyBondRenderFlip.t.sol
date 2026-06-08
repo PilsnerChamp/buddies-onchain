@@ -9,6 +9,7 @@ import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Deploy} from "../script/Deploy.s.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 import {SvgDecode} from "./helpers/SvgDecode.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 /// @title BuddyBondRenderFlipTest
 /// @notice Integration seam over the REAL BuddyNFT<->BuddyRenderer wiring: proves
@@ -20,7 +21,7 @@ import {SvgDecode} from "./helpers/SvgDecode.sol";
 ///         that drives the flip end-to-end through `Deploy.deployAll`. Decode/search
 ///         helpers come from the shared SvgDecode lib (single source of truth across
 ///         the §1 hermetic and §2 fork suites).
-contract BuddyBondRenderFlipTest is Test {
+contract BuddyBondRenderFlipTest is Test, HatchHelper {
     using stdJson for string;
 
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
@@ -42,7 +43,7 @@ contract BuddyBondRenderFlipTest is Test {
     }
 
     function test_hatch_rendersHatchedState() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         assertEq(tokenId, 1, "first hatch tokenId mismatch");
         assertEq(uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Custodial), "stage not Custodial");
 
@@ -56,7 +57,7 @@ contract BuddyBondRenderFlipTest is Test {
     }
 
     function test_bond_flipsRenderToBondedState() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         // Snapshot the pre-bond stage so the flip is a true before/after, not a bare read.
         string memory preBondJson = SvgDecode.decodeJson(nft.tokenURI(tokenId));
@@ -82,7 +83,7 @@ contract BuddyBondRenderFlipTest is Test {
     }
 
     function test_setRenderer_swapReRendersByteIdentical() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         _bond(tokenId);
 
         string memory before = nft.tokenURI(tokenId);
@@ -105,7 +106,7 @@ contract BuddyBondRenderFlipTest is Test {
     function _bond(uint256 tokenId) internal {
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(TEST_UUID)),
+            identityHash: _identityHash(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

@@ -10,7 +10,7 @@ Buddies Onchain is a solo-indie on-chain identity-record project for Claude Code
 
 - `onchain/` — Foundry contracts, renderer libraries, deployment scripts, fixtures, and contract data.
 - `plugin/` — Claude Code `/buddy-onchain` plugin source, bundle, marketplace manifest, command, hooks, tests, and deployment manifests.
-- `site/` — Vite/React static dApp for `/`, `/hatch`, `/view`, `/view/<uuid>`, and `/bond`.
+- `site/` — Vite/React static dApp for `/`, `/hatch`, `/view`, `/view/<tokenId>`, and `/bond`.
 - `shared/` — TypeScript shared by the plugin and site: network metadata, curated ABI, and deployment loading helpers.
 - `docs/` — Public technical reference for build, config, contract shape, plugin topology, and site topology.
 
@@ -24,9 +24,9 @@ Confusion-prone. One line each.
 - `buddy-onchain` — plugin name (singular) as published in the Claude Code plugin marketplace
 - `/buddy-onchain` — plugin command string; what users type in Claude Code to find their buddy. Slash-only — hook fires lookup on the slash form (and the legacy namespaced `/buddy-onchain:buddy-onchain`); no NL routing. Companion skill at `plugin/skills/buddy-onchain/SKILL.md` is the slash renderer.
 - `BuddyNFT` — Solidity contract / class / file name; technical surface only
-- `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving UUID via `?accountUuid=<uuid>`. Plugin emits query-param form. Missing/malformed → redirect to `/`.
-- `/view` — bare `/view` is the dApp manual UUID lookup page; `/view/<uuid>` is the canonical buddy URL
-- `/view/<uuid>` — canonical buddy URL on the dApp; returning-user destination and public lookup result
+- `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving UUID via fragment `#accountUuid=<uuid>`. Plugin emits the fragment form; dApp scrubs the fragment synchronously on arrival (raw UUID never crosses the HTTP wire). Missing/malformed → redirect to `/`.
+- `/view` — bare `/view` is the dApp manual UUID lookup page; resolves UUID → tokenId client-side, then navigates to `/view/<tokenId>`
+- `/view/<tokenId>` — canonical buddy URL on the dApp; returning-user destination and public lookup result. Plugin resolves identityHash → tokenId and emits this warm link. (`/view/<uuid>` removed — route deleted, no public uuid links exist. UUID survives only in the `/hatch` fragment and dApp component state — never in a path or query string.)
 - `> /buddy-onchain` — SVG chrome imprint on-chain; bytecode-permanent, matches the plugin command. Site's `/` prompt renders the same `>` sigil.
 - Unknown paths → `/` via catch-all redirect.
 

@@ -5,17 +5,18 @@ import {Script, console} from "forge-std/Script.sol";
 import {BuddyDomain} from "../contracts/libraries/BuddyDomain.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {WyHash} from "../contracts/libraries/WyHash.sol";
+import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Finds the first sequential UUID in the canonical search window with hat == 0.
 /// @dev Run with `cd onchain && forge script script/FindHatlessUuid.s.sol -vvvv`.
 contract FindHatlessUuid is Script {
-    bytes private constant SALT = "friend-2026-401";
+    bytes private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
     uint256 private constant SEARCH_LIMIT = 10_000;
 
     function run() external pure {
         for (uint256 i = 1; i <= SEARCH_LIMIT; ++i) {
             string memory uuid = _buildUuid(i);
-            uint32 seed = WyHash.hash(bytes(uuid), SALT);
+            uint32 seed = WyHash.hash(abi.encodePacked(IdentityHash._computeIdentityHash(uuid)), SEED_DOMAIN);
             (,,, uint8 hat,,,,,,) = Mulberry32.deriveTraits(seed);
 
             if (hat == 0) {

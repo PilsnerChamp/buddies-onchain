@@ -157,7 +157,7 @@ describe("detectBuddyRender", () => {
     expect(detectBuddyRender([
       "BUDDY_RENDER_BEGIN",
       "go see your buddy onchain:",
-      "https://buddies-onchain.xyz/view/abc",
+      "https://buddies-onchain.xyz/view/123",
       "BUDDY_RENDER_END",
     ].join("\n"))).toBe(false);
   });

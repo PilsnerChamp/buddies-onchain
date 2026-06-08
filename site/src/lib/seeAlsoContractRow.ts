@@ -1,5 +1,5 @@
 // Single selector powering the SEE ALSO contract row on `/`, and the footer
-// contract strip on `/hatch` and `/view/<uuid>`. Cross-surface drift is
+// contract strip on `/hatch` and `/view/<tokenId>`. Cross-surface drift is
 // structurally impossible when every surface reads from this one function.
 // Signed statement is a site-root file (`/official-links.signature.txt`),
 // authored by authenticity-ops; this selector only drives the display string.

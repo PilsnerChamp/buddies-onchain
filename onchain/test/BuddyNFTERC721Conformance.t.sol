@@ -7,8 +7,9 @@ import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.s
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
-contract BuddyNFTERC721ConformanceTest is Test {
+contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
     BuddyNFT internal nft;
@@ -66,7 +67,7 @@ contract BuddyNFTERC721ConformanceTest is Test {
     }
 
     function test_ownership_balanceAndOwnerAfterHatch_custodial() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         assertEq(nft.balanceOf(address(nft)), 1);
         assertEq(nft.ownerOf(tokenId), address(nft));
@@ -81,7 +82,7 @@ contract BuddyNFTERC721ConformanceTest is Test {
     }
 
     function test_approve_revertsSoulbound_custodial() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         nft.approve(makeAddr("approved"), tokenId);
@@ -96,7 +97,7 @@ contract BuddyNFTERC721ConformanceTest is Test {
     }
 
     function test_setApprovalForAll_revertsSoulbound_custodial() public {
-        nft.hatch(TEST_UUID);
+        _hatchUuid(nft, TEST_UUID);
 
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         nft.setApprovalForAll(makeAddr("operator"), true);
@@ -111,7 +112,7 @@ contract BuddyNFTERC721ConformanceTest is Test {
     }
 
     function test_getApproved_returnsZero_custodial() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         assertEq(nft.getApproved(tokenId), address(0));
     }
@@ -130,7 +131,7 @@ contract BuddyNFTERC721ConformanceTest is Test {
         vm.expectEmit(true, true, true, false, address(nft));
         emit Transfer(address(0), address(nft), 1);
 
-        nft.hatch(TEST_UUID);
+        _hatchUuid(nft, TEST_UUID);
     }
 
     function test_bond_emitsTransferEvent() public {
@@ -153,8 +154,8 @@ contract BuddyNFTERC721ConformanceTest is Test {
         internal
         returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory att)
     {
-        tokenId = nft.hatch(TEST_UUID);
-        identityHash = keccak256(bytes(TEST_UUID));
+        tokenId = _hatchUuid(nft, TEST_UUID);
+        identityHash = _identityHash(TEST_UUID);
         att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,

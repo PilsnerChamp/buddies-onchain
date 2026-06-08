@@ -98,10 +98,10 @@ function renderHatchAt(path: string): { container: HTMLElement } {
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/" element={<main data-testid="home-stub">home-stub</main>} />
-        <Route path="/hatch" element={<Hatch />} />
+        <Route path="/hatch" element={<Hatch accountUuid={VALID_UUID} />} />
         <Route
-          path="/view/:uuid"
-          element={<main data-testid="view-uuid-stub">view-uuid-stub</main>}
+          path="/view/:tokenId"
+          element={<main data-testid="view-token-stub">view-token-stub</main>}
         />
       </Routes>
     </MemoryRouter>,
@@ -111,7 +111,7 @@ function renderHatchAt(path: string): { container: HTMLElement } {
 function applyDefaults(): void {
   useReadContractMock.mockReset();
   useReadContractMock.mockReturnValue({
-    data: false,
+    data: 0n,
     isLoading: false,
     error: null,
   });
@@ -124,51 +124,19 @@ function applyDefaults(): void {
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
-describe('/hatch — direct UUID guard', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    applyDefaults();
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    warnSpy.mockRestore();
-    cleanup();
-  });
-
-  it('redirects to / when accountUuid is missing', () => {
-    renderHatchAt('/hatch');
-    expect(screen.getByTestId('home-stub')).toBeTruthy();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[hatch] invalid accountUuid, redirecting to /',
-      expect.objectContaining({ reason: 'missing', raw: null }),
-    );
-  });
-
-  it('redirects to / when accountUuid is malformed', () => {
-    renderHatchAt('/hatch?accountUuid=garbage');
-    expect(screen.getByTestId('home-stub')).toBeTruthy();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[hatch] invalid accountUuid, redirecting to /',
-      expect.objectContaining({ reason: 'malformed', raw: 'garbage' }),
-    );
-  });
-});
-
 describe('/hatch — terminal frame + structure', () => {
   beforeEach(applyDefaults);
   afterEach(cleanup);
 
   it('renders the brand-wordmark terminal title', () => {
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'BUDDIES·ONCHAIN·XYZ',
     );
   });
 
   it('echoes `> /hatch --help` in the page header and the full UUID in the action prompt cmd', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.route-command__accent')?.textContent).toBe(
       '/hatch --help',
     );
@@ -178,7 +146,7 @@ describe('/hatch — terminal frame + structure', () => {
   });
 
   it('renders sections in exact order: STATUS, DESCRIPTION, REQUIREMENTS, NEXT STEP, AUTHOR, SEE ALSO', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     const headings = Array.from(
       container.querySelectorAll('.man-page-section__heading'),
     ).map((el) => el.textContent);
@@ -193,7 +161,7 @@ describe('/hatch — terminal frame + structure', () => {
   });
 
   it('DESCRIPTION matches the canonical Warm Landing text', () => {
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByText(/Stage 1 of buddy evolution/)).toBeTruthy();
     expect(
       screen.getByText(/One Claude account, one buddy, one mint\. Soulbound\./),
@@ -201,7 +169,7 @@ describe('/hatch — terminal frame + structure', () => {
   });
 
   it('SEE ALSO renders cold-shape footer parity (plain `stage 2`, github↔repo-shorthand, ASCII separators, /hatch self-omits)', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(screen.getByText('/bond')).toBeTruthy();
     expect(screen.getByText('stage 2')).toBeTruthy();
     const seeAlsoText = container.querySelector('.see-also')?.textContent ?? '';
@@ -213,7 +181,7 @@ describe('/hatch — terminal frame + structure', () => {
   });
 
   it('does NOT render retired component classes', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch__brand')).toBeNull();
     expect(container.querySelector('.terminal-receipt')).toBeNull();
     expect(container.querySelector('.disclosure-block-a')).toBeNull();
@@ -228,7 +196,7 @@ describe('/hatch — state matrix', () => {
 
   it('pre-deploy: muted action prompt (no cursor, no button), deploy reason in STATUS, no gas warning', () => {
     getContractAddressMock.mockReturnValue(null);
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--muted')).toBeTruthy();
     expect(container.querySelector('.hatch-action--active')).toBeNull();
     expect(container.querySelector('.blinking-cursor__block')).toBeNull();
@@ -238,7 +206,7 @@ describe('/hatch — state matrix', () => {
   });
 
   it('wallet not connected: active action prompt, STATUS `ready to hatch`, gas warning visible', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--active')).toBeTruthy();
     expect(screen.getByText('ready to hatch')).toBeTruthy();
     expect(container.querySelector('.hatch-next__gas')).toBeTruthy();
@@ -249,7 +217,7 @@ describe('/hatch — state matrix', () => {
       { phase: 'ready' },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--active')).toBeTruthy();
     expect(screen.getByText('ready to hatch')).toBeTruthy();
     expect(
@@ -268,7 +236,7 @@ describe('/hatch — state matrix', () => {
 
   it('connecting-wallet: action prompt committed, stream `connecting wallet…`, STATUS `connecting wallet`', () => {
     setHatchFlow({ phase: 'connecting-wallet', hadConnectStep: true });
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--committed')).toBeTruthy();
     expect(screen.getByText('connecting wallet…')).toBeTruthy();
     expect(screen.getByText('connecting wallet')).toBeTruthy();
@@ -283,7 +251,7 @@ describe('/hatch — state matrix', () => {
       },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--committed')).toBeTruthy();
     expect(screen.getByText(/wallet connected/)).toBeTruthy();
     expect(container.querySelector('.hatch-stream__addr')?.textContent).toBe(
@@ -304,7 +272,7 @@ describe('/hatch — state matrix', () => {
       },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--committed')).toBeTruthy();
     expect(screen.getByText('submitting transaction…')).toBeTruthy();
     expect(screen.getAllByText('awaiting confirmation').length).toBeGreaterThan(0);
@@ -325,7 +293,7 @@ describe('/hatch — state matrix', () => {
       },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--active')).toBeTruthy();
     expect(container.querySelector('.hatch-next__gas')).toBeTruthy();
     expect(container.querySelector('.hatch-stream__hash')).toBeTruthy();
@@ -344,7 +312,7 @@ describe('/hatch — state matrix', () => {
       },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(container.querySelector('.hatch-action--active')).toBeTruthy();
     expect(container.querySelector('.hatch-stream__hash')).toBeNull();
     expect(screen.getByText(/tx cancelled — try again when ready/)).toBeTruthy();
@@ -360,7 +328,7 @@ describe('/hatch — state matrix', () => {
       raw: null,
       hadConnectStep: true,
     });
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(screen.getByText('connecting wallet…')).toBeTruthy();
     expect(screen.getByText('! wallet connection cancelled')).toBeTruthy();
     expect(screen.queryByText('connecting wallet')).toBeNull();
@@ -377,7 +345,7 @@ describe('/hatch — state matrix', () => {
       raw: null,
       hadConnectStep: false,
     });
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(
       screen.getByText(/wallet not found — install a Base-compatible wallet/),
     ).toBeTruthy();
@@ -395,7 +363,7 @@ describe('/hatch — state matrix', () => {
       },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByText('hatched')).toBeTruthy();
     expect(screen.getByText('open /view')).toBeTruthy();
     expect(
@@ -409,12 +377,12 @@ describe('/hatch — REQUIREMENTS rows + truncation', () => {
   afterEach(cleanup);
 
   it('account-uuid row shows 8…7 truncation + · connected', () => {
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByText('f47ac10b…2c3d479')).toBeTruthy();
   });
 
   it('wallet row shows browser-wallet description + · not connected when disconnected', () => {
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByText('a Base-compatible wallet in your browser')).toBeTruthy();
     expect(screen.getByText(/not connected/)).toBeTruthy();
   });
@@ -424,7 +392,7 @@ describe('/hatch — REQUIREMENTS rows + truncation', () => {
       { phase: 'ready' },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    renderHatchAt('/hatch');
     expect(screen.getByText('0xabcdef01…ef01')).toBeTruthy();
   });
 });
@@ -433,14 +401,14 @@ describe('/hatch — preflight + confirmed redirects', () => {
   beforeEach(applyDefaults);
   afterEach(cleanup);
 
-  it('preflight isMinted=true redirects to /view/<uuid>', () => {
+  it('preflight tokenId>0 redirects to /view/<tokenId>', () => {
     useReadContractMock.mockReturnValue({
-      data: true,
+      data: 42n,
       isLoading: false,
       error: null,
     });
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
-    expect(screen.getByTestId('view-uuid-stub')).toBeTruthy();
+    renderHatchAt('/hatch');
+    expect(screen.getByTestId('view-token-stub')).toBeTruthy();
   });
 
   it('confirmed tx renders success stream while redirect countdown is positive', () => {
@@ -452,14 +420,15 @@ describe('/hatch — preflight + confirmed redirects', () => {
       redirectIn: 5,
       hadConnectStep: false,
     });
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
-    expect(screen.queryByTestId('view-uuid-stub')).toBeNull();
+    const { container } = renderHatchAt('/hatch');
+    expect(screen.queryByTestId('view-token-stub')).toBeNull();
     expect(screen.getByText(/✓ buddy hatched/)).toBeTruthy();
     expect(screen.getByText(/token #247/)).toBeTruthy();
+    expect(screen.getAllByText(/redirecting to \/view\/247/).length).toBeGreaterThan(0);
     expect(container.querySelector('.hatch-stream__cursor')).toBeTruthy();
   });
 
-  it('confirmed tx navigates to /view/<uuid> once hook countdown reaches zero', () => {
+  it('confirmed tx navigates to /view/<tokenId> once hook countdown reaches zero', () => {
     setHatchFlow({
       phase: 'confirmed',
       txHash: TX_HASH,
@@ -468,8 +437,8 @@ describe('/hatch — preflight + confirmed redirects', () => {
       redirectIn: 0,
       hadConnectStep: false,
     });
-    renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
-    expect(screen.getByTestId('view-uuid-stub')).toBeTruthy();
+    renderHatchAt('/hatch');
+    expect(screen.getByTestId('view-token-stub')).toBeTruthy();
   });
 });
 
@@ -492,7 +461,7 @@ describe('/hatch — chain-pinning (tx-pending precedence)', () => {
         walletAddress: WALLET_ADDRESS,
       },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     expect(screen.getAllByText('awaiting confirmation').length).toBeGreaterThan(0);
     expect(
       screen.queryByText(/contract not yet deployed on this network/),
@@ -508,7 +477,7 @@ describe('/hatch — command dispatch', () => {
   afterEach(cleanup);
 
   it('clicking the active action prompt calls the flow owner', () => {
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     const action = container.querySelector(
       '.hatch-action--active',
     ) as HTMLButtonElement | null;
@@ -523,7 +492,7 @@ describe('/hatch — command dispatch', () => {
       { phase: 'ready' },
       { isConnected: true, walletAddress: WALLET_ADDRESS },
     );
-    const { container } = renderHatchAt(`/hatch?accountUuid=${VALID_UUID}`);
+    const { container } = renderHatchAt('/hatch');
     const action = container.querySelector(
       '.hatch-action--active',
     ) as HTMLButtonElement | null;

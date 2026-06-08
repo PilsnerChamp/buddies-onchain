@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
+import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Seeds a fresh local anvil deployment with a small curated set of
 ///         hatched buddies so `/view/<uuid>` has something to render against
@@ -56,7 +57,7 @@ contract SeedAnvil is Script {
         uint256 skipped;
         for (uint256 i = 0; i < uuids.length; ++i) {
             string memory uuid = uuids[i];
-            bytes32 identityHash = keccak256(bytes(uuid));
+            bytes32 identityHash = IdentityHash._computeIdentityHash(uuid);
             uint256 existing = buddyNft.getTokenIdByIdentity(identityHash);
             if (existing != 0) {
                 console.log(string.concat("SEED_SKIP ", uuid));
@@ -64,7 +65,7 @@ contract SeedAnvil is Script {
                 ++skipped;
                 continue;
             }
-            uint256 tokenId = buddyNft.hatch(uuid);
+            uint256 tokenId = buddyNft.hatch(identityHash);
             console.log(string.concat("SEED_HATCHED ", uuid));
             console.log("  tokenId=%d", tokenId);
             console.log(string.concat("  /view/", uuid));

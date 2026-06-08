@@ -18,13 +18,13 @@ import App from './App';
 
 // `WagmiProvider` + `RainbowKitProvider` + the RainbowKit modal stylesheet
 // mount inside `layouts/HatchLayout.tsx`, which is lazy-loaded only when a
-// user navigates to `/hatch`. Cold-load on `/`, `/view`, `/view/<uuid>`, and
+// user navigates to `/hatch`. Cold-load on `/`, `/view`, `/view/<tokenId>`, and
 // `/bond` does not pay the wagmi + RainbowKit chunk download cost.
 //
-// `QueryClientProvider` STAYS at root: `useBuddyLookup` (the wallet-free
-// `/view/<uuid>` data layer) depends on a `QueryClient` in context, and
-// keeping it here means a single client serves both the public-read query
-// graph AND the wagmi-piggybacked queries on `/hatch`.
+// `QueryClientProvider` STAYS at root: wallet-free `/view` lookup/token
+// hooks depend on a `QueryClient` in context, and keeping it here means a
+// single client serves both the public-read query graph AND the
+// wagmi-piggybacked queries on `/hatch`.
 
 const container = document.getElementById('root');
 if (!container) {
@@ -32,7 +32,7 @@ if (!container) {
 }
 
 // React Query client — a single instance per app per the TanStack docs.
-// Used by `useBuddyLookup` on `/view/<uuid>` and (transitively) by
+// Used by wallet-free `/view` lookups and `/view/<tokenId>` token pages, plus
 // wagmi v2's hooks under `/hatch`.
 const queryClient = new QueryClient();
 

@@ -12,14 +12,14 @@
 // missing the entry.
 //
 // Subset used by the public site and plugin:
-//   - hatch(string accountUuid) → uint256 tokenId         [write]
+//   - hatch(bytes32 identityHash) → uint256 tokenId       [write]
 //   - tokenURI(uint256 tokenId) → string                  [view]
 //   - isMinted(bytes32 identityHash) → bool               [view]
 //   - getTokenIdByIdentity(bytes32 identityHash) → uint256 [view]
 //   - hatcher(uint256 tokenId) → address                  [view]
 //   - Awakened(uint256, bytes32, address) event           [log]
 //   - AlreadyHatched() error                              [revert]
-//   - InvalidUuidFormat() error                           [revert]
+//   - InvalidIdentityHash() error                         [revert]
 //
 // `getTokenIdByIdentity` returns `0` when no token has been hatched for the
 // given identity hash; `BuddyNFT` token IDs start at 1 so `0` is the
@@ -27,7 +27,7 @@
 //
 // `as const` is required for viem's type inference — without it, viem
 // cannot narrow `useWriteContract({ functionName: 'hatch' })` arguments to
-// the single-string tuple.
+// the single-bytes32 tuple.
 //
 // Public references: `docs/onchain/contract.md`, `docs/network-config.md`.
 
@@ -36,7 +36,7 @@ export const BUDDY_NFT_ABI = [
     type: 'function',
     name: 'hatch',
     stateMutability: 'nonpayable',
-    inputs: [{ name: 'accountUuid', type: 'string' }],
+    inputs: [{ name: 'identityHash', type: 'bytes32' }],
     outputs: [{ name: 'tokenId', type: 'uint256' }],
   },
   {
@@ -84,7 +84,7 @@ export const BUDDY_NFT_ABI = [
   },
   {
     type: 'error',
-    name: 'InvalidUuidFormat',
+    name: 'InvalidIdentityHash',
     inputs: [],
   },
 ] as const;

@@ -26,7 +26,8 @@
     "noEmit": true,
     "types": ["vite/client"],
     "paths": {
-      "~shared/*": ["../shared/*"]
+      "~shared/*": ["../shared/*"],
+      "viem": ["./node_modules/viem"]
     }
   },
   "include": ["src", "vite.config.ts", "../shared/**/*.ts"],

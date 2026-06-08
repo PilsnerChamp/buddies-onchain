@@ -9,10 +9,10 @@ Every man-page route opens with a `>` echo line — the literal command the page
 | Route | Echo line |
 |---|---|
 | `/` | `> /buddy-onchain --help` (route header); cold-hero action prompt below is `> claude ▊` |
-| `/hatch?accountUuid=<uuid>` | `> /hatch --help` (route header); action prompt below is `> /hatch <full-uuid> ▊` |
+| `/hatch#accountUuid=<uuid>` | `> /hatch --help` (route header); action prompt below is `> /hatch <full-uuid> ▊` |
 | `/view` | `> /view --help` |
-| `/view/<uuid>` miss | `> /view <uuid>` |
-| `/view/<uuid>` hit | no man-page header — renders the SVG card only |
+| `/view/<tokenId>` miss | `> /view <tokenId>` |
+| `/view/<tokenId>` hit | no man-page header — renders the SVG card only |
 | `/bond` | `> /bond --help` |
 
 The echo line is terminal-verbatim. Truncation belongs to REQUIREMENTS and stream lines, not the command header.
@@ -23,13 +23,13 @@ Three forms, one per identifier kind. Visual rhythm distinguishes them at a glan
 
 | Kind | Form | Example |
 |---|---|---|
-| UUID (REQUIREMENTS row + redirect stream line) | 8 + ellipsis + 7 | `f47ac10b…2c3d479` |
+| UUID (REQUIREMENTS row) | 8 + ellipsis + 7 | `f47ac10b…2c3d479` |
 | Wallet address | first 10 (`0x` + 8 hex) + ellipsis + 4 | `0x1f3a5e2b…b209` |
 | Tx hash | 6 + ellipsis + 4 | `0xabc1…1234` |
 
 Ellipsis is the Unicode single-codepoint `…` (U+2026), never `...`.
 
-Redirect stream lines may display the truncated UUID for readability; the actual navigation target uses the full UUID.
+The post-hatch redirect line targets `/view/<tokenId>` and carries no UUID, so UUID truncation does not apply to it. The tokenId is small and shown in full.
 
 ## STATUS state matrix
 
@@ -45,10 +45,10 @@ Locked copy per state. Hatch route only — `/view`, `/bond`, etc. use simpler o
 | Tx failed before broadcast | `not hatched · ready to hatch` | `! <category-msg>` only |
 | Tx failed after broadcast | `not hatched · ready to hatch` | submit + awaiting trail, then `! <category-msg>` |
 | Tx failed (`event-parse-failed`) | `hatched · open /view` | submit + awaiting trail, then `! hatch confirmed — open /view to find your buddy` |
-| Preflight `isMinted=true` | (page does not render) | redirect to `/view/<uuid>` |
-| Tx confirmed during countdown | `hatched · redirecting to /view/<full-uuid>` | submit + awaiting trail, `confirmed · token #N`, then `✓ buddy hatched · redirecting to /view/<truncated-uuid> in Ns` |
+| Preflight already-hatched (`getTokenIdByIdentity` returns a tokenId) | (page does not render) | redirect to `/view/<tokenId>` |
+| Tx confirmed during countdown | `hatched · redirecting to /view/<tokenId>` | submit + awaiting trail, `confirmed · token #N`, then `✓ buddy hatched · redirecting to /view/<tokenId> in Ns` |
 
-STATUS uses the full UUID in the confirmed redirect line. The redirect stream line below it carries the truncated form.
+The redirect targets `/view/<tokenId>` — the preflight uses the tokenId from `getTokenIdByIdentity`; the post-confirmation redirect uses the tokenId from the hatch tx. No UUID appears in either redirect line.
 
 ## Hatch command-run stream
 
@@ -60,7 +60,7 @@ Sequence rules:
 2. If the flow opened a wallet modal, emit `connecting wallet…`; once an address is known, append `wallet connected · <truncated-address>`.
 3. `submitting` emits `submitting transaction…`.
 4. `pending` emits `submitting transaction…` and `awaiting confirmation · <tx-hash>`. The hash uses the 6+ellipsis+4 form and links to the chain explorer when available.
-5. `confirmed` repeats the submit + awaiting trail, then emits `confirmed · token #N` and the success redirect line with the truncated UUID and countdown cursor.
+5. `confirmed` repeats the submit + awaiting trail, then emits `confirmed · token #N` and the success redirect line targeting `/view/<tokenId>` with the countdown cursor.
 6. `failed` with no `txHash` emits only the error line. `failed` with a `txHash` preserves the submit + awaiting trail before the error line.
 
 Hatch error category copy:
@@ -135,7 +135,7 @@ Each row is one `<Link>` / `<a>` styled as a CSS subgrid that aligns inner `__k`
 | `/` | `/hatch` (when relevant) → `/view` → `/bond` → repo → contract |
 | `/hatch` | `/view` → `/bond` → repo → contract |
 | `/view` | `/hatch` → `/bond` → repo → contract |
-| `/view/<uuid>` miss | `/` → `/view` → `/bond` → repo → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
+| `/view/<tokenId>` miss | `/` → `/view` → `/bond` → repo → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
 | `/bond` | `/` → `/hatch` → `/view` → repo → contract |
 
 ### Contract row linkability
@@ -157,10 +157,10 @@ Per-route mapping:
 | Route | Action prompt |
 |---|---|
 | `/` | `> claude ▊` (active button — replays walkthrough on click) |
-| `/hatch?<uuid>` | `> /hatch <uuid> ▊` (active → committed → re-active on failure / retry) |
+| `/hatch#<uuid>` | `> /hatch <uuid> ▊` (active → committed → re-active on failure / retry) |
 | `/view` | `> /view [<uuid-input>] ▊` (active row wrapping `<input>`; row click triggers attempt; click on input focuses for typing) |
-| `/view/<uuid>` miss | same as `/view` (shared `<ViewLookupAction>` component) |
-| `/view/<uuid>` loading / error / pre-deploy | no action prompt; tail `> ▊` cursor is cursor-of-record |
+| `/view/<tokenId>` miss | same as `/view` (shared `<ViewLookupAction>` component) |
+| `/view/<tokenId>` loading / error / pre-deploy | no action prompt; tail `> ▊` cursor is cursor-of-record |
 | `/bond` | `> /bond ▊` (muted, inert, holds cursor slot for parity) |
 
 ## Cursor slot exclusivity
@@ -168,7 +168,7 @@ Per-route mapping:
 Every route renders exactly one blinking cursor at any moment. Two blinking cursors fight for attention — banned.
 
 - Action prompt present → action prompt owns the cursor → `<TerminalRouteShell>` mounts without `showCursor`.
-- Action prompt absent → tail `> ▊` cursor mounts via `<TerminalRouteShell showCursor>`. Only `/view/<uuid>` loading / error / pre-deploy states do this today.
+- Action prompt absent → tail `> ▊` cursor mounts via `<TerminalRouteShell showCursor>`. Only `/view/<tokenId>` loading / error / pre-deploy states do this today.
 - Muted disabled action prompt (`/bond`) carries a static (non-blinking) cursor slot — counts as inert visual parity, not a competing cursor.
 
 ## Cross-cutting interaction rules
@@ -194,7 +194,7 @@ Constraints: opacity / colour / `text-shadow` transitions only. No `transform`, 
 - Cold action prompt (`> claude ▊` button)
 - `/hatch` action prompt (active button only — committed `<p>` does not)
 - `/view` lookup action input wrapper
-- `/view/<uuid>` miss-card lookup action input wrapper
+- `/view/<tokenId>` miss-card lookup action input wrapper
 - `/bond` disabled action prompt (`.hover-row--inert` so no hover fires)
 - All SEE ALSO row anchors on every route (and the inert pre-deploy contract row's `<div>`, also `--inert`)
 - AUTHOR link (`@PilsnerChamp` X-link row)
@@ -215,7 +215,7 @@ Cold-hero walkthrough remounts via `replayKey` bump → CSS animation runs from 
 
 ### Cross-route action prompt slot
 
-`/view/<uuid>` miss reuses the bare-`/view` action prompt (`<ViewLookupAction>`) so a user landing on a miss can re-engage with another lookup without navigating back. Same cursor-slot exclusivity rule applies — the action prompt owns the cursor on the miss card and the tail `> ▊` is suppressed.
+`/view/<tokenId>` miss reuses the bare-`/view` action prompt (`<ViewLookupAction>`) so a user landing on a miss can re-engage with another lookup without navigating back. Same cursor-slot exclusivity rule applies — the action prompt owns the cursor on the miss card and the tail `> ▊` is suppressed.
 
 ## Route-specific copy
 
@@ -232,13 +232,15 @@ The warn pill (`! ...`) carries the long form on `/bond` itself. SEE ALSO rows o
 
 `NEXT STEP` carries the lookup UI. No separate LOOKUP man-page section. No `[View buddy]` button. The action prompt composes the prompt sigil, an inline `<input>` styled to match terminal text (no bracketed button), and the blinking cursor block.
 
-### `/view/<uuid>` miss card
+### `/view/<tokenId>` miss card
 
-STATUS reads `not found · no buddy for this UUID on this network`. DESCRIPTION separates validity from existence — the UUID syntactically parsed; the contract lookup just missed. NEXT STEPS stays plugin-first for the holder path with manual retry through `/view`.
+STATUS reads `not found · no buddy for this token on this network`. DESCRIPTION separates validity from existence — the tokenId is numeric and well-formed; the contract lookup just missed. NEXT STEPS stays plugin-first for the holder path with manual retry through `/view`.
 
-### `/hatch` mixed-case UUID handling
+### `/hatch` UUID source and mixed-case handling
 
-`accountUuid` query param is `trim().toLowerCase()`-normalized before validation and submission. Uppercase or mixed-case UUIDs in URLs render fine — the route lowercases and proceeds. Missing or syntactically invalid (fails `isValidUuid`) → redirect to `/`.
+The UUID arrives in the URL fragment (`/hatch#accountUuid=<uuid>`), never the query string. `HatchGate` (in `App.tsx`) owns parse, validate, and scrub: on arrival it reads the fragment, validates, synchronously `replaceState`s the URL to `/hatch`, and passes the UUID to the hatch surface as a prop. The surface never re-reads the URL — after the scrub it carries no UUID.
+
+The UUID is `trim().toLowerCase()`-normalized before validation and submission. Uppercase or mixed-case UUIDs in the fragment render fine — `HatchGate` lowercases and proceeds. Missing or syntactically invalid (fails `isValidUuid`) → redirect to `/`.
 
 ## Cold hero (`/`)
 
@@ -256,7 +258,7 @@ Single full-width row of `-` glyphs between the NEXT STEP block and the route me
 
 ## Per-route gaps
 
-Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <uuid>` for miss cards, and `> /bond --help`. The active hatch action prompt carries `> /hatch <full-uuid> ▊` below NEXT STEP.
+Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <tokenId>` for miss cards, and `> /bond --help`. The active hatch action prompt carries `> /hatch <full-uuid> ▊` below NEXT STEP.
 
 ## OG card
 
@@ -264,7 +266,7 @@ Default `og-home.png` renders the cold-hero terminal. The terminal is the projec
 
 ## File map
 
-- Routes: `site/src/routes/Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewUuid.tsx`, `Bond.tsx`
+- Routes: `site/src/routes/Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Bond.tsx`
 - Shared shell: `site/src/components/TerminalRouteShell.tsx`, `TerminalFrame.tsx`, `BlinkingCursor.tsx`
 - Cold action prompt: `site/src/components/ColdHeroTerminal.tsx`
 - View action prompt: `site/src/components/ViewLookupAction.tsx`

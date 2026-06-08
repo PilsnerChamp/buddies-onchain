@@ -53,6 +53,10 @@ Address fields are optional. A pre-deploy manifest may omit `addresses` entirely
 
 Missing manifest for the active chain is soft — `getActiveNetwork()` returns `buddyNft: null` and consumers fall back to the cold/pre-deploy path. Filename-vs-payload chainId mismatch and malformed JSON throw.
 
+### Hash-only hatch requires a fresh deploy
+
+The hash-only `hatch(bytes32 identityHash)` signature changes the `hatch` function selector. Any manifest pointing at an older `hatch(string)` contract is incompatible — the site and plugin built against the new ABI will fail to hatch against it. Ship a fresh contract deploy and a new `<chainId>.json` manifest before publishing the new site/plugin. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash are unchanged, so wallet/marketplace interface detection is unaffected.
+
 ### Commit policy
 
 Only canonical chains are committed. The root `.gitignore` is the enforcement source of truth and carries this policy as a comment.
@@ -78,7 +82,7 @@ Both expose `ACTIVE_NETWORK: NetworkConfig` for the static metadata of the selec
 
 ## publicClient
 
-Both site and plugin construct a viem `publicClient` with a hardcoded `http(ACTIVE_NETWORK.rpcUrl)` transport. No wallet RPC injection. This is the structural guarantee that `/view/<uuid>` and the plugin's cold/warm check work with no wallet connected.
+Both site and plugin construct a viem `publicClient` with a hardcoded `http(ACTIVE_NETWORK.rpcUrl)` transport. No wallet RPC injection. This is the structural guarantee that `/view/<tokenId>` and the plugin's cold/warm check work with no wallet connected.
 
 - `site/src/config/publicClient.ts` — module-scope singleton.
 - `plugin/src/publicClient.ts` — lazy singleton via `getPublicClient()`. Cold-account flows that short-circuit before any contract read never instantiate the client.

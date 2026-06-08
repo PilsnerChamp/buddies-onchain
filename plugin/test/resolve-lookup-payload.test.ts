@@ -27,10 +27,10 @@ import {
 
 const EXPECTED_SLEEPING_CARD_ROWS = [
   "",
-  "      .[||].",
-  "     [ -  - ]",
-  "     [ ==== ]",
-  "     `------´",
+  "       __",
+  "     <(- )___",
+  "      (  ._>",
+  "       `--´",
 ];
 const EXPECTED_COLD_SLEEPING_CARD_ROWS = [
   SLEEP_INDICATOR_ROW,
@@ -352,11 +352,9 @@ describe("resolveLookupPayload — status mapping", () => {
       netOverride: SEPOLIA_DEPLOYED_NET,
     });
     expect(result!.hatchUrl).toBe(
-      `https://buddies-onchain.xyz/hatch?accountUuid=${FIXTURE_ACCOUNT_UUID}`,
+      `https://buddies-onchain.xyz/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`,
     );
-    expect(result!.viewUrl).toBe(
-      `https://buddies-onchain.xyz/view/${FIXTURE_ACCOUNT_UUID}`,
-    );
+    expect(result!.viewUrl).toBe("https://buddies-onchain.xyz/view");
   });
 
   test("RPC throw with cached warm maps to warm + offline with view URL", async () => {
@@ -378,7 +376,7 @@ describe("resolveLookupPayload — status mapping", () => {
     });
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("warm");
-    expect(result!.viewUrl).toContain(`/view/${FIXTURE_ACCOUNT_UUID}`);
+    expect(result!.viewUrl).toBe("https://buddies-onchain.xyz/view/65261");
     expect(result!.viewUrl).not.toContain("/hatch");
     expect(result!.cardLines).toEqual(EXPECTED_SLEEPING_CARD_ROWS);
   });
@@ -437,8 +435,8 @@ describe("resolveLookupPayload — orchestrator integration", () => {
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("warm");
     expect(result!.cardLines.length).toBeGreaterThan(0);
-    expect(result!.viewUrl).toContain(`/view/${FIXTURE_ACCOUNT_UUID}`);
-    expect(result!.hatchUrl).toContain(`/hatch?accountUuid=${FIXTURE_ACCOUNT_UUID}`);
+    expect(result!.viewUrl).toContain("/view/42");
+    expect(result!.hatchUrl).toContain(`/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`);
     expect(state).not.toBeNull();
     expect(state!.hatch).toBe("warm");
     expect(state!.tokenId).toBe("0x2a");
@@ -454,9 +452,9 @@ describe("resolveLookupPayload — orchestrator integration", () => {
 
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("warm");
-    expect(result!.viewUrl).toBe(`http://localhost:5173/view/${FIXTURE_ACCOUNT_UUID}`);
+    expect(result!.viewUrl).toBe("http://localhost:5173/view/65261");
     expect(result!.hatchUrl).toBe(
-      `http://localhost:5173/hatch?accountUuid=${FIXTURE_ACCOUNT_UUID}`,
+      `http://localhost:5173/hatch#accountUuid=${FIXTURE_ACCOUNT_UUID}`,
     );
     expect(result!.cardLines).toEqual(EXPECTED_CACHED_F0_ROWS);
     expect(getTokenCalls).toBe(1);

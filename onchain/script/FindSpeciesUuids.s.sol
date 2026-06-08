@@ -5,11 +5,12 @@ import {Script, console} from "forge-std/Script.sol";
 import {WyHash} from "../contracts/libraries/WyHash.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {BuddyDomain} from "../contracts/libraries/BuddyDomain.sol";
+import {IdentityHash} from "../test/helpers/IdentityHash.sol";
 
 /// @notice Searches sequential UUIDs for Phase A coverage.
 /// @dev Run with `cd onchain && forge script script/FindSpeciesUuids.s.sol -vvvv`.
 contract FindSpeciesUuids is Script {
-    bytes private constant SALT = "friend-2026-401";
+    bytes private constant SEED_DOMAIN = "buddies-onchain:trait-seed:v2";
     uint256 private constant SEARCH_LIMIT = 10_000;
     uint8 private constant SPECIES_COUNT = BuddyDomain.SPECIES_COUNT;
     uint8 private constant RARITY_COUNT = BuddyDomain.RARITY_COUNT;
@@ -70,7 +71,7 @@ contract FindSpeciesUuids is Script {
     }
 
     function _deriveTraitResult(string memory uuid) internal pure returns (TraitResult memory) {
-        uint32 seed = WyHash.hash(bytes(uuid), SALT);
+        uint32 seed = WyHash.hash(abi.encodePacked(IdentityHash._computeIdentityHash(uuid)), SEED_DOMAIN);
         (uint8 species, uint8 rarity, uint8 eyes, uint8 hat, bool shiny,,,,,) = Mulberry32.deriveTraits(seed);
         return TraitResult({species: species, rarity: rarity, eyes: eyes, hat: hat, shiny: shiny});
     }

@@ -1,8 +1,8 @@
 // site/src/components/ViewLookupAction.tsx
 //
-// Shared action-prompt input for `/view` (bare) and `/view/<uuid>`
-// (miss card). Same UX on both: paste an account UUID, click the row
-// (or press Enter), navigate to `/view/<new-uuid>`. Lives as a shared
+// Shared action-prompt input for manual `/view` lookup surfaces. Paste an
+// account UUID, click the row (or press Enter), and the owner resolves the
+// UUID to a tokenId before navigating to `/view/<tokenId>`. Lives as a shared
 // component so the per-route surfaces stay consistent — every
 // actionable view surface renders an action prompt slot after NEXT
 // STEPS, before the rail.
@@ -22,15 +22,16 @@
 //     for keyboard parity.
 
 import { useRef, useState, type FormEvent, type MouseEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { viewUuidPath } from '../config/routes';
 import { isValidUuid } from '~shared/isValidUuid';
 
 const UUID_PLACEHOLDER = '00000000-0000-4000-8000-000000000000';
 
-export function ViewLookupAction(): JSX.Element {
-  const navigate = useNavigate();
+export function ViewLookupAction({
+  onValidUuid,
+}: {
+  onValidUuid: (uuid: string) => void;
+}): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [input, setInput] = useState('');
@@ -53,7 +54,7 @@ export function ViewLookupAction(): JSX.Element {
 
   const attemptLookup = (): void => {
     if (canSubmit) {
-      navigate(viewUuidPath(normalized));
+      onValidUuid(normalized);
       return;
     }
     setSubmitAttempted(true);

@@ -6,7 +6,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { encodeEventTopics, keccak256, toBytes } from 'viem';
+import { encodeEventTopics } from 'viem';
+import { computeIdentityHash } from '~shared/computeIdentityHash';
 
 const chainIdRef = { current: 84532 };
 const accountRef: {
@@ -80,6 +81,15 @@ function Probe(): JSX.Element {
   );
 }
 
+function InvalidProbe(): JSX.Element {
+  latestFlow = useHatchFlow('not-a-uuid');
+  return (
+    <button type="button" onClick={latestFlow.onRunHatch}>
+      run {latestFlow.state.phase}
+    </button>
+  );
+}
+
 async function flushAsync(ticks = 6): Promise<void> {
   for (let i = 0; i < ticks; i++) {
     await act(async () => {
@@ -108,7 +118,7 @@ function awakenedReceipt(tokenId = 247n): unknown {
     eventName: 'Awakened',
     args: {
       tokenId,
-      identityHash: keccak256(toBytes(VALID_UUID)),
+      identityHash: computeIdentityHash(VALID_UUID),
       hatcher: WALLET_ADDRESS,
     },
   });
@@ -176,6 +186,12 @@ describe('useHatchFlow', () => {
     await flushAsync();
 
     expect(writeContractAsyncMock).toHaveBeenCalledTimes(1);
+    expect(writeContractAsyncMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: 'hatch',
+        args: [computeIdentityHash(VALID_UUID)],
+      }),
+    );
     expect(latestFlow.state).toMatchObject({
       phase: 'confirmed',
       txHash: TX_HASH,
@@ -335,7 +351,6 @@ describe('useHatchFlow', () => {
 
   it.each([
     ['already-hatched', { cause: { data: { errorName: 'AlreadyHatched' } } }],
-    ['invalid-uuid', { cause: { data: { errorName: 'InvalidUuidFormat' } } }],
     ['wrong-network', { message: 'Wrong network: switch chain first' }],
     ['generic', { message: 'unknown provider failure' }],
   ] as const)('categorizes %s write failures', async (category, error) => {
@@ -372,5 +387,21 @@ describe('useHatchFlow', () => {
     }
     expect(writeContractAsyncMock).toHaveBeenCalledTimes(1);
     unmount();
+  });
+
+  it('invalid-uuid is a client-side pre-write validation failure', async () => {
+    accountRef.current = { isConnected: true, address: WALLET_ADDRESS };
+    render(<InvalidProbe />);
+
+    act(() => clickRun());
+    await flushAsync();
+
+    expect(writeContractAsyncMock).not.toHaveBeenCalled();
+    expect(latestFlow.state).toMatchObject({
+      phase: 'failed',
+      category: 'invalid-uuid',
+      txHash: null,
+      submissionChainId: null,
+    });
   });
 });

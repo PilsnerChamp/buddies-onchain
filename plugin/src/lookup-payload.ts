@@ -95,6 +95,17 @@ function tokenHex(tokenId: bigint): string {
   return `0x${tokenId.toString(16)}`;
 }
 
+function warmViewUrlFromState(origin: string, tokenIdHex: string | null): string {
+  if (tokenIdHex === null) {
+    return `${origin}/view`;
+  }
+  try {
+    return warmUrl(origin, BigInt(tokenIdHex));
+  } catch {
+    return `${origin}/view`;
+  }
+}
+
 function identityCanCacheArt(identity: IdentityTuple): identity is {
   accountUuidHash: string;
   chainId: number;
@@ -276,7 +287,6 @@ export async function resolveLookupPayload(
 
     const net = args.netOverride ?? getActiveNetwork();
     const origin = siteOriginForKey(net.key);
-    const viewUrl = warmUrl(origin, canonicalUuid);
     const concreteHatchUrl = buildHatchUrl(origin, canonicalUuid);
     const persistedMode = result.state.mode;
     const envMode = getEnvMode();
@@ -327,6 +337,7 @@ export async function resolveLookupPayload(
     }
 
     const buddyStatus: BuddyStatus = result.state.hatch satisfies BuddyStatus;
+    const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
 
     return {
       buddyStatus,

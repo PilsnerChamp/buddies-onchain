@@ -1,6 +1,7 @@
 // site/src/routes/Hatch.tsx
 //
-// `/hatch?accountUuid=<uuid>` warm execution terminal.
+// `/hatch#accountUuid=<uuid>` warm execution terminal. `App.tsx` owns
+// fragment parse/validate/scrub and passes the UUID in as a prop.
 //
 // The bracketed-button lifecycle is gone, replaced by the action-prompt +
 // appended-stream model that mirrors cold's `> claude ▊` register. Running
@@ -30,10 +31,10 @@
 //                                   stream appends "awaiting confirmation
 //                                   · 0xabc…1234 ↗"
 //   confirmed                     → STATUS "hatched · redirecting to
-//                                   /view/<uuid>", stream appends
+//                                   /view/<tokenId>", stream appends
 //                                   "confirmed · token #N" then
 //                                   "✓ buddy hatched · redirecting to
-//                                   /view/… in 5s…"; navigate after 5s
+//                                   /view/<tokenId> in 5s…"; navigate after 5s
 //   failed (post-broadcast)       → action prompt re-activates; stream
 //                                   shows tx hash + `! <error>`
 //   failed (pre-signature)        → action prompt re-activates; stream
@@ -44,9 +45,9 @@
 //                                   on this network"; action prompt muted
 
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
-import { keccak256, toBytes } from 'viem';
+import { Navigate } from 'react-router-dom';
 import { useReadContract } from 'wagmi';
+import { computeIdentityHash } from '~shared/computeIdentityHash';
 
 import { ManPageRow } from '../components/ManPageRow';
 import { ManPageSection } from '../components/ManPageSection';
@@ -55,17 +56,14 @@ import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import '../components/BlinkingCursor.css';
 import { getNetwork } from '../config/chains';
 import { BUDDY_NFT_ABI } from '../config/contract';
-import { ROUTES, viewUuidPath } from '../config/routes';
+import { ROUTES, viewTokenPath } from '../config/routes';
 import {
   useHatchFlow,
   type HatchErrorCategory,
   type HatchState,
 } from '../lib/hatch';
-import { isValidUuid } from '~shared/isValidUuid';
 
 import './Hatch.css';
-
-const RAW_LOG_MAX = 64;
 
 const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
   { to: ROUTES.view, description: 'look up any buddy' },
@@ -153,23 +151,10 @@ function failureLineFor(category: HatchErrorCategory): string {
 
 // ── Route entry ──────────────────────────────────────────────────────────
 //
-// App.tsx validates the UUID query-param; this keeps direct mounts consistent.
-export function Hatch(): JSX.Element {
-  const [searchParams] = useSearchParams();
-  const raw = searchParams.get('accountUuid');
-  const accountUuid = (raw?.trim() ?? '').toLowerCase();
-
-  if (accountUuid === '' || !isValidUuid(accountUuid)) {
-    const reason: 'missing' | 'malformed' =
-      accountUuid === '' ? 'missing' : 'malformed';
-    // eslint-disable-next-line no-console
-    console.warn('[hatch] invalid accountUuid, redirecting to /', {
-      reason,
-      raw: reason === 'missing' ? null : (raw ?? '').slice(0, RAW_LOG_MAX),
-    });
-    return <Navigate to={ROUTES.home} replace />;
-  }
-
+// App.tsx is the sole URL parse/validate/scrub owner. Hatch receives an
+// already-canonical v4 UUID prop; after the scrub, rereading the URL would
+// lose it.
+export function Hatch({ accountUuid }: { accountUuid: string }): JSX.Element {
   return <HatchSurface accountUuid={accountUuid} />;
 }
 
@@ -182,30 +167,34 @@ function HatchSurface({ accountUuid }: { accountUuid: string }): JSX.Element {
   const preflightAddress = getNetwork(activeChainId)?.buddyNft ?? null;
 
   const identityHash = useMemo(
-    () => keccak256(toBytes(accountUuid)),
+    () => computeIdentityHash(accountUuid),
     [accountUuid],
   );
 
-  const { data: isMinted } = useReadContract({
+  const { data: preflightTokenId } = useReadContract({
     abi: BUDDY_NFT_ABI,
     address: preflightAddress ?? undefined,
-    functionName: 'isMinted',
+    functionName: 'getTokenIdByIdentity',
     args: [identityHash],
     query: { enabled: preflightAddress !== null },
   });
+  const warmTokenId =
+    typeof preflightTokenId === 'bigint' && preflightTokenId > 0n
+      ? preflightTokenId
+      : null;
 
   // Preflight redirect: account already has a buddy → skip the warm page
   // entirely. Render guard placed AFTER hooks so the hook order stays
   // stable when wagmi's read flips.
-  if (isMinted === true) {
-    return <Navigate to={viewUuidPath(accountUuid)} replace />;
+  if (warmTokenId !== null) {
+    return <Navigate to={viewTokenPath(warmTokenId)} replace />;
   }
 
   // Confirmed-tx redirect — fires after the hook-owned countdown expires.
   // Render path means the route swap is a single React commit, no useEffect
   // sequencing.
   if (state.phase === 'confirmed' && state.redirectIn <= 0) {
-    return <Navigate to={viewUuidPath(accountUuid)} replace />;
+    return <Navigate to={viewTokenPath(state.tokenId)} replace />;
   }
 
   return (
@@ -248,7 +237,6 @@ function WarmHatchPage({
   const statusLine = computeStatusLine({
     isPreDeploy,
     state,
-    accountUuid,
   });
   const actionMode = computeActionMode({ isPreDeploy, state });
 
@@ -329,7 +317,6 @@ function WarmHatchPage({
           <HatchStream
             state={state}
             isPreDeploy={isPreDeploy}
-            accountUuid={accountUuid}
             txChainId={txChainId}
           />
         </div>
@@ -351,11 +338,9 @@ type StatusLine = {
 function computeStatusLine({
   isPreDeploy,
   state,
-  accountUuid,
 }: {
   isPreDeploy: boolean;
   state: HatchState;
-  accountUuid: string;
 }): StatusLine {
   if (isPreDeploy) {
     return {
@@ -375,12 +360,9 @@ function computeStatusLine({
     };
   }
   if (state.phase === 'confirmed') {
-    // STATUS uses the full UUID (see `docs/site/terminal-ui.md`
-    // § STATUS state matrix) — truncation permission is only granted
-    // to the redirect stream line below (§ Truncation rules).
     return {
       lead: 'hatched',
-      detail: `redirecting to /view/${accountUuid}`,
+      detail: `redirecting to ${viewTokenPath(state.tokenId)}`,
       tone: 'hatched',
     };
   }
@@ -526,12 +508,10 @@ function HatchActionPrompt({
 function HatchStream({
   state,
   isPreDeploy,
-  accountUuid,
   txChainId,
 }: {
   state: HatchState;
   isPreDeploy: boolean;
-  accountUuid: string;
   txChainId: number;
 }): JSX.Element | null {
   // Pre-deploy stream — single muted `— not yet deployed —` line per
@@ -617,7 +597,7 @@ function HatchStream({
         role="status"
       >
         ✓ buddy hatched <span className="hatch-stream__sep">·</span>{' '}
-        redirecting to /view/{truncUuid(accountUuid)}
+        redirecting to {viewTokenPath(state.tokenId)}
         <span aria-hidden="true"> in {state.redirectIn}s</span>
         <span
           className="blinking-cursor__block hatch-stream__cursor"

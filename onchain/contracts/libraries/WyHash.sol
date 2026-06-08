@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /// @title WyHash
 /// @notice Hash data + salt via wyhash v4.2 and return the lower 32 bits.
-/// @dev Matches Bun.hash(string(data) + string(salt)) with seed = 0.
+/// @dev Matches Bun.hash over the byte-exact `data || salt` preimage with seed = 0.
 library WyHash {
     uint64 private constant _S0 = 0xa0761d6478bd642f;
     uint64 private constant _S1 = 0xe7037ed1a0b428db;

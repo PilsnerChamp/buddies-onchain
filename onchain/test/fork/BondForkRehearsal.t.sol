@@ -10,6 +10,7 @@ import {BuddyNFT} from "../../contracts/BuddyNFT.sol";
 import {IBuddyNFT} from "../../contracts/interfaces/IBuddyNFT.sol";
 import {BondAttestationHelper} from "../helpers/BondAttestationHelper.sol";
 import {SvgDecode} from "../helpers/SvgDecode.sol";
+import {HatchHelper} from "../helpers/HatchHelper.sol";
 
 /// @title BondForkRehearsal
 /// @notice Dress rehearsal of the bond + render flip against the ACTUALLY DEPLOYED
@@ -32,7 +33,7 @@ import {SvgDecode} from "../helpers/SvgDecode.sol";
 ///           SEPOLIA_RPC_URL  — Base Sepolia RPC (e.g. https://sepolia.base.org)
 ///
 ///         Run: forge test --match-contract BondForkRehearsal -vv
-contract BondForkRehearsalTest is Test {
+contract BondForkRehearsalTest is Test, HatchHelper {
     using stdJson for string;
 
     uint256 internal constant BASE_SEPOLIA_CHAIN_ID = 84532;
@@ -78,9 +79,9 @@ contract BondForkRehearsalTest is Test {
 
         // Fresh v4 UUID so we never collide with a token already minted on-chain.
         string memory uuid = _freshUuid(nftAddr);
-        require(!nft.isMinted(keccak256(bytes(uuid))), "rehearsal uuid already minted; rerun");
+        require(!nft.isMinted(_identityHash(uuid)), "rehearsal uuid already minted; rerun");
 
-        uint256 tokenId = nft.hatch(uuid);
+        uint256 tokenId = _hatchUuid(nft, uuid);
         assertEq(uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Custodial), "hatched stage not Custodial");
 
         string memory preJson = SvgDecode.decodeJson(nft.tokenURI(tokenId));
@@ -89,7 +90,7 @@ contract BondForkRehearsalTest is Test {
         address recipient = makeAddr("fork-rehearsal-recipient");
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(uuid)),
+            identityHash: _identityHash(uuid),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

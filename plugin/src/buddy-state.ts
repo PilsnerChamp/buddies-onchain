@@ -25,6 +25,7 @@
 
 import { createHash } from "node:crypto";
 
+import { isValidUuid } from "~shared/isValidUuid";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { getActiveNetwork } from "./network";
 import { safeReadJson, safeWriteJson } from "./safe-json-store";
@@ -273,7 +274,9 @@ export async function readIdentityTuple(): Promise<IdentityTuple> {
   try {
     const { config } = await readClaudeConfig();
     const accountUuid = extractIdentity(config).accountUuid.trim().toLowerCase();
-    accountUuidHash = createHash("sha256").update(accountUuid).digest("hex");
+    accountUuidHash = isValidUuid(accountUuid)
+      ? createHash("sha256").update(accountUuid).digest("hex")
+      : null;
   } catch {
     accountUuidHash = null;
   }

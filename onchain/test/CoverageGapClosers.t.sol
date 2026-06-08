@@ -13,6 +13,7 @@ import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
+import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 contract BuddyRendererCoverageHarness is BuddyRenderer {
     constructor(address spriteData_, address font_, address spriteFont_)
@@ -24,7 +25,7 @@ contract BuddyRendererCoverageHarness is BuddyRenderer {
     }
 }
 
-contract CoverageGapClosersTest is Test {
+contract CoverageGapClosersTest is Test, HatchHelper {
     using stdJson for string;
 
     string private constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
@@ -67,8 +68,8 @@ contract CoverageGapClosersTest is Test {
     }
 
     function test_getTokenIdByIdentity_afterHatch() public {
-        uint256 tokenId = nft.hatch(TEST_UUID);
-        bytes32 identityHash = keccak256(bytes(TEST_UUID));
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
+        bytes32 identityHash = _identityHash(TEST_UUID);
 
         assertEq(nft.getTokenIdByIdentity(identityHash), tokenId);
     }
@@ -175,10 +176,10 @@ contract CoverageGapClosersTest is Test {
     }
 
     function _hatchAndBond(string memory name) internal returns (string memory tokenUri) {
-        uint256 tokenId = nft.hatch(TEST_UUID);
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
-            identityHash: keccak256(bytes(TEST_UUID)),
+            identityHash: _identityHash(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

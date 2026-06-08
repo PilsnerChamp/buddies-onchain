@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import type { NavigableRoute } from '../config/routes';
 import { AUTHOR_HANDLE, AUTHOR_X_URL } from '../lib/authorLinks';
@@ -20,7 +21,61 @@ export type SeeAlsoRoute = {
 type RouteMetadataProps = {
   chainId: number;
   seeAlsoRoutes: readonly SeeAlsoRoute[];
+  seo?: RouteSeoProps;
 };
+
+export type RouteSeoProps = {
+  robots?: string;
+  canonicalPath?: string;
+};
+
+const SITE_ORIGIN = 'https://buddies-onchain.xyz';
+
+function setMeta(selector: string, attr: 'name' | 'property', key: string): HTMLMetaElement {
+  const existing = document.head.querySelector<HTMLMetaElement>(selector);
+  if (existing !== null) return existing;
+  const meta = document.createElement('meta');
+  meta.setAttribute(attr, key);
+  document.head.append(meta);
+  return meta;
+}
+
+function absoluteUrl(path: string): string {
+  return `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+export function RouteSeo({
+  robots = 'index, follow',
+  canonicalPath,
+}: RouteSeoProps): null {
+  // Default to the live pathname so SPA navigation never inherits a prior
+  // route's canonical/og:url (e.g. a stale `/view/<tokenId>` left on `/`).
+  // `location.pathname` carries no UUID — the `/hatch` fragment is scrubbed
+  // and `/view` keeps the UUID in component state, so canonical stays clean.
+  const { pathname } = useLocation();
+  const effectiveCanonical = canonicalPath ?? pathname;
+
+  useEffect(() => {
+    const robotsMeta = setMeta('meta[name="robots"]', 'name', 'robots');
+    robotsMeta.content = robots;
+
+    const canonicalHref = absoluteUrl(effectiveCanonical);
+    let canonical = document.head.querySelector<HTMLLinkElement>(
+      'link[rel="canonical"]',
+    );
+    if (canonical === null) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.append(canonical);
+    }
+    canonical.href = canonicalHref;
+
+    const ogUrl = setMeta('meta[property="og:url"]', 'property', 'og:url');
+    ogUrl.content = canonicalHref;
+  }, [effectiveCanonical, robots]);
+
+  return null;
+}
 
 function renderContractStatusChunks(chunks: readonly string[]): JSX.Element {
   return (
@@ -45,11 +100,13 @@ function renderContractStatusChunks(chunks: readonly string[]): JSX.Element {
 export function RouteMetadata({
   chainId,
   seeAlsoRoutes,
+  seo,
 }: RouteMetadataProps): JSX.Element {
   const contractRow = seeAlsoContractRow(chainId);
 
   return (
     <>
+      <RouteSeo {...seo} />
       <p className="route-rail" aria-hidden="true">
         {RAIL}
       </p>

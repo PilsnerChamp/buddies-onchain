@@ -1,31 +1,31 @@
-import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
+import { lazy, Suspense, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './routes/Home';
 import { Bond } from './routes/Bond';
 import { View } from './routes/View';
-import { ViewUuid } from './routes/ViewUuid';
+import { ViewToken } from './routes/ViewToken';
 import { isValidUuid } from '~shared/isValidUuid';
 import { useArrowRowNav } from './lib/useArrowRowNav';
 import { ROUTES } from './config/routes';
 
 // URL map:
 //   `/`              → `<Home />`
-//   `/hatch`         → execution surface; reads `accountUuid` via
-//                      `useSearchParams`. Missing or malformed (fails
-//                      `isValidUuid` shape check) → redirect to `/`.
+//   `/hatch`         → execution surface; reads `accountUuid` from the URL
+//                      fragment, validates it, synchronously scrubs the URL,
+//                      then passes the UUID as a prop. Missing/malformed →
+//                      redirect to `/`.
 //                      Mounts under `<HatchLayout>` (lazy chunk) which wraps
 //                      the route in WagmiProvider + RainbowKitProvider.
 //   `/view`          → manual UUID lookup page
-//   `/view/:uuid`    → identity render. Wallet-free — uses `useBuddyLookup`
-//                      (TanStack Query + viem publicClient), so no
-//                      `<WagmiProvider>` is required.
+//   `/view/:tokenId` → token render. Wallet-free — reads tokenURI(tokenId)
+//                      directly via publicClient, so no `<WagmiProvider>`.
 //   `/bond`          → stage 2 placeholder
 //   `*`              → `<Navigate to={ROUTES.home} replace />`; absorbs unknown paths.
 //
 // `HatchLayout` is lazy-loaded so Vite emits a separate chunk for the layout
 // + its transitive imports (`wagmiConfig`, `WagmiProvider`, `RainbowKitProvider`,
 // RainbowKit theme + CSS). The chunk loads only when a user navigates to
-// `/hatch`; `/`, `/view`, `/view/<uuid>`, `/bond` bypass the wagmi chunk
+// `/hatch`; `/`, `/view`, `/view/<tokenId>`, `/bond` bypass the wagmi chunk
 // entirely on cold load.
 const HatchLayout = lazy(() => import('./layouts/HatchLayout'));
 
@@ -37,33 +37,56 @@ const Hatch = lazy(() =>
   import('./routes/Hatch').then((m) => ({ default: m.Hatch })),
 );
 
-// Max chars of the raw param we echo to the console before redirect. A
+// Max chars of the raw fragment value we echo to the console before redirect. A
 // valid UUID is 36 chars; anything much longer is almost certainly a probe
 // or plugin-drift artifact and not worth logging in full.
 const RAW_LOG_MAX = 64;
 
-// Reads `accountUuid` from the query string and redirects to `/` when the
-// value is missing or fails UUID shape validation. Emits `console.warn` so
-// plugin-drift and probing rates are observable. On valid UUID, mounts the
-// lazy `<Hatch />` route — the redirect short-circuit keeps invalid-UUID
-// renders from instantiating wagmi hooks inside Hatch.
+function readHashAccountUuid(hash: string): string | null {
+  const fragment = hash.startsWith('#') ? hash.slice(1) : hash;
+  return new URLSearchParams(fragment).get('accountUuid');
+}
+
+// Sole hatch ingress owner: reads `accountUuid` from the fragment and
+// redirects to `/` when missing/malformed. On valid UUID it synchronously
+// scrubs the fragment with `replaceState` before rendering the lazy hatch
+// surface, so third-party-free app code never renders `/hatch` descendants
+// while the UUID is still present in `location.href`.
 function HatchGate(): JSX.Element {
-  const [searchParams] = useSearchParams();
-  const raw = searchParams.get('accountUuid');
-  const accountUuid = raw?.trim() ?? '';
-  if (accountUuid === '' || !isValidUuid(accountUuid)) {
+  const location = useLocation();
+  const accountUuidRef = useRef<string | null>(null);
+  const rawFromHash = readHashAccountUuid(location.hash);
+
+  if (rawFromHash !== null) {
+    const accountUuid = rawFromHash.trim().toLowerCase();
+    if (accountUuid !== '' && isValidUuid(accountUuid)) {
+      accountUuidRef.current = accountUuid;
+      window.history.replaceState(null, '', ROUTES.hatch);
+      return <Hatch accountUuid={accountUuid} />;
+    }
+
     const reason: 'missing' | 'malformed' =
       accountUuid === '' ? 'missing' : 'malformed';
-    // `missing` encodes as `null` so the log discriminates empty-param from
-    // shape-mismatch.
     // eslint-disable-next-line no-console
     console.warn('[hatch] invalid accountUuid, redirecting to /', {
       reason,
-      raw: reason === 'missing' ? null : (raw ?? '').slice(0, RAW_LOG_MAX),
+      raw: reason === 'missing' ? null : rawFromHash.slice(0, RAW_LOG_MAX),
     });
     return <Navigate to={ROUTES.home} replace />;
   }
-  return <Hatch />;
+
+  if (accountUuidRef.current !== null) {
+    return <Hatch accountUuid={accountUuidRef.current} />;
+  }
+
+  // Missing fragment. Query-param handoffs are intentionally no longer
+  // accepted; raw UUIDs must not cross the HTTP wire.
+  // eslint-disable-next-line no-console
+  console.warn('[hatch] invalid accountUuid, redirecting to /', {
+    reason: 'missing',
+    raw: null,
+  });
+  return <Navigate to={ROUTES.home} replace />;
 }
 
 export default function App(): JSX.Element {
@@ -90,7 +113,7 @@ export default function App(): JSX.Element {
         <Route path={ROUTES.hatch} element={<HatchGate />} />
       </Route>
       <Route path={ROUTES.view} element={<View />} />
-      <Route path={ROUTES.viewUuid} element={<ViewUuid />} />
+      <Route path={ROUTES.viewToken} element={<ViewToken />} />
       <Route path={ROUTES.bond} element={<Bond />} />
       <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
     </Routes>

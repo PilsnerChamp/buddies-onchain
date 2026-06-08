@@ -1,6 +1,6 @@
 # BuddyNFT contract
 
-Soulbound on-chain identity record. Permissionless `hatch(accountUuid)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
+Soulbound on-chain identity record. Permissionless `hatch(identityHash)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
 
 ## Stage labels
 
@@ -9,20 +9,19 @@ User-facing: `Hatched`, `Bonded`. Enum identifiers (internal): `Custodial`, `Bon
 ## Hatch
 
 ```solidity
-function hatch(string calldata accountUuid) external returns (uint256 tokenId);
+function hatch(bytes32 identityHash) external returns (uint256 tokenId);
 ```
 
-No authorization signature. Anyone can call `hatch()` and pay gas to hatch any UUID. On-chain steps:
+No authorization signature. Anyone can call `hatch()` and pay gas to hatch any non-zero identity hash. On-chain steps:
 
-1. Validate UUID format via `_validateUuid`. Revert `InvalidUuidFormat` on any failure. Format rules (RFC 4122 v4 only, lowercase hex, exact pattern): [`docs/onchain/derivation.md`](derivation.md#uuid-validation).
-2. `identityHash = keccak256(bytes(accountUuid))`.
-3. Revert `AlreadyHatched` if `_minted[identityHash]`.
-4. `prngSeed = WyHash.hash(bytes(accountUuid), bytes("friend-2026-401"))`.
-5. `traits = Mulberry32.deriveTraits(prngSeed)`.
-6. `tokenId = _nextTokenId++`.
-7. Write all per-token mappings before mint. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
-8. `_mint(address(this), tokenId)` — the contract mints the token to itself.
-9. Emit `Awakened(tokenId, identityHash, msg.sender)`.
+1. Revert `InvalidIdentityHash` if `identityHash == bytes32(0)`.
+2. Revert `AlreadyHatched` if `_minted[identityHash]`.
+3. `prngSeed = WyHash.hash(abi.encodePacked(identityHash), bytes("buddies-onchain:trait-seed:v2"))`.
+4. `traits = Mulberry32.deriveTraits(prngSeed)`.
+5. `tokenId = _nextTokenId++`.
+6. Write all per-token mappings before mint. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
+7. `_mint(address(this), tokenId)` — the contract mints the token to itself.
+8. Emit `Awakened(tokenId, identityHash, msg.sender)`.
 
 Token name is empty at hatch and never written here.
 
@@ -82,6 +81,14 @@ API surface only — trust posture and scope are in [`SECURITY.md`](../../SECURI
 
 Fonts ship as WOFF2 payloads embedded on-chain. The SVG embeds Iosevka and DejaVu Sans Mono, both permissively licensed.
 
-## UUID version lock
+## Identity-hash construction
 
-BuddyNFT v1 accepts RFC 4122 v4 UUIDs only. The validation gate is permanent for the lifetime of this deployment. Future UUID schemes require a new deploy generation.
+BuddyNFT is hash-only and never sees the raw UUID. Callers compute:
+
+```text
+identityHash = keccak256("buddies-onchain:identity:v1" || 0x1f || lowercase(accountUuid))
+```
+
+Shared impl: `shared/computeIdentityHash.ts`. The domain tag omits chain id and contract address, so one account hashes to the same `identityHash` on every network (local, Sepolia, mainnet).
+
+Shared callers validate RFC 4122 v4 UUID shape before hashing. That check is advisory and off-chain only — the contract accepts any non-zero `bytes32` and never validates a UUID. See [`docs/onchain/derivation.md`](derivation.md#uuid-validation).

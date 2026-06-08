@@ -8,8 +8,8 @@
  *
  * Sync. No RPC. No disk. No cache.
  *
- * Hashing is wyhash-only to match `BuddyNFT.hatch` derivation: the eventual
- * minted buddy resolves via wyhash, so the cold sleeping buddy must too.
+ * The seed path matches `BuddyNFT.hatch`: UUID -> identityHash -> raw32 plus
+ * SEED_DOMAIN -> wyhash -> Mulberry32 traits.
  */
 
 import { deriveBuddyFromAccount } from "./bone-deriver";

@@ -1,6 +1,6 @@
 /*
  * View route styles. Shared between bare `/view` (man-page lookup form
- * with action-prompt input) and `/view/<uuid>` (pre-deploy / loading /
+ * with action-prompt input) and `/view/<tokenId>` (pre-deploy / loading /
  * miss / happy path).
  *
  * The lookup UI is a single action-prompt input shaped like terminal text:
@@ -140,7 +140,7 @@
  * `site/src/styles/man-page-extras.css` — shared across all terminal
  * routes. */
 
-/* ── /view/<uuid> shared chrome ──────────────────────────────────────── */
+/* ── /view/<tokenId> shared chrome ───────────────────────────────────── */
 .view-uuid__warn {
   color: var(--warn);
   margin: 0 0 var(--space-3);

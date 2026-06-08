@@ -1,7 +1,7 @@
 // site/src/config/publicClient.ts
 //
 // Hardcoded HTTP publicClient for the active build-time chain. Wallet-free
-// reads — `/view/<uuid>` consumes this client (via `useBuddyLookup`) instead
+// reads — `/view` and `/view/<tokenId>` consume this client instead
 // of the wagmi-coupled `useReadContract`, so the route no longer requires
 // `<WagmiProvider>` in scope and no longer pulls the wagmi + RainbowKit
 // chunk on cold load.
@@ -42,7 +42,7 @@ const chainForActive = (() => {
 // Hardcoded `http()` transport — NO wallet RPC injection. The transport URL
 // comes from `ACTIVE_NETWORK.rpcUrl` (sourced from `shared/networks.ts`),
 // not from any wallet provider. This is the structural guarantee that
-// `/view/<uuid>` works with no wallet connected.
+// `/view` and `/view/<tokenId>` work with no wallet connected.
 export const publicClient = createPublicClient({
   chain: chainForActive,
   transport: http(ACTIVE_NETWORK.rpcUrl),

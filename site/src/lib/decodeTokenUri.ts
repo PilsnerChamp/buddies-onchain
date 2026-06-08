@@ -1,5 +1,5 @@
 // Decodes a `tokenURI(uint256)` return value into the inline SVG string
-// rendered as the buddy centerpiece on `/view/<uuid>` and post-confirmation
+// rendered as the buddy centerpiece on `/view/<tokenId>` and post-confirmation
 // `/hatch`. On-chain shape (per `BuddyRenderer.sol`):
 //   `data:application/json;base64,<base64( JSON.stringify({ name, description,
 //     image: "data:image/svg+xml;base64,<base64(SVG)>", attributes }) )>`
