@@ -155,7 +155,7 @@ Per-route mapping:
 | Route | Action prompt |
 |---|---|
 | `/` | `> claude ▊` (active button — replays walkthrough on click) |
-| `/hatch#<uuid>` | `> /hatch <uuid> ▊` (active → committed → re-active on failure / retry) |
+| `/hatch` | `> /hatch ▊` (active → committed → re-active on failure / retry) |
 | `/view` | `> /view [<uuid-input>] ▊` (active row wrapping `<input>`; row click triggers attempt; click on input focuses for typing) |
 | `/view/<tokenId>` miss | same as `/view` (shared `<ViewLookupAction>` component) |
 | `/view/<tokenId>` loading / error / pre-deploy | no action prompt; tail `> ▊` cursor is cursor-of-record |

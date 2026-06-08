@@ -24,9 +24,9 @@ Confusion-prone. One line each.
 - `buddy-onchain` — plugin name (singular) as published in the Claude Code plugin marketplace
 - `/buddy-onchain` — plugin command string; what users type in Claude Code to find their buddy. Slash-only — hook fires lookup on the slash form (and the legacy namespaced `/buddy-onchain:buddy-onchain`); no NL routing. Companion skill at `plugin/skills/buddy-onchain/SKILL.md` is the slash renderer.
 - `BuddyNFT` — Solidity contract / class / file name; technical surface only
-- `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving UUID via fragment `#accountUuid=<uuid>`. Plugin emits the fragment form; dApp scrubs the fragment synchronously on arrival (raw UUID never crosses the HTTP wire). Missing/malformed → redirect to `/`.
+- `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving the hatch handoff via fragment `#identityHash=<hash>&prngSeed=<seed>`. Plugin derives both client-side and emits the fragment (raw UUID never enters the URL); dApp parses and synchronously scrubs the fragment on arrival. Missing/malformed → redirect to `/`.
 - `/view` — bare `/view` is the dApp manual UUID lookup page; resolves UUID → tokenId client-side, then navigates to `/view/<tokenId>`
-- `/view/<tokenId>` — canonical buddy URL on the dApp; returning-user destination and public lookup result. Plugin resolves identityHash → tokenId and emits this warm link. (`/view/<uuid>` removed — route deleted, no public uuid links exist. UUID survives only in the `/hatch` fragment and dApp component state — never in a path or query string.)
+- `/view/<tokenId>` — canonical buddy URL on the dApp; returning-user destination and public lookup result. Plugin resolves identityHash → tokenId and emits this warm link. (`/view/<uuid>` removed — route deleted, no public uuid links exist. UUID survives only in dApp component state — never in the fragment, a path, or a query string.)
 - `> /buddy-onchain` — SVG chrome imprint on-chain; bytecode-permanent, matches the plugin command. Site's `/` prompt renders the same `>` sigil.
 - Unknown paths → `/` via catch-all redirect.
 

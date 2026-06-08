@@ -5,9 +5,9 @@ Static SPA hosted on Vercel. Vite + React 18 + React Router + TanStack Query + w
 Routes:
 
 - `/` — cold-landing man-page terminal; also catch-all (unknown paths redirect here).
-- `/hatch?accountUuid=<uuid>` — execution surface for plugin handoffs; missing or malformed UUID redirects to `/`.
+- `/hatch#identityHash=<hash>&prngSeed=<seed>` — execution surface for plugin handoffs; missing or malformed values redirect to `/`.
 - `/view` — manual UUID lookup page.
-- `/view/<uuid>` — canonical buddy identity render (wallet-free).
+- `/view/<tokenId>` — canonical buddy render (wallet-free).
 - `/bond` — stage 2 placeholder.
 
 ## Local dev
