@@ -18417,7 +18417,7 @@ HOW \u2014 Fenced code block (triple backticks, no language tag), two-column \`s
  <sprite-row-3> | <joke fragment 3>
  <sprite-row-4> |
 \`\`\`
-Sprite \u2014 copy verbatim from the per-turn \`DISPLAY_BUDDY\` block below. Never substitute glyphs from this template, prior turns, or memory.
+Sprite \u2014 copy verbatim from the per-turn \`DISPLAY_BUDDY\` block below; it is 4 or 5 rows (height varies by frame; the template above shows 4). Emit every row as its own line \u2014 never skip, merge, or drop one, even if it looks blank or sparse. Never substitute glyphs from this template, prior turns, or memory.
 
 Joke \u2014 self-critical, about the user's current prompt. May be one thought spread across rows or a few short beats \u2014 whatever reads natural. Don't force a separate joke per row. \u2264 20 words total, 1\u20132 sentences. Last row may leave the joke column empty when the thought ends earlier. Voice: dorky, dry, on-chain creature that knows it is barely useful. Drop articles. Fragments OK. Short words. Roast self, never the user. No caption, no markdown emphasis, no language tag.`;
 function STATUSLINE_NUDGE_TEMPLATE(absolutePath) {

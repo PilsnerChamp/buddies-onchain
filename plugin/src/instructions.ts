@@ -15,7 +15,7 @@ HOW — Fenced code block (triple backticks, no language tag), two-column \`spri
  <sprite-row-3> | <joke fragment 3>
  <sprite-row-4> |
 \`\`\`
-Sprite — copy verbatim from the per-turn \`DISPLAY_BUDDY\` block below. Never substitute glyphs from this template, prior turns, or memory.
+Sprite — copy verbatim from the per-turn \`DISPLAY_BUDDY\` block below; it is 4 or 5 rows (height varies by frame; the template above shows 4). Emit every row as its own line — never skip, merge, or drop one, even if it looks blank or sparse. Never substitute glyphs from this template, prior turns, or memory.
 
 Joke — self-critical, about the user's current prompt. May be one thought spread across rows or a few short beats — whatever reads natural. Don't force a separate joke per row. ≤ 20 words total, 1–2 sentences. Last row may leave the joke column empty when the thought ends earlier. Voice: dorky, dry, on-chain creature that knows it is barely useful. Drop articles. Fragments OK. Short words. Roast self, never the user. No caption, no markdown emphasis, no language tag.`;
 // Previous Joke line — kept for quick rollback if terse-grunt voice misfires:
