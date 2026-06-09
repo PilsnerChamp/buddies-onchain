@@ -12,8 +12,9 @@
 #
 # After running:
 #   og-home.png            = default (terminal variant; carries narrative weight)
-#   og-home-terminal.png   = terminal frame variant
 #   og-home-icon.png       = bare {@,@}~ face on surface (also favicon source)
+#   og-home.svg            = served copy of og-card-terminal.svg (source of truth)
+#   og-home-icon.svg       = served copy of og-card-icon.svg (source of truth)
 
 set -euo pipefail
 
@@ -40,13 +41,16 @@ rasterize() {
   identify -format "%wx%h\n" "$png"
 }
 
-echo "terminal $(rasterize "$here/og-card-terminal.svg" "$out/og-home-terminal.png")"
-echo "icon     $(rasterize "$here/og-card-icon.svg"     "$out/og-home-icon.png")"
-
 # Default og-home.png = terminal (carries narrative weight; see
 # `docs/site/terminal-ui.md` § OG card).
-cp "$out/og-home-terminal.png" "$out/og-home.png"
-echo "default  $(identify -format "%wx%h" "$out/og-home.png") (terminal)"
+echo "terminal $(rasterize "$here/og-card-terminal.svg" "$out/og-home.png")"
+echo "icon     $(rasterize "$here/og-card-icon.svg"     "$out/og-home-icon.png")"
+
+# Served SVGs are derived artifacts: copy the hand-edited sources so the served
+# vector cards never drift from site/tools/og/*.svg (single source of truth).
+cp "$here/og-card-terminal.svg" "$out/og-home.svg"
+cp "$here/og-card-icon.svg"     "$out/og-home-icon.svg"
+echo "svg      og-home.svg, og-home-icon.svg (copied from source)"
 
 # --- favicon ---
 # Per-size SVG sources (favicon-16.svg, favicon-32.svg) hand-tuned for legibility
