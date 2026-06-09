@@ -70,6 +70,15 @@ contract BuddyRendererTest is Test {
         _assertNumericAttributeMaxValue(json, "Snark");
     }
 
+    function test_tokenURI_externalUrlUsesTokenId() public {
+        uint256 tokenId = 42;
+        _setMockToken(tokenId, _defaultTraits(), "", uint32(0x1234), IBuddyNFT.OwnershipStage.Custodial);
+
+        string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), tokenId));
+
+        assertEq(json.readString(".external_url"), "https://buddies-onchain.xyz/view/42");
+    }
+
     function test_tokenURI_emitsRailPromptTitleSpriteAndFooter() public {
         IBuddyNFT.BuddyTraits memory traits = IBuddyNFT.BuddyTraits({
             species: 16,

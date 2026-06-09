@@ -196,16 +196,14 @@ contract BuddyRenderer is IBuddyRenderer {
         IBuddyNFT.BuddyTraits memory traits = buddy.buddyTraits(tokenId);
         string memory buddyName = buddy.buddyName(tokenId);
         uint32 seed = buddy.buddyPrngSeed(tokenId);
-        bytes32 backdropHash = keccak256(abi.encode(seed));
         IBuddyNFT.OwnershipStage stage = buddy.getStage(tokenId);
 
-        string memory metadataName = _metadataDisplayName(buddyName, tokenId);
-        string memory svgMetadataTitle = _svgMetadataTitle(tokenId, traits, stage);
-        string memory svg = _buildSvg(svgMetadataTitle, backdropHash, traits, stage);
+        string memory svg =
+            _buildSvg(_svgMetadataTitle(tokenId, traits, stage), keccak256(abi.encode(seed)), traits, stage);
         string memory image = string(
             abi.encodePacked("data:image/svg+xml;base64,", Base64.encode(bytes(svg)))
         );
-        string memory metadata = _buildMetadata(metadataName, image, traits, stage);
+        string memory metadata = _buildMetadata(_metadataDisplayName(buddyName, tokenId), image, traits, stage, tokenId);
 
         return string(
             abi.encodePacked("data:application/json;base64,", Base64.encode(bytes(metadata)))
@@ -246,7 +244,8 @@ contract BuddyRenderer is IBuddyRenderer {
         string memory displayName,
         string memory image,
         IBuddyNFT.BuddyTraits memory traits,
-        IBuddyNFT.OwnershipStage stage
+        IBuddyNFT.OwnershipStage stage,
+        uint256 tokenId
     )
         internal
         pure
@@ -262,6 +261,11 @@ contract BuddyRenderer is IBuddyRenderer {
                 image,
                 '","attributes":',
                 _buildAttributes(traits, stage),
+                ',"external_url":"',
+                BuddyDomain.SITE_ORIGIN,
+                "/view/",
+                tokenId.toString(),
+                '"',
                 "}"
             )
         );
