@@ -11,13 +11,14 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {IBuddyNFT} from "./interfaces/IBuddyNFT.sol";
 import {IBuddyRenderer} from "./interfaces/IBuddyRenderer.sol";
+import {IERC5192} from "./interfaces/IERC5192.sol";
 import {AuthorAttestation} from "./libraries/AuthorAttestation.sol";
 import {Mulberry32} from "./libraries/Mulberry32.sol";
 
 /// @title BuddyNFT
 /// @notice Soulbound ERC721 for Claude Code Buddy companions on Base L2.
 /// @dev Hatches custodially to the contract and bonds later via attestation.
-contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906 {
+contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     uint256 public constant MAX_NAME_LENGTH = 14;
 
     /// @notice Immutable address of the cold ECDSA key used to sign authorship
@@ -125,12 +126,18 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906 {
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
         // EIP-4906 id (0x49064906) is hand-derived from the two event selectors;
         // type(IERC4906).interfaceId would be 0x00000000 since the interface declares no functions.
-        return interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
+        return interfaceId == bytes4(0x49064906) || interfaceId == type(IERC5192).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     function getStage(uint256 tokenId) external view override returns (IBuddyNFT.OwnershipStage) {
         _requireOwned(tokenId);
         return _tokenStages[tokenId];
+    }
+
+    function locked(uint256 tokenId) external view override returns (bool) {
+        _requireOwned(tokenId);
+        return _tokenStages[tokenId] == IBuddyNFT.OwnershipStage.Bonded;
     }
 
     function getTokenIdByIdentity(bytes32 identityHash) external view returns (uint256) {
@@ -282,6 +289,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906 {
         _transfer(address(this), msg.sender, tokenId);
         _tokenStages[tokenId] = IBuddyNFT.OwnershipStage.Bonded;
 
+        emit Locked(tokenId);
         emit MetadataUpdate(tokenId);
         emit BuddyBonded(tokenId, _tokenIdentityHashes[tokenId], msg.sender, name);
     }

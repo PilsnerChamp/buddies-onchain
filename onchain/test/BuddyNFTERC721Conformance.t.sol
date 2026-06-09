@@ -50,6 +50,10 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         assertTrue(nft.supportsInterface(0x49064906));
     }
 
+    function test_supportsInterface_erc5192() public view {
+        assertTrue(nft.supportsInterface(0xb45a3c0e));
+    }
+
     function test_supportsInterface_eip2981RoyaltiesUnsupported() public view {
         assertFalse(nft.supportsInterface(0x2a55205a));
     }
@@ -74,11 +78,30 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         nft.tokenURI(tokenId);
     }
 
+    function test_locked_revertsForNonexistentToken() public {
+        uint256 tokenId = 999;
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, tokenId));
+        nft.locked(tokenId);
+    }
+
     function test_ownership_balanceAndOwnerAfterHatch_custodial() public {
         uint256 tokenId = _hatchUuid(nft, TEST_UUID);
 
         assertEq(nft.balanceOf(address(nft)), 1);
         assertEq(nft.ownerOf(tokenId), address(nft));
+    }
+
+    function test_locked_stageMatrix_custodialFalseBondedTrue() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        assertFalse(nft.locked(tokenId));
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+
+        assertTrue(nft.locked(tokenId));
     }
 
     function test_ownership_balanceAfterBond_bonded() public {
