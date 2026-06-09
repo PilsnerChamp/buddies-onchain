@@ -246,6 +246,11 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids, HatchHelper {
             value,
             string.concat(traitType, " value mismatch for ", uuid)
         );
+        assertEq(
+            vm.parseJsonUint(json, string.concat(prefix, ".max_value")),
+            100,
+            string.concat(traitType, " max_value mismatch for ", uuid)
+        );
     }
 
     function _assertHatLayout(string memory uuid, string memory svg, uint8 hat) internal view {

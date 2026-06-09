@@ -30,27 +30,32 @@
     {
       "display_type": "number",
       "trait_type": "Debugging",
-      "value": 12
+      "value": 12,
+      "max_value": 100
     },
     {
       "display_type": "number",
       "trait_type": "Patience",
-      "value": 28
+      "value": 28,
+      "max_value": 100
     },
     {
       "display_type": "number",
       "trait_type": "Chaos",
-      "value": 15
+      "value": 15,
+      "max_value": 100
     },
     {
       "display_type": "number",
       "trait_type": "Wisdom",
-      "value": 32
+      "value": 32,
+      "max_value": 100
     },
     {
       "display_type": "number",
       "trait_type": "Snark",
-      "value": 20
+      "value": 20,
+      "max_value": 100
     }
   ]
 }

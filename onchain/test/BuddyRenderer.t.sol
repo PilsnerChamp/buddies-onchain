@@ -58,6 +58,18 @@ contract BuddyRendererTest is Test {
         assertTrue(_contains(svg, 'xml:space="preserve"'));
     }
 
+    function test_tokenURI_numericStatsCarryMaxValue() public {
+        _setMockToken(1, _defaultTraits(), "", uint32(0x1234), IBuddyNFT.OwnershipStage.Custodial);
+
+        string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
+
+        _assertNumericAttributeMaxValue(json, "Debugging");
+        _assertNumericAttributeMaxValue(json, "Patience");
+        _assertNumericAttributeMaxValue(json, "Chaos");
+        _assertNumericAttributeMaxValue(json, "Wisdom");
+        _assertNumericAttributeMaxValue(json, "Snark");
+    }
+
     function test_tokenURI_emitsRailPromptTitleSpriteAndFooter() public {
         IBuddyNFT.BuddyTraits memory traits = IBuddyNFT.BuddyTraits({
             species: 16,
@@ -547,6 +559,29 @@ contract BuddyRendererTest is Test {
 
     function _decodeJson(string memory tokenUri) internal pure returns (string memory) {
         return string(Base64.decode(_afterPrefix(tokenUri, JSON_PREFIX)));
+    }
+
+    function _assertNumericAttributeMaxValue(string memory json, string memory traitType) internal pure {
+        uint256 index = _attributeIndex(json, traitType);
+        string memory prefix = string.concat(".attributes[", vm.toString(index), "]");
+
+        assertEq(vm.parseJsonString(json, string.concat(prefix, ".display_type")), "number");
+        assertEq(vm.parseJsonUint(json, string.concat(prefix, ".max_value")), 100);
+    }
+
+    function _attributeIndex(string memory json, string memory traitType) internal pure returns (uint256) {
+        for (uint256 i; i < 11; ++i) {
+            string memory prefix = string.concat(".attributes[", vm.toString(i), "]");
+            if (_stringEq(vm.parseJsonString(json, string.concat(prefix, ".trait_type")), traitType)) {
+                return i;
+            }
+        }
+
+        revert("attribute not found");
+    }
+
+    function _stringEq(string memory left, string memory right) internal pure returns (bool) {
+        return keccak256(bytes(left)) == keccak256(bytes(right));
     }
 
     function _decodeSvgFromTokenUri(string memory tokenUri) internal pure returns (string memory) {

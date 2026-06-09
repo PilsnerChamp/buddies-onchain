@@ -548,7 +548,7 @@ contract BuddyRenderer is IBuddyRenderer {
                 traitType,
                 '","value":',
                 value.toString(),
-                "}"
+                ',"max_value":100}'
             )
         );
     }
