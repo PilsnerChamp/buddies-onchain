@@ -44,7 +44,7 @@ function bond(
 ) external;
 ```
 
-Reverts `BondingNotEnabled` until the maintainer calls `enableBonding()`. When active: stage gate (`Custodial` only) acts as the replay guard, EIP-712 signature verifies against `_attestationSigner`, name is written, token transfers from `address(this)` to `msg.sender`, stage flips to `Bonded`. Bonded is terminal.
+Reverts `BondingNotEnabled` until the maintainer calls `enableBonding()`. When active: stage gate (`Custodial` only) acts as the replay guard, EIP-712 signature verifies against `_attestationSigner`, name is written, token transfers from `address(this)` to `msg.sender`, stage flips to `Bonded`. Bonded is terminal. After the flip, emits `Locked(tokenId)` (ERC-5192) and `MetadataUpdate(tokenId)` (ERC-4906) — see [Marketplace interfaces](#marketplace-interfaces).
 
 ## Invariants
 
@@ -69,10 +69,48 @@ View accessor: `IBuddyNFT.buddyPrngSeed(uint256) returns (uint32)` reads the sto
 
 API surface only — trust posture and scope are in [`SECURITY.md`](../../SECURITY.md#maintainer-powers).
 
-- `setRenderer(address)` — swap the renderer contract. Requires non-zero. Emits `RendererUpdated`.
+- `setRenderer(address)` — swap the renderer contract. Requires non-zero. Emits `RendererUpdated`, then `BatchMetadataUpdate(0, type(uint256).max)` (ERC-4906).
 - `setAttestationSigner(address)` — rotate the bond signer. Reverts `ZeroAddress` while `bondingEnabled == true` and the address is zero.
 - `enableBonding()` — one-way activation. Requires `_attestationSigner != address(0)`. Emits `BondingEnabled`.
 - `transferOwnership(address)` / `renounceOwnership()` — OZ `Ownable`. Renounce reverts while `bondingEnabled == false` to prevent permanent loss of the Stage 2 path.
+
+## Marketplace interfaces
+
+`supportsInterface(bytes4)`:
+
+| Standard | id | Result |
+|---|---|---|
+| ERC-165 | `0x01ffc9a7` | `true` |
+| ERC-721 | `0x80ac58cd` | `true` |
+| ERC-721 Metadata | `0x5b5e139f` | `true` |
+| ERC-4906 (metadata update) | `0x49064906` | `true` |
+| ERC-5192 (soulbound) | `0xb45a3c0e` | `true` |
+| EIP-2981 (royalties) | `0x2a55205a` | `false` |
+
+No royalty interface — soulbound, no secondary-sale path. ERC-7572 (`contractURI`) is presence-detected and carries no ERC-165 bit.
+
+### ERC-4906 — metadata update signal
+
+Marketplaces and indexers refetch metadata on these events:
+
+- `MetadataUpdate(uint256 tokenId)` — emitted by `bond()` after the `Hatched`→`Bonded` flip.
+- `BatchMetadataUpdate(0, type(uint256).max)` — emitted by `setRenderer()` after the renderer swap, covering the whole collection.
+
+### ERC-5192 — soulbound signal
+
+```solidity
+function locked(uint256 tokenId) external view returns (bool);
+```
+
+`false` while `Custodial`, `true` once `Bonded`. Reverts for nonexistent tokens. `bond()` emits `Locked(uint256 tokenId)` after the flip. `Unlocked` is part of the interface but never emitted — bonding is one-way.
+
+### ERC-7572 — collection metadata
+
+```solidity
+function contractURI() external pure returns (string memory);
+```
+
+Returns a `data:application/json;utf8,` payload with `name`, `description`, `image`, and `external_link`. Immutable.
 
 ## Renderer
 

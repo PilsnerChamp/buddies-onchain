@@ -253,6 +253,15 @@ Different viewers take different paths. The mitigations above are picked against
 
 Mobile wallet rendering is structurally unreliable for this NFT shape. Target surfaces are OpenSea and direct browser loads; mobile wallet display is not a target.
 
+## tokenURI metadata
+
+The decoded `data:application/json` payload carries `name`, `description`, `image`, `attributes`, and `external_url`.
+
+- `external_url` — `https://buddies-onchain.xyz/view/<tokenId>` (tokenId form, no account UUID). Canonical buddy route; see `docs/site/architecture.md`.
+- The 5 numeric stat attributes (Debugging, Patience, Chaos, Wisdom, Snark) each emit `"display_type":"number"` with `"max_value":100`, so marketplaces render ratio bars. String traits (rarity, species, etc.) carry no `max_value`.
+
+Collection-level metadata (`name`, `description`, `image`, `external_link`) comes from `BuddyNFT.contractURI()`, not the renderer — see `docs/onchain/contract.md`.
+
 ## tokenURI extraction
 
 ```bash
