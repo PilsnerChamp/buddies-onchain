@@ -46,6 +46,14 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         assertTrue(nft.supportsInterface(0x5b5e139f));
     }
 
+    function test_supportsInterface_erc4906() public view {
+        assertTrue(nft.supportsInterface(0x49064906));
+    }
+
+    function test_supportsInterface_eip2981RoyaltiesUnsupported() public view {
+        assertFalse(nft.supportsInterface(0x2a55205a));
+    }
+
     function test_supportsInterface_unknownReturnsFalse() public view {
         assertFalse(nft.supportsInterface(0x12345678));
     }

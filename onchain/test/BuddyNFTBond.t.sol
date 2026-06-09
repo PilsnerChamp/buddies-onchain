@@ -12,6 +12,7 @@ import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 contract BuddyNFTBondTest is Test, HatchHelper {
     event BuddyBonded(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name);
+    event MetadataUpdate(uint256 _tokenId);
 
     BuddyNFT internal nft;
     address internal owner;
@@ -92,6 +93,17 @@ contract BuddyNFTBondTest is Test, HatchHelper {
 
         vm.expectEmit(true, true, true, true, address(nft));
         emit BuddyBonded(tokenId, identityHash, recipient, BOND_NAME);
+
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_emitsMetadataUpdate() public {
+        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectEmit(false, false, false, true, address(nft));
+        emit MetadataUpdate(tokenId);
 
         vm.prank(recipient);
         nft.bond(tokenId, BOND_NAME, att, sig);

@@ -9,6 +9,7 @@ import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 
 contract BuddyNFTTest is Test {
     event RendererUpdated(address indexed renderer);
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
     event AttestationSignerUpdated(address indexed signer);
     event BondingEnabled();
 
@@ -79,6 +80,9 @@ contract BuddyNFTTest is Test {
 
         vm.expectEmit(true, false, false, true, address(nft));
         emit RendererUpdated(newRenderer);
+
+        vm.expectEmit(false, false, false, true, address(nft));
+        emit BatchMetadataUpdate(0, type(uint256).max);
 
         vm.prank(owner);
         nft.setRenderer(newRenderer);

@@ -2,9 +2,12 @@
 pragma solidity ^0.8.24;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {IBuddyNFT} from "./interfaces/IBuddyNFT.sol";
 import {IBuddyRenderer} from "./interfaces/IBuddyRenderer.sol";
@@ -14,7 +17,7 @@ import {Mulberry32} from "./libraries/Mulberry32.sol";
 /// @title BuddyNFT
 /// @notice Soulbound ERC721 for Claude Code Buddy companions on Base L2.
 /// @dev Hatches custodially to the contract and bonds later via attestation.
-contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
+contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906 {
     uint256 public constant MAX_NAME_LENGTH = 14;
 
     /// @notice Immutable address of the cold ECDSA key used to sign authorship
@@ -119,6 +122,12 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
         return _nextTokenId - 1;
     }
 
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
+        // EIP-4906 id (0x49064906) is hand-derived from the two event selectors;
+        // type(IERC4906).interfaceId would be 0x00000000 since the interface declares no functions.
+        return interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
+    }
+
     function getStage(uint256 tokenId) external view override returns (IBuddyNFT.OwnershipStage) {
         _requireOwned(tokenId);
         return _tokenStages[tokenId];
@@ -190,6 +199,8 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
 
         _rendererAddress = newRenderer;
         emit RendererUpdated(newRenderer);
+        // Full-collection renderer swap; OpenSea/indexers recognize this range.
+        emit BatchMetadataUpdate(0, type(uint256).max);
     }
 
     function renounceOwnership() public override onlyOwner {
@@ -271,6 +282,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
         _transfer(address(this), msg.sender, tokenId);
         _tokenStages[tokenId] = IBuddyNFT.OwnershipStage.Bonded;
 
+        emit MetadataUpdate(tokenId);
         emit BuddyBonded(tokenId, _tokenIdentityHashes[tokenId], msg.sender, name);
     }
 
@@ -293,11 +305,11 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT {
     // Soulbound Enforcement
     // -------------------------------------------------------------------------
 
-    function approve(address, uint256) public pure override {
+    function approve(address, uint256) public pure override(ERC721, IERC721) {
         revert Soulbound();
     }
 
-    function setApprovalForAll(address, bool) public pure override {
+    function setApprovalForAll(address, bool) public pure override(ERC721, IERC721) {
         revert Soulbound();
     }
 
