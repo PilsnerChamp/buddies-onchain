@@ -8,6 +8,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 
 contract BuddyNFTTest is Test {
+    string internal constant CONTRACT_URI_PREFIX = "data:application/json;utf8,";
+
     event RendererUpdated(address indexed renderer);
     event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
     event AttestationSignerUpdated(address indexed signer);
@@ -33,6 +35,20 @@ contract BuddyNFTTest is Test {
     function test_setsCollectionMetadata() public view {
         assertEq(nft.name(), "Buddies Onchain");
         assertEq(nft.symbol(), "BUDDY");
+    }
+
+    function test_contractURI_returnsUtf8CollectionMetadata() public view {
+        string memory uri = nft.contractURI();
+        assertTrue(_startsWith(uri, CONTRACT_URI_PREFIX));
+
+        string memory json = _afterPrefix(uri, CONTRACT_URI_PREFIX);
+        assertEq(vm.parseJsonString(json, ".name"), "Buddies Onchain");
+        assertEq(
+            vm.parseJsonString(json, ".description"),
+            "One Claude account. One buddy. Lives on-chain. A soulbound identity artifact for Claude Code developers: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. An unofficial community project, not endorsed by Anthropic."
+        );
+        assertEq(vm.parseJsonString(json, ".image"), "https://buddies-onchain.xyz/favicon.svg");
+        assertEq(vm.parseJsonString(json, ".external_link"), "https://buddies-onchain.xyz");
     }
 
     function test_setsInitialOwnerAndRenderer() public view {
@@ -210,5 +226,37 @@ contract BuddyNFTTest is Test {
         nft.setAttestationSigner(signer);
         nft.enableBonding();
         vm.stopPrank();
+    }
+
+    function _afterPrefix(string memory value, string memory prefix) internal pure returns (string memory) {
+        bytes memory valueBytes = bytes(value);
+        bytes memory prefixBytes = bytes(prefix);
+
+        if (!_startsWith(value, prefix)) {
+            revert("missing prefix");
+        }
+
+        bytes memory tail = new bytes(valueBytes.length - prefixBytes.length);
+        for (uint256 i; i < tail.length; ++i) {
+            tail[i] = valueBytes[i + prefixBytes.length];
+        }
+        return string(tail);
+    }
+
+    function _startsWith(string memory value, string memory prefix) internal pure returns (bool) {
+        bytes memory valueBytes = bytes(value);
+        bytes memory prefixBytes = bytes(prefix);
+
+        if (prefixBytes.length > valueBytes.length) {
+            return false;
+        }
+
+        for (uint256 i; i < prefixBytes.length; ++i) {
+            if (valueBytes[i] != prefixBytes[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

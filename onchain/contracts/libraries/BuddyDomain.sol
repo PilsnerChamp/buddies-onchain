@@ -2,6 +2,8 @@
 pragma solidity ^0.8.24;
 
 library BuddyDomain {
+    string internal constant SITE_ORIGIN = "https://buddies-onchain.xyz";
+
     uint8 internal constant SPECIES_COUNT = 18;
     uint8 internal constant RARITY_COUNT = 5;
     uint8 internal constant EYE_COUNT = 6;

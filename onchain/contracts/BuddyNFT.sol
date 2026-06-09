@@ -13,6 +13,7 @@ import {IBuddyNFT} from "./interfaces/IBuddyNFT.sol";
 import {IBuddyRenderer} from "./interfaces/IBuddyRenderer.sol";
 import {IERC5192} from "./interfaces/IERC5192.sol";
 import {AuthorAttestation} from "./libraries/AuthorAttestation.sol";
+import {BuddyDomain} from "./libraries/BuddyDomain.sol";
 import {Mulberry32} from "./libraries/Mulberry32.sol";
 
 /// @title BuddyNFT
@@ -121,6 +122,20 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
 
     function totalSupply() external view returns (uint256) {
         return _nextTokenId - 1;
+    }
+
+    function contractURI() external pure returns (string memory) {
+        return string.concat(
+            "data:application/json;utf8,",
+            '{"name":"Buddies Onchain","description":"',
+            "One Claude account. One buddy. Lives on-chain. A soulbound identity artifact for Claude Code developers: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. An unofficial community project, not endorsed by Anthropic.",
+            '","image":"',
+            BuddyDomain.SITE_ORIGIN,
+            "/favicon.svg",
+            '","external_link":"',
+            BuddyDomain.SITE_ORIGIN,
+            '"}'
+        );
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
