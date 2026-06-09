@@ -131,7 +131,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
             "One Claude account. One buddy. Lives on-chain. A soulbound identity artifact for Claude Code developers: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. An unofficial community project, not endorsed by Anthropic.",
             '","image":"',
             BuddyDomain.SITE_ORIGIN,
-            "/favicon.svg",
+            "/og-home.svg",
             '","external_link":"',
             BuddyDomain.SITE_ORIGIN,
             '"}'
