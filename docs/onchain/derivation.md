@@ -97,7 +97,7 @@ Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → iden
 
 ## Verifying parity
 
-WyHash now guards the client-side seed only — `hatch` no longer calls it. `WyHash.t.sol` tests the primitive against `wyhash-vectors.json` (preimage `lowercase(uuid) + "friend-2026-401"`). Mulberry32 parity guards the on-chain trait step.
+WyHash guards the client-side seed only — `hatch` never calls it. `WyHash.t.sol` tests the primitive against `wyhash-vectors.json` (preimage `lowercase(uuid) + "friend-2026-401"`). Mulberry32 parity guards the on-chain trait step.
 
 ```bash
 # Regenerate TypeScript-side vectors

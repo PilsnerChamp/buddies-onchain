@@ -39,7 +39,7 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 | `/bond` | `<Bond />` | no |
 | `*` | `<Navigate to="/" replace />` | no |
 
-Routes in `site/src/config/routes.ts`. The `/view/:uuid` route is removed; no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric or `tokenId <= 0` renders NotFound, not a redirect.
+Routes in `site/src/config/routes.ts`. No route carries a UUID — no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric or `tokenId <= 0` renders NotFound, not a redirect.
 
 ### Hatch fragment
 

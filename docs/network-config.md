@@ -53,9 +53,9 @@ Address fields are optional. A pre-deploy manifest may omit `addresses` entirely
 
 Missing manifest for the active chain is soft — `getActiveNetwork()` returns `buddyNft: null` and consumers fall back to the cold/pre-deploy path. Filename-vs-payload chainId mismatch and malformed JSON throw.
 
-### Hash-only hatch requires a fresh deploy
+### ABI/selector parity
 
-The hash-only `hatch(bytes32 identityHash, uint32 prngSeed)` signature changes the `hatch` function selector. Any manifest pointing at an older single-arg `hatch(bytes32)` (or the earlier `hatch(string)`) contract is incompatible — the site and plugin built against the new ABI will fail to hatch against it. The curated ABI in `shared/buddyNftAbi.ts` carries the two-arg `hatch`; both site and plugin import it. The `buddyPrngSeed(uint256)` view lives in the on-chain `IBuddyNFT` interface, not the curated subset — no client reads it. Ship a fresh contract deploy and a new `<chainId>.json` manifest before publishing the new site/plugin. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash are unchanged, so wallet/marketplace interface detection is unaffected.
+The contract a `<chainId>.json` manifest points at must expose the same `hatch` selector the site and plugin are built against, or hatch fails. Both clients import the curated ABI in `shared/buddyNftAbi.ts`, which carries `hatch(bytes32 identityHash, uint32 prngSeed)`; a manifest pointing at a contract with a different `hatch` signature is incompatible. The `buddyPrngSeed(uint256)` view lives in the on-chain `IBuddyNFT` interface, not the curated subset — no client reads it. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash sit outside the `hatch` path, so wallet and marketplace interface detection is independent of it.
 
 ### Commit policy
 

@@ -146,7 +146,7 @@ The fixed `2 leading + 2 trailing` spaces lift the 13-byte hat row to 17 bytes. 
 
 ### Hat-substitution gate (canonical flicker)
 
-The substitution check at `BuddyRenderer.sol:429` is:
+The substitution check at `BuddyRenderer.sol:593` is:
 
 ```solidity
 if (row == 0 && traits.hat != 0 && _isBlankRow(rawRow)) { … }
@@ -362,7 +362,7 @@ What this catches: if the predicate ever returns false for a 4-row eligible hatl
 
 Visual outcome:
 ```
-y=125     \^^^/         ← crown (substituted into duck's blank row 0 by the hat-substitution gate at BuddyRenderer.sol:429)
+y=125     \^^^/         ← crown (substituted into duck's blank row 0 by the hat-substitution gate at BuddyRenderer.sol:593)
 y=175       __          ← duck beak (50px gap, full row pitch)
 y=225     <(✦ )___      ← duck head
 y=275       (  ._>      ← body
@@ -419,7 +419,7 @@ What you'd see during play (the canonical hat-flicker behavior):
 - Frame 2: **crown momentarily disappears**, replaced by `~    ~` nostril breath for one tick (~500ms)
 - Frame 0 returns: crown is back
 
-The substitution gate at `BuddyRenderer.sol:429` checks `_isBlankRow(rawRow)` per-frame at render time. For frame 2's non-blank row 0, the hat substitution is skipped — the dragon's own row-0 content wins. This is the deliberate Claude Code preservation behavior — Alice's crowned dragon momentarily snorts the crown aside and we keep that quirk on chain.
+The substitution gate at `BuddyRenderer.sol:593` checks `_isBlankRow(rawRow)` per-frame at render time. For frame 2's non-blank row 0, the hat substitution is skipped — the dragon's own row-0 content wins. This is the deliberate Claude Code preservation behavior — Alice's crowned dragon momentarily snorts the crown aside and we keep that quirk on chain.
 
 What this catches: same predicate validation as case 3, plus indirect coverage that hatted dragons' y-coords match hatless dragons' y-coords (identical 5-row layout).
 
@@ -438,7 +438,7 @@ Six fixtures at the top of `selfCheck`:
 - 17-byte row with reserved `0` eye sentinel → expected pass
 - 17-byte row with multi-byte `´` (which counts as 2 bytes despite occupying 1 visible column) → expected pass
 - 16-byte and 18-byte rows → expected fail (one short / one long)
-- Lone `{` and `}` → expected pass (no longer brace-based eye tokens to confuse)
+- Lone `{` and `}` → expected pass (not eye tokens; the eye sentinel is ASCII `0`)
 
 Catches: byte-width regressions in the row validation logic.
 

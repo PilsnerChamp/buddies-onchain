@@ -42,7 +42,7 @@ The plugin re-derives traits off-chain for sleeping-frame rendering. Two parity 
 
 | Domain | TS source | Solidity source |
 |---|---|---|
-| wyhash | `bone-deriver.ts::wyhash` | `onchain/contracts/libraries/WyHash.sol` (primitive parity; `hatch` no longer calls it) |
+| wyhash | `bone-deriver.ts::wyhash` | `onchain/contracts/libraries/WyHash.sol` (primitive parity only; `hatch` does not call it — the client supplies the seed) |
 | Mulberry32 | `bone-deriver.ts::makeMulberry32` | `onchain/contracts/libraries/Mulberry32.sol` |
 
 The seed step (`wyhash`) is client-side on the mint path — the contract stores the seed and never recomputes it. WyHash parity stays guarded against `WyHash.t.sol` so the plugin's seed matches what any client would compute.
