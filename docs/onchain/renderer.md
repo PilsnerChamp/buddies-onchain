@@ -258,7 +258,9 @@ Mobile wallet rendering is structurally unreliable for this NFT shape. Target su
 The decoded `data:application/json` payload carries `name`, `description`, `image`, `attributes`, and `external_url`.
 
 - `external_url` — `https://buddies-onchain.xyz/view/<tokenId>` (tokenId form, no account UUID). Canonical buddy route; see `docs/site/architecture.md`.
-- The 5 numeric stat attributes (Debugging, Patience, Chaos, Wisdom, Snark) each emit `"display_type":"number"` with `"max_value":100`, so marketplaces render ratio bars. String traits (rarity, species, etc.) carry no `max_value`.
+- `attributes` is a 12-entry array in fixed order: `Species`, `Rarity`, `Eyes`, `Hat`, `Shiny`, `Stage`, `Provider` (index 6), then the 5 numeric stats.
+- `Provider` carries the self-declared label from `BuddyNFT.buddyProvider(tokenId)`, read via the `IBuddyNFT` view and trimmed of its null-padding tail. `"claude"` for v1 buddies.
+- The 5 numeric stat attributes (Debugging, Patience, Chaos, Wisdom, Snark) each emit `"display_type":"number"` with `"max_value":100`, so marketplaces render ratio bars. String traits (rarity, species, provider, etc.) carry no `max_value`.
 
 Collection-level metadata (`name`, `description`, `image`, `external_link`) comes from `BuddyNFT.contractURI()`, not the renderer — see `docs/onchain/contract.md`.
 

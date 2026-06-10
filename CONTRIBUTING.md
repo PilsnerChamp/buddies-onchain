@@ -1,6 +1,6 @@
 # Contributing
 
-Solo-indie project. Issues welcome. PRs accepted; review on a best-effort basis.
+Issues welcome. PRs accepted and reviewed on a best-effort basis — maintainer bandwidth is limited.
 
 MIT — contributions assumed under the same license. No CLA.
 

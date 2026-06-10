@@ -46,7 +46,7 @@
 
   <!-- tagline: canonical Block E split at sentence boundary, 2 lines inside frame -->
   <g id="tagline" text-anchor="middle">
-    <text class="tag" x="600" y="480">One Claude account. One buddy.</text>
+    <text class="tag" x="600" y="480">One account. One buddy.</text>
     <text class="tag" x="600" y="530">Lives on-chain. No host. No takedown.</text>
   </g>
 </svg>

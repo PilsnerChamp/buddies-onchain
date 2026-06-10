@@ -12,7 +12,7 @@ Claude Code plugin that emits `/buddy-onchain` deep-links based on on-chain stat
 - `lookup-payload.ts` — formats the rendered deep-link block.
 - `network.ts` — reads `BUDDY_NETWORK` and merges `shared/networks.ts` with `plugin/deployments/<chainId>.json`. Lazy.
 - `publicClient.ts` — viem `publicClient` over the active network's RPC. Lazy singleton.
-- `bone-deriver.ts` — TS-side trait derivation. `deriveTraitSeed(uuid) = wyhash(lowercase(uuid) + "friend-2026-401")` returns the `uint32` seed the contract stores. The `bytes32` identity hash comes from the shared `computeIdentityHash`, not from here. The plugin computes both off the same UUID and emits both in the `/hatch` fragment.
+- `bone-deriver.ts` — TS-side trait derivation. `deriveTraitSeed(uuid) = wyhash(lowercase(uuid) + "friend-2026-401")` returns the `uint32` seed the contract stores. The `bytes32` identity hash comes from the shared `computeIdentityHash`, not from here. The plugin computes both off the same UUID and emits both in the `/hatch` fragment, plus the fixed `provider=claude` label (`CLAUDE_PROVIDER` in `shared/providerBytes16.ts`).
 - `config-reader.ts` — reads `~/.claude.json`. Extracts `oauthAccount.accountUuid`.
 - `session-start.ts`, `stop-hook.ts`, `ambient.ts`, `sleeping-frame.ts`, `sprite-decorations.ts` — ambient-render pipeline.
 - `buddy-state.ts`, `effective-state.ts`, `safe-json-store.ts`, `drift-flag.ts` — local state at `~/.claude/plugins/buddy-onchain/.buddy-state` (override base with `CLAUDE_CONFIG_DIR`).
@@ -30,11 +30,11 @@ For `/buddy-onchain` with no args:
    - `tokenId === 0n` → `cold-miss`.
    - `tokenId > 0n` → `warm-hatched`.
 3. `lookup-payload.ts` formats the deep-link:
-   - cold → `https://buddies-onchain.xyz/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>` (fragment, not query — the raw UUID never crosses the HTTP wire)
+   - cold → `https://buddies-onchain.xyz/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>&provider=claude` (fragment, not query — the raw UUID never crosses the HTTP wire)
    - warm → `https://buddies-onchain.xyz/view/<tokenId>` (numeric; no UUID in the URL)
 4. The hook emits `additionalContext` JSON. Claude Code injects it into the session.
 
-The plugin computes both hatch args off the UUID and emits them in the fragment. The dApp forwards them to `hatch` verbatim — it never re-derives either. Identity hash: shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`, also passed to `getTokenIdByIdentity` for the warm/cold check. Trait seed: `bone-deriver.ts::deriveTraitSeed(uuid)`. UUID is `trim().toLowerCase()` before both derivations. Only a UUID that passes shared v4 validation (`assertCanonicalV4Uuid`) is used — never a fallback or placeholder. Site origin: `local` → `http://localhost:5173`; everything else → `https://buddies-onchain.xyz`.
+The plugin computes the two derived hatch args off the UUID and emits them in the fragment, alongside the fixed `provider=claude` label. The dApp forwards all three to `hatch` verbatim — it never re-derives any. Identity hash: shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`, also passed to `getTokenIdByIdentity` for the warm/cold check. Trait seed: `bone-deriver.ts::deriveTraitSeed(uuid)`. Provider: `CLAUDE_PROVIDER` from `shared/providerBytes16.ts`. UUID is `trim().toLowerCase()` before both derivations. Only a UUID that passes shared v4 validation (`assertCanonicalV4Uuid`) is used — never a fallback or placeholder. Site origin: `local` → `http://localhost:5173`; everything else → `https://buddies-onchain.xyz`.
 
 ## Cross-domain parity
 

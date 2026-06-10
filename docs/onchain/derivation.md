@@ -6,10 +6,10 @@ Deterministic pipeline from `accountUuid` to a trait seed, then to traits. Same 
 
 ```
 lowercase accountUuid
-  -> wyhash(uuid || "friend-2026-401")  -> 32-bit prngSeed   (client-side)
-  -> hatch(identityHash, prngSeed)       -> seed stored on-chain
-  -> Mulberry32                          -> floats in [0, 1)
-  -> deriveTraits                        -> { rarity, species, eye, hat, shiny, stats }
+  -> wyhash(uuid || "friend-2026-401")       -> 32-bit prngSeed   (client-side)
+  -> hatch(identityHash, prngSeed, provider) -> seed stored on-chain
+  -> Mulberry32                              -> floats in [0, 1)
+  -> deriveTraits                            -> { rarity, species, eye, hat, shiny, stats }
 ```
 
 `identityHash` is a separate, parallel derivation off the same UUID — the privacy, lookup, and uniqueness key. It plays no part in trait derivation. See [Identity hash vs PRNG seed](#identity-hash-vs-prng-seed).
@@ -77,6 +77,16 @@ prngSeed     = wyhash(lowercase(accountUuid) || "friend-2026-401") & 0xFFFFFFFF
 ```
 
 `identityHash` is the privacy, lookup, and uniqueness key — never an input to traits. `prngSeed` is the sole trait input. Uniqueness is enforced on `identityHash`, not `prngSeed`. Two different UUIDs that happen to collide on `prngSeed` get the same traits but distinct tokens.
+
+### Domain tag per provider
+
+The `identityHash` domain tag carries a provider slug: `buddies-onchain:identity:<provider>:v1`. The provider label is also passed to `hatch` as a separate `bytes16` arg (see `docs/onchain/contract.md`). The hashing itself is identical across providers — only the slug differs.
+
+| Provider | Domain tag | Status |
+|---|---|---|
+| `claude` | `buddies-onchain:identity:claude:v1` | live (v1) |
+
+The trait seed (`prngSeed`) salt is `friend-2026-401` and does not vary by provider — provider enters neither derivation.
 
 ## UUID validation
 

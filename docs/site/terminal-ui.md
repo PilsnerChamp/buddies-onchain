@@ -239,12 +239,12 @@ STATUS reads `not found · no buddy for this token on this network`. DESCRIPTION
 The plugin handoff arrives in the URL fragment, never the query string and never as a raw UUID:
 
 ```
-/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>
+/hatch#identityHash=0x<64 lowercase hex>&prngSeed=<decimal uint32>&provider=claude
 ```
 
-The fragment-parse/validate/scrub owner is in `App.tsx`, not the hatch surface. On arrival it reads the fragment, validates `identityHash` (`0x` + 64 hex) and `prngSeed` (a `uint32`), synchronously `replaceState`s the URL to bare `/hatch`, and passes both values to the surface as props. The surface never re-reads the URL — after the scrub it carries no fragment.
+The fragment-parse/validate/scrub owner is in `App.tsx`, not the hatch surface. On arrival it reads the fragment, validates `identityHash` (`0x` + 64 hex), `prngSeed` (a `uint32`), and `provider` (encodable to `bytes16`), synchronously `replaceState`s the URL to bare `/hatch`, and passes the values to the surface as props. The surface never re-reads the URL — after the scrub it carries no fragment.
 
-Missing or malformed `identityHash`/`prngSeed`, or the legacy `#accountUuid=` form → redirect to `/`. The surface forwards both values to `hatch(bytes32, uint32)` unchanged; it derives nothing.
+Missing or malformed `identityHash`/`prngSeed`/`provider`, or the legacy `#accountUuid=` form → redirect to `/`. The surface forwards the values to `hatch(bytes32, uint32, bytes16)` unchanged; it derives nothing.
 
 The REQUIREMENTS section shows a `handoff` row valued `identity hash + trait seed` with status `connected` — a presence indicator. Neither value is echoed into copy. See [`docs/site/architecture.md`](architecture.md#hatch-fragment).
 

@@ -1,6 +1,6 @@
 # BuddyNFT contract
 
-Soulbound on-chain identity record. Permissionless `hatch(identityHash, prngSeed)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
+Soulbound on-chain identity record. Permissionless `hatch(identityHash, prngSeed, provider)`. Two-stage lifecycle: `Hatched` (implemented) and `Bonded` (dormant in v1). Fully on-chain SVG renderer.
 
 ## Stage labels
 
@@ -9,18 +9,31 @@ User-facing: `Hatched`, `Bonded`. Enum identifiers (internal): `Custodial`, `Bon
 ## Hatch
 
 ```solidity
-function hatch(bytes32 identityHash, uint32 prngSeed) external returns (uint256 tokenId);
+function hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider) external returns (uint256 tokenId);
 ```
 
-No authorization signature. Anyone can call `hatch()` and pay gas to hatch any non-zero identity hash. Caller supplies both args. The contract stores `prngSeed` and derives traits from it; it does not derive the seed itself. Compute both client-side — see [`docs/onchain/derivation.md`](derivation.md). On-chain steps:
+No authorization signature. Anyone can call `hatch()` and pay gas to hatch any non-zero identity hash. Caller supplies all three args. The contract stores `prngSeed` and derives traits from it; it does not derive the seed itself. Compute `identityHash` and `prngSeed` client-side — see [`docs/onchain/derivation.md`](derivation.md). On-chain steps:
 
 1. Revert `InvalidIdentityHash` if `identityHash == bytes32(0)`. `prngSeed == 0` is valid.
 2. Revert `AlreadyHatched` if `_minted[identityHash]`.
-3. `traits = Mulberry32.deriveTraits(prngSeed)`.
-4. `tokenId = _nextTokenId++`.
-5. Write all per-token mappings before mint, including `_tokenPrngSeeds[tokenId] = prngSeed`. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
-6. `_mint(address(this), tokenId)` — the contract mints the token to itself.
-7. Emit `Awakened(tokenId, identityHash, msg.sender)`.
+3. Revert `InvalidProvider` if `provider` fails the validation rules below.
+4. `traits = Mulberry32.deriveTraits(prngSeed)`.
+5. `tokenId = _nextTokenId++`.
+6. Write all per-token mappings before mint, including `_tokenPrngSeeds[tokenId] = prngSeed` and `_tokenProviders[tokenId] = provider`. Stage starts `Custodial`. `_hatcher[tokenId] = msg.sender` (transparency only — not an ownership record, does not grant transfer rights).
+7. `_mint(address(this), tokenId)` — the contract mints the token to itself.
+8. Emit `Awakened(tokenId, identityHash, msg.sender, provider)`.
+
+### Provider
+
+`provider` is a self-declared `bytes16` label for the originating AI coding tool — `"claude"` for the v1 plugin. Stored verbatim, never validated against any registry. Same trust model as `identityHash` and `prngSeed`: the chain attests it stays consistent, not that the label is true.
+
+Validation (`InvalidProvider` on any breach):
+
+- First byte non-null — the empty value is rejected.
+- Allowed bytes `[a-z0-9-]` (lowercase ASCII, digits, hyphen).
+- Null padding tail-only — the first `0x00` begins the padding tail; every byte after it must stay null. No interior nulls.
+
+A full 16-byte value with no padding is valid. The renderer trims the padding tail for the `Provider` attribute.
 
 Token name is empty at hatch and never written here. Gas ~212,462.
 
@@ -57,13 +70,16 @@ Reverts `BondingNotEnabled` until the maintainer calls `enableBonding()`. When a
 
 ## Storage layout
 
-Per-token: `_tokenTraits` (`BuddyTraits`), `_tokenNames` (empty until `bond()`), `_tokenStages` (enum), `_tokenIdentityHashes` (`bytes32`), `_tokenPrngSeeds` (`uint32`), `_hatcher` (gas-payer, transparency only).
+Per-token: `_tokenTraits` (`BuddyTraits`), `_tokenNames` (empty until `bond()`), `_tokenStages` (enum), `_tokenIdentityHashes` (`bytes32`), `_tokenPrngSeeds` (`uint32`), `_tokenProviders` (`bytes16`, self-declared at hatch), `_hatcher` (gas-payer, transparency only).
 
 Identity: `_identityHashToTokenId` (`bytes32 -> uint256`, returns `0` on miss), `_minted` (`bytes32 -> bool`, uniqueness key).
 
 Global: `_rendererAddress` (own slot), `_attestationSigner` + `bondingEnabled` (packed in one slot — `address` 20 bytes + `bool` 1 byte fits within 32), `_nextTokenId` (token ids start at 1).
 
-View accessor: `IBuddyNFT.buddyPrngSeed(uint256) returns (uint32)` reads the stored seed back. Recompute traits off-chain with `Mulberry32.deriveTraits(buddyPrngSeed(id))` to confirm consistency.
+View accessors:
+
+- `IBuddyNFT.buddyPrngSeed(uint256) returns (uint32)` reads the stored seed back. Recompute traits off-chain with `Mulberry32.deriveTraits(buddyPrngSeed(id))` to confirm consistency.
+- `IBuddyNFT.buddyProvider(uint256) returns (bytes16)` reads the stored provider label back (raw, with padding). The renderer trims it for the `Provider` attribute.
 
 ## Maintainer-only functions
 

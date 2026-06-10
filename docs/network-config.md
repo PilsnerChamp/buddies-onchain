@@ -55,7 +55,7 @@ Missing manifest for the active chain is soft — `getActiveNetwork()` returns `
 
 ### ABI/selector parity
 
-The contract a `<chainId>.json` manifest points at must expose the same `hatch` selector the site and plugin are built against, or hatch fails. Both clients import the curated ABI in `shared/buddyNftAbi.ts`, which carries `hatch(bytes32 identityHash, uint32 prngSeed)`; a manifest pointing at a contract with a different `hatch` signature is incompatible. The `buddyPrngSeed(uint256)` view lives in the on-chain `IBuddyNFT` interface, not the curated subset — no client reads it. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash sit outside the `hatch` path, so wallet and marketplace interface detection is independent of it.
+The contract a `<chainId>.json` manifest points at must expose the same `hatch` selector the site and plugin are built against, or hatch fails. Both clients import the curated ABI in `shared/buddyNftAbi.ts`, which carries `hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider)`; a manifest pointing at a contract with a different `hatch` signature is incompatible. The `buddyPrngSeed(uint256)` and `buddyProvider(uint256)` views live in the on-chain `IBuddyNFT` interface; `buddyProvider` is in the curated subset (the site reads it for `/view`), `buddyPrngSeed` is not. ERC-165 interface ids and the `BondAttestation` EIP-712 typehash sit outside the `hatch` path, so wallet and marketplace interface detection is independent of it.
 
 ### Commit policy
 
