@@ -3,7 +3,7 @@
 **Status:** Regression gate (as-built)
 **Mirrors:** `onchain/script/CheckHatchCoverageUuids.s.sol`, `onchain/tools/renderer/regen-hatch-coverage-uuids.sh`, `onchain/test/helpers/HatchCoverageUuids.sol`, `onchain/test/BuddyNFTHatchCoverage.t.sol`
 
-Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, not a coverage matrix: one UUID per axis value where practical, covering species, rarity, eyes, hats, shiny, and hatless state without Cartesian or pairwise expansion. The gate has two parts: Solidity re-derives UUID → seed → traits (and UUID → identityHash) from `manifest.json`, and the Foundry test walks the real hash-only hatch path `BuddyNFT.hatch(identityHash, prngSeed)` → `tokenURI(tokenId)` with structural rendering assertions. No committed tokenURI/JSON/SVG byte fixtures live here.
+Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, not a coverage matrix: one UUID per axis value where practical, covering species, rarity, eyes, hats, shiny, and hatless state without Cartesian or pairwise expansion. The gate has two parts: Solidity re-derives UUID → seed → traits (and UUID → identityHash) from `manifest.json`, and the Foundry test walks the real hash-only hatch path `BuddyNFT.hatch(identityHash, prngSeed, provider)` → `tokenURI(tokenId)` with structural rendering assertions. No committed tokenURI/JSON/SVG byte fixtures live here.
 
 ## Suite contents
 

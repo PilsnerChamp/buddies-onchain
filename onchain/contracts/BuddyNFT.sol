@@ -39,6 +39,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     error ZeroAddress();
     error NameTooLong(uint256 length);
     error InvalidIdentityHash();
+    error InvalidProvider();
     error AlreadyHatched();
     error BondingNotEnabled();
     error BondingAlreadyEnabled();
@@ -61,7 +62,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     // Events
     // -------------------------------------------------------------------------
 
-    event Awakened(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed hatcher);
+    event Awakened(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed hatcher, bytes16 provider);
     event BuddyBonded(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name);
     event RendererUpdated(address indexed renderer);
     event AttestationSignerUpdated(address indexed signer);
@@ -83,6 +84,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     mapping(uint256 tokenId => IBuddyNFT.OwnershipStage) private _tokenStages;
     mapping(uint256 tokenId => bytes32) private _tokenIdentityHashes;
     mapping(uint256 tokenId => uint32) private _tokenPrngSeeds;
+    mapping(uint256 tokenId => bytes16) private _tokenProviders;
     mapping(bytes32 identityHash => uint256 tokenId) private _identityHashToTokenId;
     mapping(bytes32 identityHash => bool) private _minted;
     mapping(uint256 tokenId => address) private _hatcher;
@@ -128,7 +130,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
         return string.concat(
             "data:application/json;utf8,",
             '{"name":"Buddies Onchain","description":"',
-            "One Claude account. One buddy. Lives on-chain. A soulbound identity artifact for Claude Code developers: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. An unofficial community project, not endorsed by Anthropic.",
+            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. Born from the Claude Code terminal buddy. An unofficial community project, not endorsed by Anthropic.",
             '","image":"',
             BuddyDomain.SITE_ORIGIN,
             "/og-home.svg",
@@ -181,6 +183,11 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     function buddyPrngSeed(uint256 tokenId) external view override returns (uint32) {
         _requireOwned(tokenId);
         return _tokenPrngSeeds[tokenId];
+    }
+
+    function buddyProvider(uint256 tokenId) external view override returns (bytes16) {
+        _requireOwned(tokenId);
+        return _tokenProviders[tokenId];
     }
 
     function hatcher(uint256 tokenId) external view returns (address) {
@@ -238,7 +245,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     // Hatch & Bond
     // -------------------------------------------------------------------------
 
-    function hatch(bytes32 identityHash, uint32 prngSeed) external returns (uint256 tokenId) {
+    function hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider) external returns (uint256 tokenId) {
         if (identityHash == bytes32(0)) {
             revert InvalidIdentityHash();
         }
@@ -247,12 +254,15 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
             revert AlreadyHatched();
         }
 
+        _validateProvider(provider);
+
         IBuddyNFT.BuddyTraits memory traits = _deriveTraits(prngSeed);
 
         tokenId = _nextTokenId++;
 
         _tokenTraits[tokenId] = traits;
         _tokenPrngSeeds[tokenId] = prngSeed;
+        _tokenProviders[tokenId] = provider;
         _tokenIdentityHashes[tokenId] = identityHash;
         _identityHashToTokenId[identityHash] = tokenId;
         _minted[identityHash] = true;
@@ -261,7 +271,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
 
         _mint(address(this), tokenId);
 
-        emit Awakened(tokenId, identityHash, msg.sender);
+        emit Awakened(tokenId, identityHash, msg.sender, provider);
     }
 
     function bond(uint256 tokenId, string calldata name, BondAttestation calldata attestation, bytes calldata signature)
@@ -357,6 +367,26 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     function _validateName(string memory name_) internal pure {
         if (bytes(name_).length > MAX_NAME_LENGTH) {
             revert NameTooLong(bytes(name_).length);
+        }
+    }
+
+    /// @dev Provider label: lowercase ascii `[a-z0-9-]`, null-padded tail-only,
+    ///      first byte non-null (empty rejected). Stored verbatim; self-declared.
+    function _validateProvider(bytes16 provider) internal pure {
+        bool padding;
+        for (uint256 i = 0; i < 16; ++i) {
+            bytes1 c = provider[i];
+            if (c == 0x00) {
+                // First null begins the padding tail; the rest must stay null.
+                if (i == 0) revert InvalidProvider();
+                padding = true;
+            } else if (padding) {
+                // Non-null after a null is an interior null — reject.
+                revert InvalidProvider();
+            } else if (!((c >= 0x61 && c <= 0x7a) || (c >= 0x30 && c <= 0x39) || c == 0x2d)) {
+                // Not [a-z], [0-9], or '-'.
+                revert InvalidProvider();
+            }
         }
     }
 

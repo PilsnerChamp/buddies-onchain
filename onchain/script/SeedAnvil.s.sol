@@ -67,7 +67,7 @@ contract SeedAnvil is Script {
                 ++skipped;
                 continue;
             }
-            uint256 tokenId = buddyNft.hatch(identityHash, WyHash.hash(bytes(uuid), HATCH_SALT));
+            uint256 tokenId = buddyNft.hatch(identityHash, WyHash.hash(bytes(uuid), HATCH_SALT), "claude");
             console.log(string.concat("SEED_HATCHED ", uuid));
             console.log("  tokenId=%d", tokenId);
             console.log(string.concat("  /view/", uuid));

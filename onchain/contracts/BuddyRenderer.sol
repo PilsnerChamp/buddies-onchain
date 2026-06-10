@@ -31,7 +31,7 @@ contract BuddyRenderer is IBuddyRenderer {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable spriteFont;
 
-    string private constant DESCRIPTION = "One Claude account. One buddy. Lives on-chain. No host. No takedown.";
+    string private constant DESCRIPTION = "One account. One buddy. Lives on-chain. No host. No takedown.";
 
     uint256 private constant CHROME_FONT_SIZE = 18;
     uint256 private constant CHROME_ROW_X = 16;
@@ -197,13 +197,19 @@ contract BuddyRenderer is IBuddyRenderer {
         string memory buddyName = buddy.buddyName(tokenId);
         uint32 seed = buddy.buddyPrngSeed(tokenId);
         IBuddyNFT.OwnershipStage stage = buddy.getStage(tokenId);
+        // Provider pulled via the IBuddyNFT view like all other token data; the
+        // value is JSON metadata only (v1 art ignores it). Reading on demand
+        // keeps the IBuddyRenderer signature stable and lets a future renderer
+        // branch art per provider without a BuddyNFT redeploy.
+        string memory provider = _trimProvider(buddy.buddyProvider(tokenId));
 
         string memory svg =
             _buildSvg(_svgMetadataTitle(tokenId, traits, stage), keccak256(abi.encode(seed)), traits, stage);
         string memory image = string(
             abi.encodePacked("data:image/svg+xml;base64,", Base64.encode(bytes(svg)))
         );
-        string memory metadata = _buildMetadata(_metadataDisplayName(buddyName, tokenId), image, traits, stage, tokenId);
+        string memory metadata =
+            _buildMetadata(_metadataDisplayName(buddyName, tokenId), image, traits, stage, tokenId, provider);
 
         return string(
             abi.encodePacked("data:application/json;base64,", Base64.encode(bytes(metadata)))
@@ -245,7 +251,8 @@ contract BuddyRenderer is IBuddyRenderer {
         string memory image,
         IBuddyNFT.BuddyTraits memory traits,
         IBuddyNFT.OwnershipStage stage,
-        uint256 tokenId
+        uint256 tokenId,
+        string memory provider
     )
         internal
         pure
@@ -260,7 +267,7 @@ contract BuddyRenderer is IBuddyRenderer {
                 '","image":"',
                 image,
                 '","attributes":',
-                _buildAttributes(traits, stage),
+                _buildAttributes(traits, stage, provider),
                 ',"external_url":"',
                 BuddyDomain.SITE_ORIGIN,
                 "/view/",
@@ -271,7 +278,7 @@ contract BuddyRenderer is IBuddyRenderer {
         );
     }
 
-    function _buildAttributes(IBuddyNFT.BuddyTraits memory traits, IBuddyNFT.OwnershipStage stage)
+    function _buildAttributes(IBuddyNFT.BuddyTraits memory traits, IBuddyNFT.OwnershipStage stage, string memory provider)
         internal
         pure
         returns (string memory)
@@ -280,6 +287,8 @@ contract BuddyRenderer is IBuddyRenderer {
             abi.encodePacked(
                 "[",
                 _traitAttributes(traits, stage),
+                ",",
+                _stringAttribute("Provider", _jsonEscape(provider)),
                 ",",
                 _statAttributes(traits),
                 "]"
@@ -1080,6 +1089,23 @@ contract BuddyRenderer is IBuddyRenderer {
         }
 
         return string(output);
+    }
+
+    /// @dev Decodes a `bytes16` provider label to its string form, dropping the
+    ///      null-padding tail. `hatch` validation guarantees nulls are tail-only,
+    ///      so the first null is the end of the label.
+    function _trimProvider(bytes16 provider) internal pure returns (string memory) {
+        uint256 length;
+        while (length < 16 && provider[length] != 0x00) {
+            ++length;
+        }
+
+        bytes memory out = new bytes(length);
+        for (uint256 i = 0; i < length; ++i) {
+            out[i] = provider[i];
+        }
+
+        return string(out);
     }
 
     function _jsonEscape(string memory value) internal pure returns (string memory) {

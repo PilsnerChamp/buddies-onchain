@@ -201,11 +201,13 @@ contract BuddyNFTHatchCoverage is Test, HatchCoverageUuids, HatchHelper {
         _assertStringAttribute(json, 3, "Hat", _hatLabel(uint8(traits.hat)), uuid);
         _assertStringAttribute(json, 4, "Shiny", traits.shiny ? "Yes" : "No", uuid);
         _assertStringAttribute(json, 5, "Stage", "Hatched", uuid);
-        _assertUintAttribute(json, 6, "Debugging", traits.debugging, uuid);
-        _assertUintAttribute(json, 7, "Patience", traits.patience, uuid);
-        _assertUintAttribute(json, 8, "Chaos", traits.chaos, uuid);
-        _assertUintAttribute(json, 9, "Wisdom", traits.wisdom, uuid);
-        _assertUintAttribute(json, 10, "Snark", traits.snark, uuid);
+        // Coverage fixtures hatch via HatchHelper, which supplies the "claude" provider.
+        _assertStringAttribute(json, 6, "Provider", "claude", uuid);
+        _assertUintAttribute(json, 7, "Debugging", traits.debugging, uuid);
+        _assertUintAttribute(json, 8, "Patience", traits.patience, uuid);
+        _assertUintAttribute(json, 9, "Chaos", traits.chaos, uuid);
+        _assertUintAttribute(json, 10, "Wisdom", traits.wisdom, uuid);
+        _assertUintAttribute(json, 11, "Snark", traits.snark, uuid);
     }
 
     function _assertStringAttribute(

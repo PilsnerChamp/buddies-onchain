@@ -16,7 +16,7 @@ import {BondAttestationHelper} from "../test/helpers/BondAttestationHelper.sol";
 ///         `cast` invocation fills.
 /// @dev    Two keys: SIGNER_KEY signs the attestation only; RECIPIENT_KEY broadcasts
 ///         bond() because the contract enforces `attestation.recipient == msg.sender`.
-///         Assumes the token is already hatched (hatch via `cast send hatch(bytes32,uint32)`).
+///         Assumes the token is already hatched (hatch via `cast send hatch(bytes32,uint32,bytes16)`).
 ///
 ///         The post-broadcast require()s here run against SIMULATED state and are a
 ///         fast preflight only. The authoritative confirmation is a separate post-mine

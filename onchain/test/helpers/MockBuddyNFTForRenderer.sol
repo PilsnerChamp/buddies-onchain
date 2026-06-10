@@ -8,6 +8,7 @@ contract MockBuddyNFTForRenderer is IBuddyNFT {
     mapping(uint256 tokenId => string) private _names;
     mapping(uint256 tokenId => bytes32) private _identityHashes;
     mapping(uint256 tokenId => uint32) private _prngSeeds;
+    mapping(uint256 tokenId => bytes16) private _providers;
     mapping(uint256 tokenId => IBuddyNFT.OwnershipStage) private _stages;
 
     function setTraits(uint256 tokenId, IBuddyNFT.BuddyTraits calldata traits_) external {
@@ -24,6 +25,10 @@ contract MockBuddyNFTForRenderer is IBuddyNFT {
 
     function setPrngSeed(uint256 tokenId, uint32 prngSeed_) external {
         _prngSeeds[tokenId] = prngSeed_;
+    }
+
+    function setProvider(uint256 tokenId, bytes16 provider_) external {
+        _providers[tokenId] = provider_;
     }
 
     function setStage(uint256 tokenId, IBuddyNFT.OwnershipStage stage_) external {
@@ -44,6 +49,10 @@ contract MockBuddyNFTForRenderer is IBuddyNFT {
 
     function buddyPrngSeed(uint256 tokenId) external view override returns (uint32) {
         return _prngSeeds[tokenId];
+    }
+
+    function buddyProvider(uint256 tokenId) external view override returns (bytes16) {
+        return _providers[tokenId];
     }
 
     function getStage(uint256 tokenId) external view override returns (IBuddyNFT.OwnershipStage) {

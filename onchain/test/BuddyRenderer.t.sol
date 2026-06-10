@@ -17,7 +17,7 @@ contract BuddyRendererTest is Test {
 
     string internal constant JSON_PREFIX = "data:application/json;base64,";
     string internal constant SVG_PREFIX = "data:image/svg+xml;base64,";
-    string internal constant DESCRIPTION = "One Claude account. One buddy. Lives on-chain. No host. No takedown.";
+    string internal constant DESCRIPTION = "One account. One buddy. Lives on-chain. No host. No takedown.";
     string internal constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string internal constant FONT_PATH = "contract-data/fonts/chrome/BuddyFont.woff2";
     string internal constant RULE =
@@ -235,6 +235,32 @@ contract BuddyRendererTest is Test {
         string memory bondedJson = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
         assertEq(bondedJson.readString(".name"), unicode"Pilsner · Buddy Onchain #1");
         assertEq(bondedJson.readString(".attributes[5].value"), "Bonded");
+    }
+
+    function test_tokenURI_providerAttribute_trimsNullPadding() public {
+        // "claude" null-padded to bytes16 → attribute value "claude" (no nulls).
+        _setMockToken(1, _defaultTraits(), "", uint32(0xB1), IBuddyNFT.OwnershipStage.Custodial, "claude");
+
+        string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
+        assertEq(json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")), "claude");
+    }
+
+    function test_tokenURI_providerAttribute_fullSixteenBytesUnchanged() public {
+        // A full-width label has no padding to trim; the value passes through intact.
+        _setMockToken(1, _defaultTraits(), "", uint32(0xB2), IBuddyNFT.OwnershipStage.Custodial, "abcdefgh12345678");
+
+        string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
+        assertEq(json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")), "abcdefgh12345678");
+    }
+
+    function test_tokenURI_providerAttribute_orderingAfterStage() public {
+        // Provider sits between the trait block (Stage at [5]) and the stat block.
+        _setMockToken(1, _defaultTraits(), "", uint32(0xB3), IBuddyNFT.OwnershipStage.Custodial, "codex");
+
+        string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
+        assertEq(_attributeIndex(json, "Provider"), 6);
+        assertEq(json.readString(".attributes[6].trait_type"), "Provider");
+        assertEq(json.readString(".attributes[6].value"), "codex");
     }
 
     function test_tokenURI_rootTitleMetadata() public {
@@ -559,11 +585,23 @@ contract BuddyRendererTest is Test {
         uint32 prngSeed,
         IBuddyNFT.OwnershipStage stage
     ) internal {
+        _setMockToken(tokenId, traits, name, prngSeed, stage, "claude");
+    }
+
+    function _setMockToken(
+        uint256 tokenId,
+        IBuddyNFT.BuddyTraits memory traits,
+        string memory name,
+        uint32 prngSeed,
+        IBuddyNFT.OwnershipStage stage,
+        bytes16 provider
+    ) internal {
         mockBuddy.setTraits(tokenId, traits);
         mockBuddy.setName(tokenId, name);
         mockBuddy.setIdentityHash(tokenId, keccak256(abi.encodePacked("renderer-test-identity", tokenId)));
         mockBuddy.setPrngSeed(tokenId, prngSeed);
         mockBuddy.setStage(tokenId, stage);
+        mockBuddy.setProvider(tokenId, provider);
     }
 
     function _decodeJson(string memory tokenUri) internal pure returns (string memory) {
@@ -579,7 +617,7 @@ contract BuddyRendererTest is Test {
     }
 
     function _attributeIndex(string memory json, string memory traitType) internal pure returns (uint256) {
-        for (uint256 i; i < 11; ++i) {
+        for (uint256 i; i < 12; ++i) {
             string memory prefix = string.concat(".attributes[", vm.toString(i), "]");
             if (_stringEq(vm.parseJsonString(json, string.concat(prefix, ".trait_type")), traitType)) {
                 return i;

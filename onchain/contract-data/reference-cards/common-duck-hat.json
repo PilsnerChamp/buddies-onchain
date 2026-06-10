@@ -1,6 +1,6 @@
 {
   "name": "Buddy Onchain #1",
-  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown.",
+  "description": "One account. One buddy. Lives on-chain. No host. No takedown.",
   "image": "./common-duck-hat.svg",
   "attributes": [
     {
@@ -26,6 +26,10 @@
     {
       "trait_type": "Stage",
       "value": "Hatched"
+    },
+    {
+      "trait_type": "Provider",
+      "value": "claude"
     },
     {
       "display_type": "number",

@@ -19,7 +19,7 @@ contract MockRenderer is IBuddyRenderer {
 }
 
 contract BuddyNFTHatchTest is Test, HatchHelper {
-    event Awakened(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed hatcher);
+    event Awakened(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed hatcher, bytes16 provider);
 
     BuddyNFT internal nft;
     address internal owner;
@@ -46,7 +46,7 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
         bytes32 identityHash = _identityHash(TEST_UUID);
 
         vm.expectEmit(true, true, true, true, address(nft));
-        emit Awakened(1, identityHash, address(this));
+        emit Awakened(1, identityHash, address(this), CLAUDE_PROVIDER);
 
         _hatchUuid(nft, TEST_UUID);
     }
@@ -103,7 +103,7 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
     }
 
     function test_hatch_acceptsZeroPrngSeedAndStoresDerivedTraits() public {
-        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), 0);
+        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), 0, CLAUDE_PROVIDER);
 
         assertEq(nft.buddyPrngSeed(tokenId), 0);
 
@@ -186,7 +186,7 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
 
     function test_hatch_revertsInvalidIdentityHash_zero() public {
         vm.expectRevert(BuddyNFT.InvalidIdentityHash.selector);
-        nft.hatch(bytes32(0), _prngSeed(TEST_UUID));
+        nft.hatch(bytes32(0), _prngSeed(TEST_UUID), CLAUDE_PROVIDER);
     }
 
     // Note: v4 variant/shape acceptance is no longer an on-chain responsibility
@@ -261,5 +261,108 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
         vm.prank(stranger);
         uint256 tokenId2 = _hatchUuid(nft, "f47ac10b-58cc-4372-a567-0e02b2c3d479");
         assertEq(nft.hatcher(tokenId2), stranger);
+    }
+
+    // -------------------------------------------------------------------------
+    // Provider
+    // -------------------------------------------------------------------------
+
+    function test_hatch_storesProvider() public {
+        uint256 tokenId = _hatchUuid(nft, TEST_UUID);
+        assertEq(nft.buddyProvider(tokenId), CLAUDE_PROVIDER);
+    }
+
+    function test_hatch_acceptsFullSixteenByteProvider() public {
+        bytes16 provider = "abcdefgh12345678";
+        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), provider);
+        assertEq(nft.buddyProvider(tokenId), provider);
+    }
+
+    function test_hatch_acceptsHyphenAndDigits() public {
+        bytes16 provider = "gpt-4o-2024";
+        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), provider);
+        assertEq(nft.buddyProvider(tokenId), provider);
+    }
+
+    function test_hatch_emitsProvider() public {
+        bytes16 provider = "codex";
+        bytes32 identityHash = _identityHash(TEST_UUID);
+
+        vm.expectEmit(true, true, true, true, address(nft));
+        emit Awakened(1, identityHash, address(this), provider);
+
+        nft.hatch(identityHash, _prngSeed(TEST_UUID), provider);
+    }
+
+    function test_hatch_revertsProviderAllZero() public {
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), bytes16(0));
+    }
+
+    function test_hatch_revertsProviderUppercase() public {
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), "Claude");
+    }
+
+    function test_hatch_revertsProviderControlByte() public {
+        // Leading byte 0x01 is below the printable range.
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), bytes16(hex"01000000000000000000000000000000"));
+    }
+
+    function test_hatch_revertsProviderQuoteByte() public {
+        // Double-quote (0x22) would break JSON when later threaded into metadata.
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), bytes16(hex"22000000000000000000000000000000"));
+    }
+
+    function test_hatch_revertsProviderInteriorNull() public {
+        // "abc\x00def" padded — a non-null byte follows an interior null.
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), bytes16(hex"61626300646566000000000000000000"));
+    }
+
+    function test_hatch_revertsProviderInvalidSymbol() public {
+        // Underscore (0x5f) is not in [a-z0-9-].
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), "claude_v1");
+    }
+
+    function test_hatch_acceptsClaudeNullPadded() public {
+        // "claude" left-aligned, null-padded tail — the v1 canonical value.
+        bytes16 provider = "claude";
+        assertEq(provider, bytes16(hex"636c6175646500000000000000000000"), "claude null-padded layout");
+        uint256 tokenId = nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), provider);
+        assertEq(nft.buddyProvider(tokenId), provider);
+    }
+
+    // Fence-post coverage for _validateProvider: bytes adjacent to the accepted
+    // ranges [a-z]=0x61-0x7a, [0-9]=0x30-0x39, '-'=0x2d, plus the high-bit edge.
+    function test_hatch_revertsProviderBacktick() public {
+        _assertProviderByteReverts(0x60); // one below 'a'
+    }
+
+    function test_hatch_revertsProviderOpenBrace() public {
+        _assertProviderByteReverts(0x7b); // one above 'z'
+    }
+
+    function test_hatch_revertsProviderSlash() public {
+        _assertProviderByteReverts(0x2f); // one below '0'
+    }
+
+    function test_hatch_revertsProviderColon() public {
+        _assertProviderByteReverts(0x3a); // one above '9'
+    }
+
+    function test_hatch_revertsProviderHighBit() public {
+        _assertProviderByteReverts(0x80); // above 7-bit ascii
+    }
+
+    /// @dev Places `b` as the leading provider byte (null-padded tail) and
+    ///      asserts hatch reverts InvalidProvider.
+    function _assertProviderByteReverts(uint8 b) internal {
+        bytes16 provider = bytes16(bytes1(b));
+        vm.expectRevert(BuddyNFT.InvalidProvider.selector);
+        nft.hatch(_identityHash(TEST_UUID), _prngSeed(TEST_UUID), provider);
     }
 }

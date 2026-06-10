@@ -213,6 +213,9 @@ contract GenerateRendererPlayground is Script {
         mock.setIdentityHash(tokenId, keccak256(abi.encodePacked("playground-card-identity:", section, ":", slug)));
         mock.setPrngSeed(tokenId, prngSeed);
         mock.setStage(tokenId, stage);
+        // v1 plugin provider; without this the mock returns bytes16(0), which
+        // trims to "" — an on-chain-impossible value the validator rejects.
+        mock.setProvider(tokenId, "claude");
 
         string memory uri = renderer.tokenURI(address(mock), tokenId);
 

@@ -35,6 +35,9 @@ contract GenerateRendererCard is Script {
         mock.setIdentityHash(1, keccak256(abi.encodePacked("renderer-card-identity:", slug)));
         mock.setPrngSeed(1, prngSeed);
         mock.setStage(1, stage);
+        // v1 plugin provider; without this the mock returns bytes16(0), which
+        // trims to "" — an on-chain-impossible value the validator rejects.
+        mock.setProvider(1, "claude");
 
         console.log(string.concat("RENDERER_CARD ", slug, "|", label));
         console.log(string.concat("RENDERER_URI ", renderer.tokenURI(address(mock), 1)));
