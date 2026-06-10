@@ -6,13 +6,17 @@ import { View } from './routes/View';
 import { ViewToken } from './routes/ViewToken';
 import { useArrowRowNav } from './lib/useArrowRowNav';
 import { ROUTES } from './config/routes';
+import {
+  encodeProviderBytes16,
+  type ProviderBytes16,
+} from '~shared/providerBytes16';
 
 // URL map:
 //   `/`              → `<Home />`
-//   `/hatch`         → execution surface; reads identityHash + prngSeed from
-//                      the URL fragment, validates them, synchronously scrubs
-//                      the URL, then passes both as props. Missing/malformed →
-//                      redirect to `/`.
+//   `/hatch`         → execution surface; reads identityHash + prngSeed +
+//                      provider from the URL fragment, validates them,
+//                      synchronously scrubs the URL, then passes all three as
+//                      props. Missing/malformed → redirect to `/`.
 //                      Mounts under `<HatchLayout>` (lazy chunk) which wraps
 //                      the route in WagmiProvider + RainbowKitProvider.
 //   `/view`          → manual UUID lookup page
@@ -39,6 +43,7 @@ const Hatch = lazy(() =>
 type HatchHandoff = {
   identityHash: `0x${string}`;
   prngSeed: number;
+  provider: ProviderBytes16;
 };
 
 type HatchHandoffParse =
@@ -70,16 +75,26 @@ function readHashHandoff(hash: string): HatchHandoffParse {
   const params = new URLSearchParams(fragment);
   const rawIdentityHash = params.get('identityHash');
   const rawPrngSeed = params.get('prngSeed');
+  const rawProvider = params.get('provider');
   if (
     rawIdentityHash === null ||
     rawIdentityHash === '' ||
     rawPrngSeed === null ||
-    rawPrngSeed === ''
+    rawPrngSeed === '' ||
+    rawProvider === null ||
+    rawProvider === ''
   ) {
     return { ok: false, reason: 'missing' };
   }
 
   const prngSeed = parsePrngSeed(rawPrngSeed);
+  let provider: ProviderBytes16;
+  try {
+    provider = encodeProviderBytes16(rawProvider);
+  } catch {
+    return { ok: false, reason: 'malformed' };
+  }
+
   if (!isValidIdentityHash(rawIdentityHash) || prngSeed === null) {
     return { ok: false, reason: 'malformed' };
   }
@@ -89,6 +104,7 @@ function readHashHandoff(hash: string): HatchHandoffParse {
     handoff: {
       identityHash: rawIdentityHash,
       prngSeed,
+      provider,
     },
   };
 }
@@ -110,6 +126,7 @@ function HatchGate(): JSX.Element {
       <Hatch
         identityHash={parsed.handoff.identityHash}
         prngSeed={parsed.handoff.prngSeed}
+        provider={parsed.handoff.provider}
       />
     );
   }
@@ -119,6 +136,7 @@ function HatchGate(): JSX.Element {
       <Hatch
         identityHash={handoffRef.current.identityHash}
         prngSeed={handoffRef.current.prngSeed}
+        provider={handoffRef.current.provider}
       />
     );
   }

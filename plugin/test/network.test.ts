@@ -4,7 +4,7 @@
  *
  * Mirrors site-side `buildDeployments` semantics against the plugin's
  * fs-based loader (see `docs/network-config.md` § Deployment manifests):
- *   - real local deployment file (chainId 31337) loads + merges cleanly
+ *   - committed local deployment file (chainId 31337) loads + merges cleanly
  *   - missing deployment file => returns null (soft case)
  *   - filename↔payload chainId mismatch => throws (hard fail)
  *   - malformed JSON => throws (hard fail)
@@ -55,7 +55,7 @@ describe("ACTIVE_NETWORK — module-level env validation", () => {
 });
 
 describe("loadDeployment (real on-disk fixture)", () => {
-  test("loads onchain/deployments/31337.json with matching chainId", () => {
+  test("loads plugin/deployments/31337.json", () => {
     const d = loadDeployment(REAL_LOCAL_CHAIN_ID);
     expect(d).not.toBeNull();
     expect(d!.chainId).toBe(REAL_LOCAL_CHAIN_ID);
@@ -64,8 +64,8 @@ describe("loadDeployment (real on-disk fixture)", () => {
   });
 
   test("returns null for a chainId without a committed deployment file", () => {
-    // 8453 (mainnet) and 84532 (sepolia) currently have no deployment JSONs
-    // committed; pick one that's also unambiguously not local.
+    // 8453 (mainnet) currently has no deployment JSON committed; pick one
+    // that's also unambiguously not local.
     const d = loadDeployment(8453);
     // Only assert null if the file genuinely doesn't exist on disk; if a
     // mainnet deploy lands later this test should adapt rather than

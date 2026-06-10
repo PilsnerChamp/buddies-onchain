@@ -1,7 +1,8 @@
 // site/src/routes/Hatch.tsx
 //
-// `/hatch#identityHash=0x…&prngSeed=…` warm execution terminal. `App.tsx`
-// owns fragment parse/validate/scrub and passes the handoff values as props.
+// `/hatch#identityHash=0x…&prngSeed=…&provider=…` warm execution terminal.
+// `App.tsx` owns fragment parse/validate/scrub and passes the handoff values
+// as props.
 //
 // The bracketed-button lifecycle is gone, replaced by the action-prompt +
 // appended-stream model that mirrors cold's `> claude ▊` register. Running
@@ -47,6 +48,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useReadContract } from 'wagmi';
+import type { ProviderBytes16 } from '~shared/providerBytes16';
 
 import { ManPageRow } from '../components/ManPageRow';
 import { ManPageSection } from '../components/ManPageSection';
@@ -74,8 +76,8 @@ const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
 // explicit newlines; CSS `white-space: pre-wrap` preserves them.
 const HATCH_DESCRIPTION =
   'Stage 1 of buddy evolution. Your buddy is derived from your\n' +
-  'Claude account by the plugin and minted directly into the\n' +
-  'Buddies Onchain contract. One Claude account, one buddy,\n' +
+  'account by the plugin and minted directly into the\n' +
+  'Buddies Onchain contract. One account, one buddy,\n' +
   'one mint. Soulbound.';
 
 const GAS_WARNING_COPY =
@@ -148,23 +150,33 @@ function failureLineFor(category: HatchErrorCategory): string {
 export function Hatch({
   identityHash,
   prngSeed,
+  provider,
 }: {
   identityHash: `0x${string}`;
   prngSeed: number;
+  provider: ProviderBytes16;
 }): JSX.Element {
-  return <HatchSurface identityHash={identityHash} prngSeed={prngSeed} />;
+  return (
+    <HatchSurface
+      identityHash={identityHash}
+      prngSeed={prngSeed}
+      provider={provider}
+    />
+  );
 }
 
 // ── Main warm surface ────────────────────────────────────────────────────
 function HatchSurface({
   identityHash,
   prngSeed,
+  provider,
 }: {
   identityHash: `0x${string}`;
   prngSeed: number;
+  provider: ProviderBytes16;
 }): JSX.Element {
   const { state, onRunHatch, activeChainId, isConnected, walletAddress } =
-    useHatchFlow(identityHash, prngSeed);
+    useHatchFlow(identityHash, prngSeed, provider);
 
   // Active-chain contract for the preflight read.
   const preflightAddress = getNetwork(activeChainId)?.buddyNft ?? null;
@@ -280,7 +292,7 @@ function WarmHatchPage({
       <ManPageSection heading="REQUIREMENTS">
         <ManPageRow
           k="handoff"
-          v="identity hash + trait seed"
+          v="identity hash + trait seed + provider"
           status={<span className="status-text--ok">connected</span>}
         />
         <ManPageRow

@@ -1,6 +1,6 @@
 {
   "name": "buddy-onchain",
-  "description": "One Claude account. One buddy. Lives on-chain. No host. No takedown. Run /buddy-onchain to find your buddy; /buddy-onchain off|lite|full to tune ambient mode.",
+  "description": "One account. One buddy. Lives on-chain. No host. No takedown. Run /buddy-onchain to find your buddy; /buddy-onchain off|lite|full to tune ambient mode.",
   "version": "0.4.3",
   "author": {
     "name": "Buddies Onchain",

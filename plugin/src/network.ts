@@ -74,7 +74,7 @@ export const ACTIVE_NETWORK: NetworkConfig = new Proxy({} as NetworkConfig, {
 });
 
 // `Deployment` type duplicates the site-side type intentionally. The shape is
-// small (4 fields) and hoisting to `shared/` would require Vite + Bun + tsc
+// small (5 fields) and hoisting to `shared/` would require Vite + Bun + tsc
 // to all resolve the same module across project boundaries via the JSON-import
 // path. If duplication bites later, hoist to `shared/deployment.ts` then.
 export type Deployment = {

@@ -5,10 +5,8 @@
 // Two layers:
 //
 // 1. The live `deployments` map — built at module load from
-//    `import.meta.glob('../../../onchain/deployments/*.json', …)`. We assert
-//    that the committed `onchain/deployments/31337.json` lands at
-//    `deployments[31337]` with the canonical anvil values, and that
-//    pre-deploy chains (84532/8453) return `undefined`.
+//    `import.meta.glob('../../../onchain/deployments/*.json', …)`. Any
+//    committed manifest loads.
 //
 // 2. The pure `buildDeployments(modules)` helper — exercised with synthetic
 //    fixtures so the integrity-assertion branches (chainId mismatch + path
@@ -24,36 +22,17 @@ import {
 } from '../../src/config/deployment';
 
 describe('deployments (live glob)', () => {
-  it('loads the committed canonical anvil deployment at chainId 31337', () => {
+  it('loads the committed anvil deployment at chainId 31337', () => {
     const d = deployments[31337];
     expect(d).toBeDefined();
-    // Type narrowing for the rest of the assertions.
     if (d === undefined) throw new Error('unreachable');
 
     expect(d.chainId).toBe(31337);
     expect(d.deployer).toBe('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
     expect(d.buddyNftBlock).toBe(5);
-
-    // EIP-55 checksum guarantee (see `docs/network-config.md` § Deployment
-    // manifests): addresses are checksummed before write. Asserting exact
-    // case here — a future regression that lowercases the
-    // address (e.g. swaps in `cast --to-address` instead of
-    // `cast --to-checksum-address`) trips the byte-equality check.
     expect(d.addresses?.BuddyNFT).toBe(
       '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
     );
-  });
-
-  it('returns undefined for a pre-deploy chain (84532, base sepolia)', () => {
-    // No `onchain/deployments/84532.json` is committed pre-deploy-day.
-    // `import.meta.glob` enumerates only files that match at build time,
-    // so the slot is simply absent — the soft-miss case in
-    // `docs/network-config.md` § Deployment manifests. No throw, no error.
-    expect(deployments[84532]).toBeUndefined();
-  });
-
-  it('returns undefined for a pre-deploy chain (8453, base mainnet)', () => {
-    expect(deployments[8453]).toBeUndefined();
   });
 
   it('returns undefined for an unknown chainId', () => {

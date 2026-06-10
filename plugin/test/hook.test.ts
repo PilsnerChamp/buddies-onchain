@@ -19,13 +19,14 @@ import {
   COLD_NUDGE_LINE_1,
   COLD_NUDGE_LINE_2,
 } from "../src/sprite-decorations";
+import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 const DIST = join(PLUGIN_ROOT, "dist", "index.js");
 const RULESET_PREFIX = "BUDDIES ONCHAIN AMBIENT ACTIVE.";
 const HATCH_FRAGMENT =
-  "identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173";
+  `identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${HATCH_FRAGMENT}`;
 const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#${HATCH_FRAGMENT}`;
 
@@ -387,7 +388,7 @@ describe("hook — lookup route", () => {
     expect(context).toContain(LOCAL_HATCH_URL);
     expect(context).not.toContain(TEST_UUID);
     expect(context).toMatch(
-      /http:\/\/localhost:5173\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+/,
+      /http:\/\/localhost:5173\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude/,
     );
     expect(context).toContain("your buddy is sleeping - hatch it onchain:");
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");

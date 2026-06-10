@@ -9,10 +9,18 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { computeIdentityHash } from '~shared/computeIdentityHash';
+import {
+  decodeProviderBytes16,
+  encodeProviderBytes16,
+} from '~shared/providerBytes16';
 import { publicClient } from '../config/publicClient';
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
-import { decodeTokenUriToSvg } from './decodeTokenUri';
+import {
+  decodeTokenMetadataToSvg,
+  decodeTokenUri,
+  type DecodedTokenMetadata,
+} from './decodeTokenUri';
 
 type BuddyLookupErrorKind = 'tokenId' | 'tokenUri';
 
@@ -29,7 +37,7 @@ type BuddyLookupData =
 
 type BuddyTokenData =
   | { state: 'pre-deploy' }
-  | { state: 'hit'; svg: string };
+  | { state: 'hit'; svg: string; provider: string };
 
 export type BuddyLookupResult =
   | { status: 'idle' }
@@ -65,6 +73,17 @@ function reshapeError(error: Error): BuddyLookupErrorState {
     error,
     kind: 'tokenId',
   };
+}
+
+function providerFromMetadata(meta: DecodedTokenMetadata): string {
+  const attr = meta.attributes?.find(
+    (candidate) => candidate.trait_type === 'Provider',
+  );
+  if (!attr || typeof attr.value !== 'string') {
+    throw new Error('decodeTokenUri: missing Provider attribute');
+  }
+
+  return decodeProviderBytes16(encodeProviderBytes16(attr.value));
 }
 
 export function useBuddyLookup(
@@ -145,7 +164,12 @@ export function useBuddyToken(
       }
 
       try {
-        return { state: 'hit', svg: decodeTokenUriToSvg(tokenUri) };
+        const meta = decodeTokenUri(tokenUri);
+        return {
+          state: 'hit',
+          svg: decodeTokenMetadataToSvg(meta),
+          provider: providerFromMetadata(meta),
+        };
       } catch (cause) {
         throw new BuddyLookupError('tokenUri', cause);
       }

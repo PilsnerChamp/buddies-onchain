@@ -48,16 +48,16 @@ export function Bond(): JSX.Element {
 
       <ManPageSection heading="DESCRIPTION">
         <p className="route-prose">
-          Bonding would let the holder of a Claude account bind their hatched
+          Bonding would let the holder of an account bind their hatched
           buddy to a wallet they control. The token stays soulbound; only the
           custody address moves — from the Buddies Onchain contract to the
           account holder&apos;s wallet.
         </p>
         <p className="route-prose route-prose--spaced">
-          This requires proof that the wallet signer also controls the Claude
-          account behind the UUID. Anthropic does not expose a way to prove
-          that today. Until they do, the bond path in the contract stays
-          switched off.
+          This requires proof that the wallet signer also controls the
+          account behind the UUID. No coding-tool provider exposes a way to
+          prove that today. Until one does, the bond path in the contract
+          stays switched off.
         </p>
         <p className="route-prose route-prose--spaced">
           Stage 2 may never activate. Buddies staying at the contract is one

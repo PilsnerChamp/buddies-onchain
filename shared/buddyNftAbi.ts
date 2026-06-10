@@ -12,14 +12,17 @@
 // missing the entry.
 //
 // Subset used by the public site and plugin:
-//   - hatch(bytes32 identityHash, uint32 prngSeed) → uint256 tokenId [write]
+//   - hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider)
+//       → uint256 tokenId [write]
 //   - tokenURI(uint256 tokenId) → string                  [view]
 //   - isMinted(bytes32 identityHash) → bool               [view]
 //   - getTokenIdByIdentity(bytes32 identityHash) → uint256 [view]
 //   - hatcher(uint256 tokenId) → address                  [view]
-//   - Awakened(uint256, bytes32, address) event           [log]
+//   - buddyProvider(uint256 tokenId) → bytes16            [view]
+//   - Awakened(uint256, bytes32, address, bytes16) event  [log]
 //   - AlreadyHatched() error                              [revert]
 //   - InvalidIdentityHash() error                         [revert]
+//   - InvalidProvider() error                             [revert]
 //
 // `getTokenIdByIdentity` returns `0` when no token has been hatched for the
 // given identity hash; `BuddyNFT` token IDs start at 1 so `0` is the
@@ -27,7 +30,7 @@
 //
 // `as const` is required for viem's type inference — without it, viem
 // cannot narrow `useWriteContract({ functionName: 'hatch' })` arguments to
-// the bytes32/uint32 tuple.
+// the bytes32/uint32/bytes16 tuple.
 //
 // Public references: `docs/onchain/contract.md`, `docs/network-config.md`.
 
@@ -39,6 +42,7 @@ export const BUDDY_NFT_ABI = [
     inputs: [
       { name: 'identityHash', type: 'bytes32' },
       { name: 'prngSeed', type: 'uint32' },
+      { name: 'provider', type: 'bytes16' },
     ],
     outputs: [{ name: 'tokenId', type: 'uint256' }],
   },
@@ -71,6 +75,13 @@ export const BUDDY_NFT_ABI = [
     outputs: [{ name: '', type: 'address' }],
   },
   {
+    type: 'function',
+    name: 'buddyProvider',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bytes16' }],
+  },
+  {
     type: 'event',
     name: 'Awakened',
     anonymous: false,
@@ -78,6 +89,7 @@ export const BUDDY_NFT_ABI = [
       { name: 'tokenId', type: 'uint256', indexed: true },
       { name: 'identityHash', type: 'bytes32', indexed: true },
       { name: 'hatcher', type: 'address', indexed: true },
+      { name: 'provider', type: 'bytes16', indexed: false },
     ],
   },
   {
@@ -88,6 +100,11 @@ export const BUDDY_NFT_ABI = [
   {
     type: 'error',
     name: 'InvalidIdentityHash',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'InvalidProvider',
     inputs: [],
   },
 ] as const;

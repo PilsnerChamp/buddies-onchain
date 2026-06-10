@@ -1,9 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { formatLookupBlock, type LookupPayload } from "../src/lookup-payload";
 import type { ModeLevel } from "../src/buddy-state";
+import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 
 const HATCH_URL =
-  "https://buddies-onchain.xyz/hatch#identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173";
+  `https://buddies-onchain.xyz/hatch#identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 
 function makeLookupPayload(
   payload: Partial<LookupPayload> &

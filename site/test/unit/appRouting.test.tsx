@@ -32,14 +32,17 @@ vi.mock('../../src/routes/Hatch', () => {
   const Hatch = ({
     identityHash,
     prngSeed,
+    provider,
   }: {
     identityHash: `0x${string}`;
     prngSeed: number;
+    provider: `0x${string}`;
   }): JSX.Element => (
     <main
       data-testid="hatch-stub"
       data-identity-hash={identityHash}
       data-prng-seed={String(prngSeed)}
+      data-provider={provider}
     >
       hatch placeholder
     </main>
@@ -66,6 +69,10 @@ vi.mock('../../src/routes/Bond', () => ({
 }));
 
 import App from '../../src/App';
+import {
+  CLAUDE_PROVIDER,
+  CLAUDE_PROVIDER_BYTES16,
+} from '../../../shared/providerBytes16';
 
 const VALID_IDENTITY_HASH =
   '0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6' as const;
@@ -76,11 +83,13 @@ const VALID_PRNG_SEED = 4_116_242_804;
 function hatchFragment({
   identityHash = VALID_IDENTITY_HASH,
   prngSeed = String(VALID_PRNG_SEED),
+  provider = CLAUDE_PROVIDER,
 }: {
   identityHash?: string;
   prngSeed?: string;
+  provider?: string;
 } = {}): string {
-  return `identityHash=${identityHash}&prngSeed=${prngSeed}`;
+  return `identityHash=${identityHash}&prngSeed=${prngSeed}&provider=${provider}`;
 }
 
 function renderAt(path: string): void {
@@ -133,6 +142,7 @@ describe('App routing — routing-collapse contract', () => {
     expect(logged).not.toContain('raw');
     expect(logged).not.toContain('identityHash');
     expect(logged).not.toContain('prngSeed');
+    expect(logged).not.toContain('provider');
   }
 
   it('`/hatch` with no fragment redirects to `/` and warns with reason=missing', async () => {
@@ -145,8 +155,13 @@ describe('App routing — routing-collapse contract', () => {
   it.each([
     ['missing prngSeed', `identityHash=${VALID_IDENTITY_HASH}`],
     ['missing identityHash', `prngSeed=${VALID_PRNG_SEED}`],
-    ['empty identityHash', `identityHash=&prngSeed=${VALID_PRNG_SEED}`],
-    ['empty prngSeed', `identityHash=${VALID_IDENTITY_HASH}&prngSeed=`],
+    [
+      'missing provider',
+      `identityHash=${VALID_IDENTITY_HASH}&prngSeed=${VALID_PRNG_SEED}`,
+    ],
+    ['empty identityHash', hatchFragment({ identityHash: '' })],
+    ['empty prngSeed', hatchFragment({ prngSeed: '' })],
+    ['empty provider', hatchFragment({ provider: '' })],
   ])('`/hatch#%s` redirects to `/` and warns with reason=missing', async (_, fragment) => {
     renderAt(`/hatch#${fragment}`);
     expect(await screen.findByTestId('home-stub')).toBeTruthy();
@@ -179,11 +194,24 @@ describe('App routing — routing-collapse contract', () => {
     expectNoRawHandoffLogged(prngSeed, fragment);
   });
 
-  it('`/hatch#identityHash=<hash>&prngSeed=<uint32>` stays on the hatch placeholder', async () => {
+  it.each([
+    ['uppercase', 'Claude'],
+    ['invalid char', 'clau_de'],
+    ['too long', 'abcdefghijklmnopq'],
+  ])('malformed provider (%s) redirects to `/` without logging raw values', async (_, provider) => {
+    const fragment = hatchFragment({ provider });
+    renderAt(`/hatch#${fragment}`);
+    expect(await screen.findByTestId('home-stub')).toBeTruthy();
+    expectInvalidHandoffWarning('malformed');
+    expectNoRawHandoffLogged(provider, fragment);
+  });
+
+  it('`/hatch#identityHash=<hash>&prngSeed=<uint32>&provider=<name>` stays on the hatch placeholder', async () => {
     renderAt(`/hatch#${hatchFragment()}`);
     const hatch = await screen.findByTestId('hatch-stub');
     expect(hatch.dataset.identityHash).toBe(VALID_IDENTITY_HASH);
     expect(hatch.dataset.prngSeed).toBe(String(VALID_PRNG_SEED));
+    expect(hatch.dataset.provider).toBe(CLAUDE_PROVIDER_BYTES16);
     expect(screen.queryByTestId('home-stub')).toBeNull();
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -192,6 +220,7 @@ describe('App routing — routing-collapse contract', () => {
     renderAt(`/hatch#${hatchFragment({ prngSeed: '0' })}`);
     const hatch = await screen.findByTestId('hatch-stub');
     expect(hatch.dataset.prngSeed).toBe('0');
+    expect(hatch.dataset.provider).toBe(CLAUDE_PROVIDER_BYTES16);
     expect(screen.queryByTestId('home-stub')).toBeNull();
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -219,5 +248,6 @@ describe('App routing — routing-collapse contract', () => {
     expect(window.location.href).not.toContain(VALID_IDENTITY_HASH);
     expect(window.location.href).not.toContain(String(VALID_PRNG_SEED));
     expect(window.location.href).not.toContain('prngSeed');
+    expect(window.location.href).not.toContain('provider');
   });
 });

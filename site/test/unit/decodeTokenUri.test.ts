@@ -12,7 +12,10 @@
 // SVG through the encoder is enough to lock the public decoder behavior.
 
 import { describe, it, expect } from 'vitest';
-import { decodeTokenUriToSvg } from '../../src/lib/decodeTokenUri';
+import {
+  decodeTokenUri,
+  decodeTokenUriToSvg,
+} from '../../src/lib/decodeTokenUri';
 
 // Helper: encode a UTF-8 string to base64 the way browsers do (matches
 // the production `atob` round-trip in `base64ToUtf8`).
@@ -27,15 +30,28 @@ function buildTokenUri(svg: string, extras: Record<string, unknown> = {}): strin
   const imageDataUri = `data:image/svg+xml;base64,${utf8ToBase64(svg)}`;
   const meta = {
     name: 'buddy #1',
-    description: 'One Claude account. One buddy.',
+    description: 'One account. One buddy.',
     image: imageDataUri,
-    attributes: [{ trait_type: 'species', value: 'cat' }],
+    attributes: [
+      { trait_type: 'species', value: 'cat' },
+      { trait_type: 'Provider', value: 'claude' },
+    ],
     ...extras,
   };
   return `data:application/json;base64,${utf8ToBase64(JSON.stringify(meta))}`;
 }
 
 describe('decodeTokenUriToSvg', () => {
+  it('decodes full metadata attributes, including Provider', () => {
+    const tokenUri = buildTokenUri('<svg />');
+    const metadata = decodeTokenUri(tokenUri);
+
+    expect(metadata.attributes).toContainEqual({
+      trait_type: 'Provider',
+      value: 'claude',
+    });
+  });
+
   it('round-trips an SVG through the full decode pipeline', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect /></svg>';
     const tokenUri = buildTokenUri(svg);

@@ -27,6 +27,7 @@ import {
 import { setPublicClientForTest } from "../src/publicClient";
 import { type PluginNetworkInfo } from "../src/network";
 import { NETWORKS } from "~shared/networks";
+import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const TEST_IDENTITY_HASH = "0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb";
@@ -171,21 +172,22 @@ describe("resolveDeepLink", () => {
 });
 
 describe("URL helpers", () => {
-  test("hatchUrl emits hash+seed fragment and warmUrl uses tokenId", () => {
+  test("hatchUrl emits hash+seed+provider fragment and warmUrl uses tokenId", () => {
     const url = hatchUrl(PROD_ORIGIN, TEST_UUID);
 
     expect(warmUrl(PROD_ORIGIN, 123n)).toBe(`${PROD_ORIGIN}/view/123`);
     expect(url).toBe(
-      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}`,
+      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}&provider=${CLAUDE_PROVIDER}`,
     );
     expect(url).not.toContain(TEST_UUID);
     expect(url).not.toContain("accountUuid");
     expect(url).toMatch(
-      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+$/,
+      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude$/,
     );
 
     const params = new URLSearchParams(url.split("#")[1]);
     expect(params.get("identityHash")).toBe(TEST_IDENTITY_HASH);
+    expect(params.get("provider")).toBe(CLAUDE_PROVIDER);
     const prngSeed = Number(params.get("prngSeed"));
     expect(Number.isInteger(prngSeed)).toBe(true);
     expect(prngSeed).toBeGreaterThanOrEqual(0);
@@ -194,7 +196,7 @@ describe("URL helpers", () => {
 
   test("hatchUrl canonicalizes valid UUID input but rejects placeholders", () => {
     expect(hatchUrl(PROD_ORIGIN, ` ${TEST_UUID.toUpperCase()}\n`)).toBe(
-      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}`,
+      `${PROD_ORIGIN}/hatch#identityHash=${TEST_IDENTITY_HASH}&prngSeed=${TEST_PRNG_SEED}&provider=${CLAUDE_PROVIDER}`,
     );
     expect(() => hatchUrl(PROD_ORIGIN, "anon")).toThrow();
     expect(() => hatchUrl(PROD_ORIGIN, "not-a-uuid")).toThrow();

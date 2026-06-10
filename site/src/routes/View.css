@@ -166,9 +166,12 @@
 .terminal-frame:has(.view-uuid__buddy) {
   max-width: calc(100vh - 128px);
 }
-.terminal-frame__body:has(> .view-uuid__buddy) {
+.terminal-frame__body:has(> .view-uuid__buddy:only-child) {
   padding: 0;
   max-height: none;
+}
+.view-token__register {
+  margin: 0 0 var(--space-4);
 }
 .view-uuid__buddy > svg {
   width: 100%;

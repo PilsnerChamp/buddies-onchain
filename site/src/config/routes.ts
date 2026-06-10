@@ -3,7 +3,8 @@
 // etc. — never literal strings.
 //
 // `/hatch` takes its mint handoff via URL fragment
-// (`/hatch#identityHash=0x…&prngSeed=…`) so it never crosses the HTTP wire.
+// (`/hatch#identityHash=0x…&prngSeed=…&provider=…`) so it never crosses the
+// HTTP wire.
 // Unknown paths are absorbed by the catch-all `*` route in `App.tsx`
 // (redirects to `/`).
 

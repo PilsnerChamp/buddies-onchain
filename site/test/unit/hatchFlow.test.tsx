@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { encodeEventTopics } from 'viem';
+import { encodeAbiParameters, encodeEventTopics } from 'viem';
 
 const chainIdRef = { current: 84532 };
 const accountRef: {
@@ -63,6 +63,7 @@ vi.mock('../../src/config/chains', () => ({
 
 import { BUDDY_NFT_ABI } from '../../src/config/contract';
 import { useHatchFlow } from '../../src/lib/hatch';
+import { CLAUDE_PROVIDER_BYTES16 } from '../../../shared/providerBytes16';
 
 const VALID_IDENTITY_HASH =
   '0x11c1f0ff5f3422e0e9c64abda3c02ca65cb05b5fe768946f7f3f7b89ae3667f6' as const;
@@ -74,7 +75,11 @@ const TX_HASH = '0xabc1234567890000000000000000000000000000000000000000000000001
 let latestFlow: ReturnType<typeof useHatchFlow>;
 
 function Probe(): JSX.Element {
-  latestFlow = useHatchFlow(VALID_IDENTITY_HASH, VALID_PRNG_SEED);
+  latestFlow = useHatchFlow(
+    VALID_IDENTITY_HASH,
+    VALID_PRNG_SEED,
+    CLAUDE_PROVIDER_BYTES16,
+  );
   return (
     <button type="button" onClick={latestFlow.onRunHatch}>
       run {latestFlow.state.phase}
@@ -116,7 +121,15 @@ function awakenedReceipt(tokenId = 247n): unknown {
   });
   return {
     status: 'success',
-    logs: [{ data: '0x', topics }],
+    logs: [
+      {
+        data: encodeAbiParameters(
+          [{ name: 'provider', type: 'bytes16' }],
+          [CLAUDE_PROVIDER_BYTES16],
+        ),
+        topics,
+      },
+    ],
   };
 }
 
@@ -181,7 +194,7 @@ describe('useHatchFlow', () => {
     expect(writeContractAsyncMock).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: 'hatch',
-        args: [VALID_IDENTITY_HASH, VALID_PRNG_SEED],
+        args: [VALID_IDENTITY_HASH, VALID_PRNG_SEED, CLAUDE_PROVIDER_BYTES16],
       }),
     );
     expect(latestFlow.state).toMatchObject({

@@ -12,6 +12,7 @@ import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { waitForTransactionReceipt } from 'wagmi/actions';
 import { decodeEventLog, type Hex, type Log } from 'viem';
 import { useAccount, useChainId, useConfig, useConnect, useWriteContract } from 'wagmi';
+import type { ProviderBytes16 } from '~shared/providerBytes16';
 
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
@@ -352,6 +353,7 @@ function extractAwakenedTokenId(logs: readonly Log[]): bigint | null {
 export function useHatchFlow(
   identityHash: `0x${string}`,
   prngSeed: number,
+  provider: ProviderBytes16,
 ): {
   state: HatchState;
   onRunHatch: () => void;
@@ -430,7 +432,7 @@ export function useHatchFlow(
             address: pinnedAddress,
             chainId: pinnedChainId,
             functionName: 'hatch',
-            args: [identityHash, prngSeed],
+            args: [identityHash, prngSeed, provider],
           });
           dispatch({
             type: 'pending',
@@ -497,7 +499,15 @@ export function useHatchFlow(
         }
       })();
     },
-    [activeChainId, config, identityHash, prngSeed, resetWrite, writeContractAsync],
+    [
+      activeChainId,
+      config,
+      identityHash,
+      prngSeed,
+      provider,
+      resetWrite,
+      writeContractAsync,
+    ],
   );
 
   const onRunHatch = useCallback((): void => {

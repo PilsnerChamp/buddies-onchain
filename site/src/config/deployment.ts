@@ -5,9 +5,9 @@
 //
 // Merge accessor `getNetwork()` in `chains.ts`: docs/network-config.md § Active network accessors.
 //
-// Why glob (not static import): pre-deploy chains (84532/8453) have no JSON
-// file. Vite's glob enumerates only files that match at build time — missing
-// files simply don't appear in the resulting map. A static
+// Why glob (not static import): pre-deploy chains (84532/8453) may have no
+// JSON file. Vite's glob enumerates only files that match at build time —
+// missing files simply don't appear in the resulting map. A static
 // `import dep from '../../../onchain/deployments/84532.json'` would hard-fail
 // the build before deploy day.
 //
@@ -40,23 +40,25 @@ export type Deployment = {
 export function buildDeployments(
   modules: Record<string, Deployment>,
 ): Partial<Record<number, Deployment>> {
-  return Object.fromEntries(
-    Object.entries(modules).map(([path, d]) => {
-      const match = path.match(/(\d+)\.json$/);
-      if (match === null) throw new Error(`unexpected deployment path: ${path}`);
-      const filenameChainId = Number(match[1]);
-      // Integrity assertion: payload `chainId` must match the filename. Catches
-      // accidental wrong-file commits (e.g. mainnet deploy output written to a
-      // file named `84532.json`) before the loader silently misroutes a real
-      // address into the wrong chain slot.
-      if (d.chainId !== filenameChainId) {
-        throw new Error(
-          `deployment chainId mismatch: payload=${d.chainId} filename=${filenameChainId} path=${path}`,
-        );
-      }
-      return [filenameChainId, d];
-    }),
-  );
+  const deployments: Array<[number, Deployment]> = [];
+
+  for (const [path, d] of Object.entries(modules)) {
+    const match = path.match(/(\d+)\.json$/);
+    if (match === null) throw new Error(`unexpected deployment path: ${path}`);
+    const filenameChainId = Number(match[1]);
+    // Integrity assertion: payload `chainId` must match the filename. Catches
+    // accidental wrong-file commits (e.g. mainnet deploy output written to a
+    // file named `84532.json`) before the loader silently misroutes a real
+    // address into the wrong chain slot.
+    if (d.chainId !== filenameChainId) {
+      throw new Error(
+        `deployment chainId mismatch: payload=${d.chainId} filename=${filenameChainId} path=${path}`,
+      );
+    }
+    deployments.push([filenameChainId, d]);
+  }
+
+  return Object.fromEntries(deployments);
 }
 
 const deploymentModules = import.meta.glob<Deployment>(
@@ -64,8 +66,8 @@ const deploymentModules = import.meta.glob<Deployment>(
   { eager: true, import: 'default' },
 );
 
-// Keyed by chainId. Pre-deploy chains simply don't appear (no throw, no error).
-// Map is `Partial` because consumers must handle `undefined` for any chainId
-// without a committed deployment JSON.
+// Keyed by chainId. Pre-deploy chains simply don't appear (no throw, no
+// error). Map is `Partial` because consumers must handle `undefined` for any
+// chainId without a committed deployment JSON.
 export const deployments: Partial<Record<number, Deployment>> =
   buildDeployments(deploymentModules);

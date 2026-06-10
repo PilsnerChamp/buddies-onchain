@@ -24,6 +24,7 @@ import {
   readIdentityTuple,
   seedBuddyState,
 } from "./_helpers/lookup-fixtures";
+import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 
 const EXPECTED_SLEEPING_CARD_ROWS = [
   "",
@@ -41,7 +42,7 @@ const EXPECTED_CACHED_F0_ROWS = [
   "cached f0 row 2",
 ];
 const EXPECTED_HATCH_FRAGMENT =
-  "identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173";
+  `identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#${EXPECTED_HATCH_FRAGMENT}`;
 const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${EXPECTED_HATCH_FRAGMENT}`;
 const PLUGIN_ROOT = join(import.meta.dir, "..");
@@ -360,7 +361,7 @@ describe("resolveLookupPayload — status mapping", () => {
     expect(result!.hatchUrl).not.toContain(FIXTURE_ACCOUNT_UUID);
     expect(result!.hatchUrl).not.toContain("accountUuid");
     expect(result!.hatchUrl).toMatch(
-      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+$/,
+      /^https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude$/,
     );
   });
 

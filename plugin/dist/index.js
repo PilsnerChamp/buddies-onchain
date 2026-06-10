@@ -9090,7 +9090,8 @@ var BUDDY_NFT_ABI = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "identityHash", type: "bytes32" },
-      { name: "prngSeed", type: "uint32" }
+      { name: "prngSeed", type: "uint32" },
+      { name: "provider", type: "bytes16" }
     ],
     outputs: [{ name: "tokenId", type: "uint256" }]
   },
@@ -9123,13 +9124,21 @@ var BUDDY_NFT_ABI = [
     outputs: [{ name: "", type: "address" }]
   },
   {
+    type: "function",
+    name: "buddyProvider",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes16" }]
+  },
+  {
     type: "event",
     name: "Awakened",
     anonymous: false,
     inputs: [
       { name: "tokenId", type: "uint256", indexed: true },
       { name: "identityHash", type: "bytes32", indexed: true },
-      { name: "hatcher", type: "address", indexed: true }
+      { name: "hatcher", type: "address", indexed: true },
+      { name: "provider", type: "bytes16", indexed: false }
     ]
   },
   {
@@ -9140,6 +9149,11 @@ var BUDDY_NFT_ABI = [
   {
     type: "error",
     name: "InvalidIdentityHash",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidProvider",
     inputs: []
   }
 ];
@@ -18108,6 +18122,34 @@ function deriveEffective(state, identity, envOverride) {
   };
 }
 
+// ../shared/providerBytes16.ts
+var CLAUDE_PROVIDER = "claude";
+var PROVIDER_MAX_BYTES = 16;
+var PROVIDER_HEX_CHARS = PROVIDER_MAX_BYTES * 2;
+var HEX_PREFIX = "0x";
+function isProviderCode(code) {
+  return code >= 97 && code <= 122 || code >= 48 && code <= 57 || code === 45;
+}
+function assertProvider(provider) {
+  if (provider.length === 0 || provider.length > PROVIDER_MAX_BYTES) {
+    throw new Error("invalid provider");
+  }
+  for (let i = 0;i < provider.length; i++) {
+    if (!isProviderCode(provider.charCodeAt(i))) {
+      throw new Error("invalid provider");
+    }
+  }
+}
+function encodeProviderBytes16(provider) {
+  assertProvider(provider);
+  let hex = HEX_PREFIX;
+  for (let i = 0;i < provider.length; i++) {
+    hex += provider.charCodeAt(i).toString(16).padStart(2, "0");
+  }
+  return hex + "0".repeat(PROVIDER_HEX_CHARS - (hex.length - HEX_PREFIX.length));
+}
+var CLAUDE_PROVIDER_BYTES16 = encodeProviderBytes16(CLAUDE_PROVIDER);
+
 // src/lookup.ts
 function siteOriginForKey(key) {
   return key === "local" ? "http://localhost:5173" : "https://buddies-onchain.xyz";
@@ -18120,7 +18162,12 @@ function hatchUrl(origin, uuid) {
   if (!/^0x[0-9a-f]{64}$/.test(identityHash) || identityHash === ZERO_IDENTITY_HASH || !Number.isInteger(prngSeed) || prngSeed < 0 || prngSeed > UINT32_MAX) {
     throw new Error("invalid hatch fragment");
   }
-  return `${origin}/hatch#identityHash=${identityHash}&prngSeed=${prngSeed}`;
+  const fragment = new URLSearchParams({
+    identityHash,
+    prngSeed: String(prngSeed),
+    provider: CLAUDE_PROVIDER
+  });
+  return `${origin}/hatch#${fragment.toString()}`;
 }
 function warmUrl(origin, tokenId) {
   return `${origin}/view/${tokenId.toString()}`;

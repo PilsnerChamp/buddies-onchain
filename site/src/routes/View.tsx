@@ -124,7 +124,7 @@ export function View(): JSX.Element {
 
       <ManPageSection heading="DESCRIPTION">
         <p className="route-prose">
-          Buddies are looked up by Claude account UUID. The best path is to
+          Buddies are looked up by account UUID. The best path is to
           run <span className="route-accent">/buddy-onchain</span> in Claude
           Code — it tells you where your buddy is and gives you the right
           link. Or paste a UUID below to resolve its token page.

@@ -3,4 +3,4 @@
 // description. Edited in lockstep with the Solidity source, never ahead.
 
 export const DESCRIPTION =
-  'One Claude account. One buddy. Lives on-chain. No host. No takedown.';
+  'One account. One buddy. Lives on-chain. No host. No takedown.';

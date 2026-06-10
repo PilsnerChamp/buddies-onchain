@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { HatchState } from '../../src/lib/hatch';
+import { CLAUDE_PROVIDER_BYTES16 } from '../../../shared/providerBytes16';
 
 // ── Hooks mocks ──────────────────────────────────────────────────────────
 
@@ -106,6 +107,7 @@ function renderHatchAt(path: string): { container: HTMLElement } {
             <Hatch
               identityHash={VALID_IDENTITY_HASH}
               prngSeed={VALID_PRNG_SEED}
+              provider={CLAUDE_PROVIDER_BYTES16}
             />
           }
         />
@@ -181,7 +183,7 @@ describe('/hatch — terminal frame + structure', () => {
     renderHatchAt('/hatch');
     expect(screen.getByText(/Stage 1 of buddy evolution/)).toBeTruthy();
     expect(
-      screen.getByText(/One Claude account, one buddy, one mint\. Soulbound\./),
+      screen.getByText(/One account, one buddy, one mint\. Soulbound\./),
     ).toBeTruthy();
   });
 
@@ -393,10 +395,10 @@ describe('/hatch — REQUIREMENTS rows', () => {
   beforeEach(applyDefaults);
   afterEach(cleanup);
 
-  it('handoff row confirms the scrubbed hash/seed pair without exposing values', () => {
+  it('handoff row confirms the scrubbed hash/seed/provider tuple without exposing values', () => {
     renderHatchAt('/hatch');
     expect(screen.getByText('handoff')).toBeTruthy();
-    expect(screen.getByText('identity hash + trait seed')).toBeTruthy();
+    expect(screen.getByText('identity hash + trait seed + provider')).toBeTruthy();
     expect(screen.getAllByText('connected').length).toBeGreaterThan(0);
   });
 

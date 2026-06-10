@@ -1,4 +1,4 @@
-One Claude account. One buddy. Lives on-chain. No host. No takedown.
+One account. One buddy. Lives on-chain. No host. No takedown.
 
 Run `/buddy-onchain` when you want to find your buddy.
 
@@ -29,4 +29,4 @@ Requires [Bun](https://bun.sh) 1.1.0 or newer on your `PATH`.
 
 https://buddies-onchain.xyz
 
-Buddies Onchain is an unofficial community project. It is not endorsed by, affiliated with, or sponsored by Anthropic.
+An unofficial community project, not endorsed by Anthropic.

@@ -23,6 +23,7 @@
 
 import { BUDDY_NFT_ABI } from '~shared/buddyNftAbi';
 import { computeIdentityHash } from '~shared/computeIdentityHash';
+import { CLAUDE_PROVIDER } from '~shared/providerBytes16';
 import { deriveBuddyFromAccount } from './bone-deriver';
 import { getActiveNetwork, type PluginNetworkInfo } from './network';
 import { getPublicClient } from './publicClient';
@@ -63,7 +64,12 @@ export function hatchUrl(origin: string, uuid: string): string {
     throw new Error('invalid hatch fragment');
   }
 
-  return `${origin}/hatch#identityHash=${identityHash}&prngSeed=${prngSeed}`;
+  const fragment = new URLSearchParams({
+    identityHash,
+    prngSeed: String(prngSeed),
+    provider: CLAUDE_PROVIDER,
+  });
+  return `${origin}/hatch#${fragment.toString()}`;
 }
 
 export function warmUrl(origin: string, tokenId: bigint): string {
