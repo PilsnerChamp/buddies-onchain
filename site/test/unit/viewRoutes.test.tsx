@@ -7,7 +7,8 @@
 //   - UUID-shaped path segments are not a route anymore; they render NotFound
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 const useBuddyLookupMock = vi.fn();
@@ -25,7 +26,16 @@ const VALID_UUID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
 function LocationProbe(): JSX.Element {
   const loc = useLocation();
-  return <span data-testid="location">{`${loc.pathname}${loc.search}${loc.hash}`}</span>;
+  const state = loc.state === null ? 'null' : JSON.stringify(loc.state);
+  return (
+    <span
+      data-testid="location"
+      data-location-key={loc.key}
+      data-location-state={state}
+    >
+      {`${loc.pathname}${loc.search}${loc.hash}`}
+    </span>
+  );
 }
 
 function TokenStub(): JSX.Element {
@@ -34,7 +44,7 @@ function TokenStub(): JSX.Element {
 }
 
 function renderViewAt(path: string): void {
-  render(
+  renderWithClient(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route
@@ -52,11 +62,26 @@ function renderViewAt(path: string): void {
   );
 }
 
-function submitUuid(uuid = VALID_UUID): void {
-  fireEvent.change(screen.getByLabelText('account-uuid'), {
-    target: { value: uuid },
+function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
-  fireEvent.submit(screen.getByLabelText('account-uuid').closest('form')!);
+}
+
+function renderWithClient(
+  ui: JSX.Element,
+  queryClient = createTestQueryClient(),
+): ReturnType<typeof render> {
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
+const INPUT_LABEL = 'token-id or account-uuid';
+
+function submitLookup(value: string): void {
+  fireEvent.change(screen.getByLabelText(INPUT_LABEL), {
+    target: { value },
+  });
+  fireEvent.submit(screen.getByLabelText(INPUT_LABEL).closest('form')!);
 }
 
 describe('/view manual lookup', () => {
@@ -72,21 +97,98 @@ describe('/view manual lookup', () => {
 
   afterEach(cleanup);
 
-  it('renders the manual lookup prompt and marks the page noindex', () => {
+  it('renders the dual-grammar lookup prompt and marks the page noindex', () => {
     renderViewAt('/view');
     expect(screen.getByText('no id supplied')).toBeTruthy();
-    expect(screen.getByLabelText('account-uuid')).toBeTruthy();
+    expect(screen.getByText('enter a token id or account UUID')).toBeTruthy();
+    expect(screen.getByLabelText(INPUT_LABEL)).toBeTruthy();
+    expect(screen.getByPlaceholderText('<token-id> | <account-uuid>')).toBeTruthy();
     expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
       'noindex, follow',
     );
   });
 
-  it('shows the invalid-uuid warning while a non-empty invalid value is typed', () => {
+  it('shows the invalid-input warning while a non-empty invalid value is typed', () => {
     renderViewAt('/view');
-    fireEvent.change(screen.getByLabelText('account-uuid'), {
+    fireEvent.change(screen.getByLabelText(INPUT_LABEL), {
       target: { value: 'garbage' },
     });
-    expect(screen.getByText('! enter a valid account uuid')).toBeTruthy();
+    expect(screen.getByText('! enter a valid token id or account uuid')).toBeTruthy();
+  });
+
+  it('marks empty submits invalid until the user enters a valid value', () => {
+    renderViewAt('/view');
+    const input = screen.getByLabelText(INPUT_LABEL);
+
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+
+    fireEvent.submit(input.closest('form')!);
+
+    expect(screen.getByText('! enter a valid token id or account uuid')).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+
+    fireEvent.change(input, { target: { value: '42' } });
+
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('digit input navigates straight to /view/<tokenId> with no contract read', async () => {
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view']}>
+        <Routes>
+          <Route path="/view" element={<View />} />
+          <Route path="/view/:tokenId" element={<TokenStub />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    submitLookup('42');
+
+    expect((await screen.findByTestId('token-stub')).textContent).toBe('token 42');
+    expect(useBuddyLookupMock.mock.calls.some(([uuid]) => uuid !== null)).toBe(false);
+  });
+
+  it('bare token-id submit landing on a miss mounts without the retry warn', async () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view']}>
+        <Routes>
+          <Route
+            path="/view"
+            element={
+              <>
+                <LocationProbe />
+                <View />
+              </>
+            }
+          />
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    submitLookup('42');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/view/42');
+    });
+    expect(
+      screen.queryByText('! not found — try a different token id'),
+    ).toBeNull();
+    expect(screen.getByTestId('location').getAttribute('data-location-state')).toBe(
+      'null',
+    );
   });
 
   it('valid input resolves UUID in state and navigates to /view/<tokenId>', async () => {
@@ -94,7 +196,7 @@ describe('/view manual lookup', () => {
       if (uuid === null) return { status: 'idle' };
       return { status: 'success', data: { state: 'hit', tokenId: 42n } };
     });
-    render(
+    renderWithClient(
       <MemoryRouter initialEntries={['/view']}>
         <Routes>
           <Route
@@ -111,11 +213,10 @@ describe('/view manual lookup', () => {
       </MemoryRouter>,
     );
 
-    submitUuid();
+    submitLookup(VALID_UUID);
 
     expect((await screen.findByTestId('token-stub')).textContent).toBe('token 42');
     expect(screen.queryByTestId('location')).toBeNull();
-    expect(window.location.href).not.toContain(VALID_UUID);
   });
 
   it('lookup miss stays on /view and never writes the UUID into the URL', () => {
@@ -125,11 +226,31 @@ describe('/view manual lookup', () => {
     });
     renderViewAt('/view');
 
-    submitUuid();
+    submitLookup(VALID_UUID);
 
     expect(screen.getByText('! no buddy found for that UUID on this network')).toBeTruthy();
     expect(screen.getByTestId('location').textContent).toBe('/view');
-    expect(window.location.href).not.toContain(VALID_UUID);
+  });
+
+  it('identical UUID resubmit remounts the async feedback line', () => {
+    useBuddyLookupMock.mockImplementation((uuid: string | null) => {
+      if (uuid === null) return { status: 'idle' };
+      return { status: 'success', data: { state: 'miss' } };
+    });
+    renderViewAt('/view');
+
+    submitLookup(VALID_UUID);
+    const firstFeedback = screen.getByText(
+      '! no buddy found for that UUID on this network',
+    );
+
+    fireEvent.submit(screen.getByLabelText(INPUT_LABEL).closest('form')!);
+
+    const secondFeedback = screen.getByText(
+      '! no buddy found for that UUID on this network',
+    );
+    expect(secondFeedback).not.toBe(firstFeedback);
+    expect(secondFeedback.className).toContain('view-uuid__feedback');
   });
 });
 
@@ -140,6 +261,11 @@ describe('/view/<tokenId> token page', () => {
     useBuddyLookupMock.mockReset();
     useBuddyTokenMock.mockReset();
     useBuddyTokenMock.mockReturnValue({ status: 'loading' });
+    // The miss state mounts the unified console, which wires the UUID
+    // lookup hook; default to idle/loading.
+    useBuddyLookupMock.mockImplementation((uuid: string | null) =>
+      uuid === null ? { status: 'idle' } : { status: 'loading' },
+    );
   });
 
   afterEach(cleanup);
@@ -147,6 +273,12 @@ describe('/view/<tokenId> token page', () => {
   it('rejects non-numeric token ids with NotFound, not a home redirect', () => {
     renderViewAt('/view/garbage');
     expect(screen.getByText('! not found — token id must be a positive number')).toBeTruthy();
+  });
+
+  it('rejects token ids beyond uint256 as invalid, not a miss', () => {
+    renderViewAt(`/view/${(1n << 256n).toString()}`);
+    expect(screen.getByText('! not found — token id must be a positive number')).toBeTruthy();
+    expect(useBuddyTokenMock).not.toHaveBeenCalled();
   });
 
   it('rejects UUID-shaped path segments; /view/:uuid is gone', () => {
@@ -183,6 +315,269 @@ describe('/view/<tokenId> token page', () => {
     expect(
       screen.getByText('! Buddies Onchain is not yet deployed on this network'),
     ).toBeTruthy();
+  });
+
+  it('renders the miss card for a nonexistent token — not the generic error', () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    renderViewAt('/view/999');
+
+    expect(screen.getByText('not found')).toBeTruthy();
+    expect(
+      screen.getByText('no buddy for this token on this network'),
+    ).toBeTruthy();
+    // The unified dual-grammar console mounts on the miss state — same
+    // prompt as bare /view.
+    expect(screen.getByLabelText(INPUT_LABEL)).toBeTruthy();
+    expect(document.body.textContent).not.toContain('Looking for your own buddy?');
+    expect(document.body.textContent).toContain(
+      'try another token id or account UUID below',
+    );
+    // Deterministic miss never shows the transient-failure copy.
+    expect(
+      screen.queryByText('! could not load buddy metadata — try refreshing the page'),
+    ).toBeNull();
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+      'noindex, follow',
+    );
+  });
+
+  it('miss-card retry navigates to the entered token id', async () => {
+    useBuddyTokenMock.mockImplementation((tokenId: bigint) =>
+      tokenId === 999n
+        ? { status: 'success', data: { state: 'miss' } }
+        : { status: 'loading' },
+    );
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view/999']}>
+        <Routes>
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    submitLookup('42');
+
+    expect((await screen.findByTestId('location')).textContent).toBe('/view/42');
+  });
+
+  it('miss-card retry rejects an invalid value inline', () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    renderViewAt('/view/999');
+
+    submitLookup('abc');
+
+    expect(screen.getByText('! enter a valid token id or account uuid')).toBeTruthy();
+  });
+
+  it('miss-card UUID entry resolves and navigates to the found token', async () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    useBuddyLookupMock.mockImplementation((uuid: string | null) => {
+      if (uuid === null) return { status: 'idle' };
+      return { status: 'success', data: { state: 'hit', tokenId: 1n } };
+    });
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view/999']}>
+        <Routes>
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    submitLookup(VALID_UUID);
+
+    expect((await screen.findByTestId('location')).textContent).toBe('/view/1');
+  });
+
+  it('miss-card UUID hit for the same token invalidates instead of navigating', async () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    useBuddyLookupMock.mockImplementation((uuid: string | null) => {
+      if (uuid === null) return { status: 'idle' };
+      return { status: 'success', data: { state: 'hit', tokenId: 999n } };
+    });
+    const queryClient = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const routeTree = (): JSX.Element => (
+      <MemoryRouter initialEntries={['/view/999']}>
+        <Routes>
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    const { rerender } = renderWithClient(routeTree(), queryClient);
+    const initialLocationKey = screen
+      .getByTestId('location')
+      .getAttribute('data-location-key');
+
+    submitLookup(VALID_UUID);
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['buddy-token', expect.any(Number), '999'],
+    });
+    expect(screen.getByTestId('location').textContent).toBe('/view/999');
+    expect(screen.getByTestId('location').getAttribute('data-location-key')).toBe(
+      initialLocationKey,
+    );
+
+    rerender(<QueryClientProvider client={queryClient}>{routeTree()}</QueryClientProvider>);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    expect(invalidateSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-submitting the current missed id warns in place without navigating', () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view/999']}>
+        <Routes>
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    submitLookup('999');
+
+    expect(
+      screen.getByText('! not found — try a different token id'),
+    ).toBeTruthy();
+    expect(screen.getByTestId('location').textContent).toBe('/view/999');
+  });
+
+  it('a retry that lands on another miss mounts with the not-found warn', async () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    renderWithClient(
+      <MemoryRouter initialEntries={['/view/999']}>
+        <Routes>
+          <Route
+            path="/view/:tokenId"
+            element={
+              <>
+                <LocationProbe />
+                <ViewToken />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    // No warn on the directly-visited miss card.
+    expect(
+      screen.queryByText('! not found — try a different token id'),
+    ).toBeNull();
+
+    submitLookup('4');
+
+    expect((await screen.findByTestId('location')).textContent).toBe('/view/4');
+    expect(
+      screen.getByText('! not found — try a different token id'),
+    ).toBeTruthy();
+
+    // Typing clears the sticky warn — the user is acting on it.
+    fireEvent.change(screen.getByLabelText(INPUT_LABEL), {
+      target: { value: '5' },
+    });
+    expect(
+      screen.queryByText('! not found — try a different token id'),
+    ).toBeNull();
+  });
+
+  it('consumes retriedMiss state after mounting the retry warn', async () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: { state: 'miss' },
+    });
+    const renderMiss = (entry: string | { pathname: string; state?: unknown }): void => {
+      renderWithClient(
+        <MemoryRouter initialEntries={[entry]}>
+          <Routes>
+            <Route
+              path="/view/:tokenId"
+              element={
+                <>
+                  <LocationProbe />
+                  <ViewToken />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>,
+      );
+    };
+
+    renderMiss({ pathname: '/view/4', state: { retriedMiss: true } });
+
+    expect(
+      screen.getByText('! not found — try a different token id'),
+    ).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('location').getAttribute('data-location-state')).toBe(
+        'null',
+      );
+    });
+    expect(
+      screen.getByText('! not found — try a different token id'),
+    ).toBeTruthy();
+
+    cleanup();
+    renderMiss('/view/4');
+
+    expect(
+      screen.queryByText('! not found — try a different token id'),
+    ).toBeNull();
   });
 
   it('renders the buddy SVG and sets canonical/OG to tokenId form', () => {

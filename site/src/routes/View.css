@@ -5,7 +5,7 @@
  *
  * The lookup UI is a single action-prompt input shaped like terminal text:
  *
- *   > /view [<uuid-placeholder-or-typed-input>] ▊
+ *   > /view [<token-id> | <account-uuid>] ▊
  *
  * The brackets are visual register (terminal-style optional argument);
  * the input is borderless and inherits monospace font + colour so the
@@ -104,7 +104,7 @@
   border: 0;
 }
 
-/* Warn line — `! enter a valid account uuid`. Re-mounts via React key
+/* Warn line — `! enter a valid token id or account uuid`. Re-mounts via React key
  * bump on each failed click attempt; the opacity fade-in keyframe
  * replays from frame 0 so the user sees the message animate even when
  * the text content is unchanged. Mirrors cold-hero's walkthrough
@@ -149,6 +149,15 @@
 .view-uuid__loading {
   color: var(--color-text-secondary);
   margin: 0;
+}
+
+.view-uuid__feedback {
+  animation: view-action-warn-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-uuid__feedback {
+    animation: none;
+  }
 }
 
 .view-uuid__echo-uuid {

@@ -23,6 +23,9 @@
 //   - AlreadyHatched() error                              [revert]
 //   - InvalidIdentityHash() error                         [revert]
 //   - InvalidProvider() error                             [revert]
+//   - ERC721NonexistentToken(uint256) error (OZ ERC-721)  [revert]
+//       tokenURI(missing id) reverts with it; the dApp decodes the errorName
+//       to render the /view/<tokenId> miss card instead of a generic error.
 //
 // `getTokenIdByIdentity` returns `0` when no token has been hatched for the
 // given identity hash; `BuddyNFT` token IDs start at 1 so `0` is the
@@ -106,5 +109,10 @@ export const BUDDY_NFT_ABI = [
     type: 'error',
     name: 'InvalidProvider',
     inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'ERC721NonexistentToken',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
   },
 ] as const;

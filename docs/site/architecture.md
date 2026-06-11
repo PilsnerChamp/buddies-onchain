@@ -34,12 +34,12 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 |---|---|---|
 | `/` | `<Home />` | no |
 | `/hatch` | `<HatchGate />` inside `<HatchLayout>` | yes (lazy) |
-| `/view` | `<View />` (manual UUID lookup) | no |
+| `/view` | `<View />` (lookup console — token id or account UUID) | no |
 | `/view/:tokenId` | `<ViewToken />` | no |
 | `/bond` | `<Bond />` | no |
 | `*` | `<Navigate to="/" replace />` | no |
 
-Routes in `site/src/config/routes.ts`. No route carries a UUID — no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric or `tokenId <= 0` renders NotFound, not a redirect.
+Routes in `site/src/config/routes.ts`. No route carries a UUID — no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric, `tokenId <= 0`, or beyond `uint256` renders NotFound, not a redirect. A well-formed id with no minted buddy renders the lookup console in its miss state (`terminal-ui.md` § Lookup console), distinct from both NotFound and load errors.
 
 ### Hatch fragment
 
@@ -55,9 +55,9 @@ Fragments never cross the HTTP wire. The raw UUID is never in the fragment — t
 
 No third-party script (analytics, error reporter) may read `location.href` or the unscrubbed fragment on `/hatch`. The scrub runs before any reporter can capture it.
 
-### Manual `/view`
+### Lookup console
 
-`<View />` resolves the typed UUID to a `tokenId` client-side, then `navigate('/view/<tokenId>', { replace: true })`. The UUID stays in component state and never enters a URL.
+Bare `/view` and the `/view/<tokenId>` miss state render one `<LookupConsole>` (STATUS and command header differ). Its single input is dual-grammar, shape-detected: all digits → token id → `navigate('/view/<id>')` directly, no contract read; UUID pattern → resolved to a `tokenId` client-side, then `navigate('/view/<tokenId>', { replace: true })`. The UUID stays in component state and never enters a URL.
 
 ## Wagmi-chunk split
 

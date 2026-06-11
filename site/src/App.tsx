@@ -19,7 +19,7 @@ import {
 //                      props. Missing/malformed → redirect to `/`.
 //                      Mounts under `<HatchLayout>` (lazy chunk) which wraps
 //                      the route in WagmiProvider + RainbowKitProvider.
-//   `/view`          → manual UUID lookup page
+//   `/view`          → lookup console (token id or account UUID)
 //   `/view/:tokenId` → token render. Wallet-free — reads tokenURI(tokenId)
 //                      directly via publicClient, so no `<WagmiProvider>`.
 //   `/bond`          → stage 2 placeholder

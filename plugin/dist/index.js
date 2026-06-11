@@ -9155,6 +9155,11 @@ var BUDDY_NFT_ABI = [
     type: "error",
     name: "InvalidProvider",
     inputs: []
+  },
+  {
+    type: "error",
+    name: "ERC721NonexistentToken",
+    inputs: [{ name: "tokenId", type: "uint256" }]
   }
 ];
 

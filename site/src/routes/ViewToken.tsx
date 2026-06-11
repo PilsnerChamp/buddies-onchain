@@ -3,23 +3,19 @@
 // Canonical `/view/:tokenId` route. Token pages load tokenURI(tokenId)
 // directly; no UUID/hash step runs here.
 
-import { Component } from 'react';
+import { Component, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { LookupConsole } from '../components/LookupConsole';
 import { RouteSeo } from '../components/RouteMetadata';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import { ACTIVE_NETWORK } from '../config/network';
 import { ROUTES, viewTokenPath } from '../config/routes';
+import { parseTokenId } from '../lib/parseTokenId';
 import { useBuddyToken } from '../lib/useBuddyLookup';
 
 import './View.css';
-
-function parseTokenId(raw: string): bigint | null {
-  if (!/^[0-9]+$/.test(raw)) return null;
-  const tokenId = BigInt(raw);
-  return tokenId > 0n ? tokenId : null;
-}
 
 export function ViewToken(): JSX.Element {
   const params = useParams<{ tokenId: string }>();
@@ -63,7 +59,35 @@ function ViewTokenSurface({ tokenId }: { tokenId: bigint }): JSX.Element {
     );
   }
 
+  if (result.data.state === 'miss') {
+    // The miss state renders the unified lookup console (shared with bare
+    // `/view`). Keyed by id: a retry navigation re-renders the same route
+    // element, and without the key React preserves the console's input/warn
+    // state across navigations — the mount-time not-found warn would never
+    // re-apply.
+    return <MissConsole key={tokenId.toString()} tokenId={tokenId} />;
+  }
+
   return <HappyPath tokenId={tokenId} svg={result.data.svg} />;
+}
+
+function MissConsole({ tokenId }: { tokenId: bigint }): JSX.Element {
+  // Retry navigations stamp router state so a retry that lands on another
+  // miss mounts with the not-found warn visible — otherwise the new console
+  // is near-identical to the old one and the attempt reads as a no-op.
+  // The flag is consumed immediately so reload/back-forward mounts are
+  // warn-free again.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const retried = Boolean(
+    (location.state as { retriedMiss?: boolean } | null)?.retriedMiss,
+  );
+  useEffect(() => {
+    if (!retried) return;
+    navigate(viewTokenPath(tokenId), { replace: true, state: null });
+  }, [navigate, retried, tokenId]);
+
+  return <LookupConsole variant={{ kind: 'miss', tokenId, retried }} />;
 }
 
 function NotFoundView(): JSX.Element {

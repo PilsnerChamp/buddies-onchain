@@ -1,65 +1,116 @@
 // site/src/components/ViewLookupAction.tsx
 //
-// Shared action-prompt input for manual `/view` lookup surfaces. Paste an
-// account UUID, click the row (or press Enter), and the owner resolves the
-// UUID to a tokenId before navigating to `/view/<tokenId>`. Lives as a shared
-// component so the per-route surfaces stay consistent — every
-// actionable view surface renders an action prompt slot after NEXT
-// STEPS, before the rail.
+// Dual-grammar lookup prompt for the unified `/view` console (bare `/view`
+// and the `/view/<tokenId>` miss state render the same console; STATUS is
+// the only difference). One input, two argument shapes, detected by form —
+// zero ambiguity:
+//
+//   > /view [<token-id> | <account-uuid>] ▊
+//
+//   - all digits        → token id (public, sequential, browsable)
+//   - 8-4-4-4-12 hex    → account UUID (resolves only the holder's own buddy)
+//
+// A buddy answers to both keys on-chain (sequential id + identity hash via
+// getTokenIdByIdentity), so the prompt exposes both through one slot. The
+// SYNOPSIS line is the whole affordance — no auto-detect helper copy, no
+// privacy-reassurance toast (declarative register).
+//
+// One warn slot, two sync messages (both replay via `warnKey` remount):
+//   - `! enter a valid token id or account uuid` — empty / malformed input
+//     on attempt, or live while a malformed value is typed.
+//   - `! not found — try a different token id` — the submitted id is a known
+//     miss: either it equals `currentTokenId` (this console IS its miss
+//     result, so re-submitting navigates nowhere — warn in place), or the
+//     console mounted from a retry navigation that landed on another miss
+//     (`showNotFoundOnMount`, router-state driven). Without this, a retry
+//     that misses re-renders a near-identical card and reads as "nothing
+//     happened".
+// Typing clears the sticky warn — the user is acting on it. Async UUID
+// lookup feedback (looking up / miss / pre-deploy) is the owner's line,
+// rendered below; `onInputChange` lets the owner reset it on typing so the
+// two feedback sources never describe different attempts at once.
 //
 // Whole-row click model (mirrors cold's `> claude ▊` button):
-//   - The `.view-action` wrapper is the click target. Click anywhere in
-//     the row triggers a lookup attempt.
-//   - Click on the inner `<input>` does NOT bubble to the row (stop-
-//     propagation), so typing-clicks focus the input without firing a
-//     premature submit.
-//   - Empty / invalid input + click → error line `! enter a valid
-//     account uuid` re-mounts via `errorKey` bump (CSS opacity fade-in
-//     replays from frame 0) and the input is focused so the user can
-//     fix the value.
-//   - Valid input + click → navigate.
-//   - Enter inside the input still submits via the wrapping `<form>`
-//     for keyboard parity.
+//   - The `.view-action` wrapper is the click target; input clicks stop
+//     propagation so typing-clicks focus without firing a submit attempt.
+//   - Failed attempt → warn line re-mounts via `warnKey` bump (CSS fade-in
+//     replays from frame 0) and the input refocuses.
+//   - Valid token id (not the current miss) → `onValidTokenId`.
+//   - Valid UUID → `onValidUuid` (owner resolves client-side; the UUID
+//     never enters a URL).
+//   - Enter inside the input submits via the wrapping `<form>` for
+//     keyboard parity.
 
 import { useRef, useState, type FormEvent, type MouseEvent } from 'react';
 
 import { isValidUuid } from '~shared/isValidUuid';
+import { parseTokenId } from '../lib/parseTokenId';
 
-const UUID_PLACEHOLDER = '00000000-0000-4000-8000-000000000000';
+const INPUT_PLACEHOLDER = '<token-id> | <account-uuid>';
+
+type WarnKind = 'invalid' | 'not-found';
+
+const WARN_COPY: Record<WarnKind, string> = {
+  invalid: '! enter a valid token id or account uuid',
+  'not-found': '! not found — try a different token id',
+};
 
 export function ViewLookupAction({
+  onValidTokenId,
   onValidUuid,
+  onInputChange,
+  currentTokenId,
+  showNotFoundOnMount = false,
 }: {
+  onValidTokenId: (tokenId: bigint) => void;
   onValidUuid: (uuid: string) => void;
+  // Fires on every keystroke — owners reset async lookup feedback here.
+  onInputChange?: () => void;
+  // The token id this console already proved nonexistent — re-submitting it
+  // warns in place instead of navigating to the same URL.
+  currentTokenId?: bigint;
+  // Mount with the not-found warn visible (set from router state when a
+  // retry navigation landed on another miss).
+  showNotFoundOnMount?: boolean;
 }): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [input, setInput] = useState('');
-  // Tracks whether the user has clicked / submitted at least once. Once
-  // true, we surface the error line on empty input as well so a click
-  // on an empty row gets visible feedback (lookup-attempt rules are
-  // unified across whole-row click + Enter inside the input).
-  const [submitAttempted, setSubmitAttempted] = useState(false);
-  // Bumped on every failed attempt — used as the error `<p>`'s React
-  // key so the element remounts and the CSS fade-in keyframe replays.
-  // Mirrors `replayKey` from cold-hero's walkthrough remount idiom.
-  const [errorKey, setErrorKey] = useState(0);
+  const [warn, setWarn] = useState<WarnKind | null>(
+    showNotFoundOnMount ? 'not-found' : null,
+  );
+  const [warnKey, setWarnKey] = useState(0);
 
-  const normalized = input.trim().toLowerCase();
-  const isInvalid = normalized !== '' && !isValidUuid(normalized);
-  const canSubmit = normalized !== '' && !isInvalid;
-  // Show the warn line if the user has typed an invalid value at any
-  // point, OR if they've attempted submit on an empty value.
-  const showError = isInvalid || (submitAttempted && !canSubmit);
+  const normalized = input.trim();
+  const lowered = normalized.toLowerCase();
+  const tokenId = parseTokenId(normalized);
+  const isUuid = isValidUuid(lowered);
+  const canSubmit = tokenId !== null || isUuid;
+  const isInvalid = normalized !== '' && !canSubmit;
+  // Live invalid feedback while typing wins the slot; otherwise the sticky
+  // post-attempt warn holds it.
+  const activeWarn: WarnKind | null = isInvalid ? 'invalid' : warn;
+
+  const raiseWarn = (kind: WarnKind): void => {
+    setWarn(kind);
+    setWarnKey((k) => k + 1);
+    inputRef.current?.focus();
+  };
 
   const attemptLookup = (): void => {
-    if (canSubmit) {
-      onValidUuid(normalized);
+    if (!canSubmit) {
+      raiseWarn('invalid');
       return;
     }
-    setSubmitAttempted(true);
-    setErrorKey((k) => k + 1);
-    inputRef.current?.focus();
+    if (tokenId !== null) {
+      if (currentTokenId !== undefined && tokenId === currentTokenId) {
+        raiseWarn('not-found');
+        return;
+      }
+      onValidTokenId(tokenId);
+      return;
+    }
+    onValidUuid(lowered);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -73,30 +124,26 @@ export function ViewLookupAction({
 
   const handleInputClick = (event: MouseEvent<HTMLInputElement>): void => {
     // Stop the click from bubbling to the row's `onClick` so typing-
-    // clicks just focus the input (default browser behaviour) rather
-    // than firing a submit attempt.
+    // clicks just focus the input rather than firing a submit attempt.
     event.stopPropagation();
   };
 
   return (
     <>
       <form className="view-action-form" onSubmit={handleSubmit} noValidate>
-        {/* Hidden label keeps the screen-reader hook for the input
-            while the visible UI presents the field as inline terminal
-            text (sigil + cmd + bracketed input + cursor block). */}
+        {/* Hidden label keeps the screen-reader hook for the input while
+            the visible UI presents the field as inline terminal text
+            (sigil + cmd + bracketed input + cursor block). */}
         <label htmlFor="view-action-input" className="view-action__sr-only">
-          account-uuid
+          token-id or account-uuid
         </label>
         {/*
           The row is a mouse click target — `onClick` triggers a lookup
-          attempt regardless of validity, mirroring cold's `> claude ▊`
-          button replay-on-click. NO `role="button"` / `tabIndex={0}` /
-          `aria-label` on the wrapper: nesting a labelled `<input>` +
-          submit `<button>` inside a button-role widget creates
-          ambiguous SR semantics. Keyboard users get full parity via
-          the input's own focus + form Enter submit + the sr-only
-          submit button. Clicks on the input stop propagation so they
-          only focus, never submit.
+          attempt regardless of validity. NO `role="button"` / `tabIndex`
+          / `aria-label` on the wrapper: nesting a labelled `<input>` +
+          submit `<button>` inside a button-role widget creates ambiguous
+          SR semantics. Keyboard users get full parity via the input's own
+          focus + form Enter submit + the sr-only submit button.
         */}
         <div
           className="terminal-action-row view-action hover-row"
@@ -115,20 +162,25 @@ export function ViewLookupAction({
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            placeholder={UUID_PLACEHOLDER}
+            placeholder={INPUT_PLACEHOLDER}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (warn !== null) setWarn(null);
+              onInputChange?.();
+            }}
             onClick={handleInputClick}
-            aria-invalid={isInvalid}
-            aria-describedby={showError ? 'view-action-warn' : undefined}
+            aria-invalid={activeWarn === 'invalid'}
+            aria-describedby={
+              activeWarn !== null ? 'view-action-warn' : undefined
+            }
           />
           <span className="view-action__bracket">]</span>{' '}
           <span className="blinking-cursor__block" aria-hidden="true" />
         </div>
         {/* Hidden submit button so the form still submits reliably on
             Enter inside the input — Safari historically requires an
-            explicit submit element on single-input forms. CSS hides it
-            visually; keyboard Enter still fires the form's onSubmit. */}
+            explicit submit element on single-input forms. */}
         <button
           type="submit"
           className="view-action__sr-only"
@@ -138,14 +190,14 @@ export function ViewLookupAction({
           submit
         </button>
       </form>
-      {showError && (
+      {activeWarn !== null && (
         <p
           id="view-action-warn"
-          key={errorKey}
+          key={`${activeWarn}-${warnKey}`}
           className="view-action__warn"
           role="alert"
         >
-          ! enter a valid account uuid
+          {WARN_COPY[activeWarn]}
         </p>
       )}
     </>

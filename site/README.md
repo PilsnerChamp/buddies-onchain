@@ -6,7 +6,7 @@ Routes:
 
 - `/` — cold-landing man-page terminal; also catch-all (unknown paths redirect here).
 - `/hatch#identityHash=<hash>&prngSeed=<seed>&provider=<provider>` — execution surface for plugin handoffs; missing or malformed values redirect to `/`.
-- `/view` — manual UUID lookup page.
+- `/view` — lookup console; one input takes a token id or an account UUID. UUIDs resolve to a tokenId client-side and never enter a URL.
 - `/view/<tokenId>` — canonical buddy render (wallet-free).
 - `/bond` — stage 2 placeholder.
 

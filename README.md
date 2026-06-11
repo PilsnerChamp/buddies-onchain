@@ -33,7 +33,7 @@ Short reference — full canonical table with usage rules at [`CLAUDE.md`](CLAUD
 | `buddy-onchain` | Claude Code plugin name |
 | `/buddy-onchain` | the slash command you type in Claude Code |
 | `/hatch` | the dApp route that mints the buddy for a UUID |
-| `/view` | manual lookup page — resolves a UUID to a tokenId client-side; `/view/<tokenId>` is the canonical buddy URL (no UUID in the path) |
+| `/view` | lookup console — one input takes a token id or an account UUID; UUIDs resolve to a tokenId client-side; `/view/<tokenId>` is the canonical buddy URL (no UUID in the path) |
 
 ## Use it
 

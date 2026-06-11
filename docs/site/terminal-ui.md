@@ -144,7 +144,7 @@ The contract row's `href` is `null` whenever the active chain has no deployment 
 
 The focal row after NEXT STEP/STEPS. Doubles as cursor-of-record. Three modes:
 
-- **Active** — focusable `<button>` (or wrapper `<div role="button">` when an `<input>` lives inside, e.g. `/view`). Sigil + cmd token + blinking cursor block. Click / Enter triggers action.
+- **Active** — focusable `<button>` (or an input-owning row for `/view`: clickable wrapper `<div>` with deliberately no `role="button"` because the labelled `<input>` and hidden submit button own keyboard/screen-reader semantics). Sigil + cmd token + blinking cursor block. Click / Enter triggers action.
 - **Committed** — plain `<p>` (or `<div>`). Same sigil + cmd, no cursor, no click target. Used while a multi-step flow is running (`/hatch` post-click).
 - **Muted** — plain `<p>` with `aria-disabled`. Muted colour scheme, optional static cursor slot for visual parity (`/bond` disabled prompt, `/hatch` pre-deploy).
 
@@ -156,8 +156,8 @@ Per-route mapping:
 |---|---|
 | `/` | `> claude ▊` (active button — replays walkthrough on click) |
 | `/hatch` | `> /hatch ▊` (active → committed → re-active on failure / retry) |
-| `/view` | `> /view [<uuid-input>] ▊` (active row wrapping `<input>`; row click triggers attempt; click on input focuses for typing) |
-| `/view/<tokenId>` miss | same as `/view` (shared `<ViewLookupAction>` component) |
+| `/view` | `> /view [<token-id> \| <account-uuid>] ▊` (unified lookup console — active row wrapping `<input>`; row click triggers attempt; click on input focuses for typing) |
+| `/view/<tokenId>` miss | same prompt — the miss state renders the same `<LookupConsole>` as bare `/view`; STATUS and the command header are the only differences |
 | `/view/<tokenId>` loading / error / pre-deploy | no action prompt; tail `> ▊` cursor is cursor-of-record |
 | `/bond` | `> /bond ▊` (muted, inert, holds cursor slot for parity) |
 
@@ -191,8 +191,7 @@ Constraints: opacity / colour / `text-shadow` transitions only. No `transform`, 
 
 - Cold action prompt (`> claude ▊` button)
 - `/hatch` action prompt (active button only — committed `<p>` does not)
-- `/view` lookup action input wrapper
-- `/view/<tokenId>` miss-card lookup action input wrapper
+- `/view` lookup console input wrapper (bare and miss states)
 - `/bond` disabled action prompt (`.hover-row--inert` so no hover fires)
 - All SEE ALSO row anchors on every route (and the inert pre-deploy contract row's `<div>`, also `--inert`)
 - AUTHOR link (`@PilsnerChamp` X-link row)
@@ -213,7 +212,7 @@ Cold-hero walkthrough remounts via `replayKey` bump → CSS animation runs from 
 
 ### Cross-route action prompt slot
 
-`/view/<tokenId>` miss reuses the bare-`/view` action prompt (`<ViewLookupAction>`) so a user landing on a miss can re-engage with another lookup without navigating back. Same cursor-slot exclusivity rule applies — the action prompt owns the cursor on the miss card and the tail `> ▊` is suppressed.
+Bare `/view` and the `/view/<tokenId>` miss state render the same `<LookupConsole>` — they are one command surface in two states ("no arg supplied" / "arg supplied, lookup missed"); STATUS and the command header are the only differences. Same cursor-slot exclusivity rule applies — the console's action prompt owns the cursor in both states and the tail `> ▊` is suppressed.
 
 ## Route-specific copy
 
@@ -226,13 +225,21 @@ STATUS
 
 The warn pill (`! ...`) carries the long form on `/bond` itself. SEE ALSO rows on other routes display only `stage 2`.
 
-### `/view` bare lookup
+### Lookup console (`/view` bare + `/view/<tokenId>` miss)
 
-`NEXT STEP` carries the lookup UI. No separate LOOKUP man-page section. No `[View buddy]` button. The action prompt composes the prompt sigil, an inline `<input>` styled to match terminal text (no bracketed button), and the blinking cursor block.
+One console, two states — bare `/view` is "no arg supplied", the miss state is "arg supplied, lookup missed". Both render `<LookupConsole>`; STATUS and the command header (`> /view --help` / `> /view <tokenId>`) are the only differences. NEXT STEPS carries the lookup UI — no separate LOOKUP man-page section, no `[View buddy]` button. The action prompt composes the prompt sigil, an inline `<input>` styled to match terminal text, and the blinking cursor block.
 
-### `/view/<tokenId>` miss card
+The input is dual-grammar, shape-detected, SYNOPSIS-style:
 
-STATUS reads `not found · no buddy for this token on this network`. DESCRIPTION separates validity from existence — the tokenId is numeric and well-formed; the contract lookup just missed. NEXT STEPS stays plugin-first for the holder path with manual retry through `/view`.
+```
+> /view [<token-id> | <account-uuid>] ▊
+```
+
+All digits → token id (public, sequential, browsable) → navigate to `/view/<id>`. UUID pattern → account UUID (resolves only the holder's own buddy) → resolves client-side via identityHash → `getTokenIdByIdentity`, navigating to the canonical `/view/<tokenId>` on hit; the UUID lives in component state only and never enters a URL. A buddy answers to both keys on-chain — the console exposes both through one slot. The SYNOPSIS line is the whole affordance: no auto-detect helper copy, no privacy-reassurance toast (declarative register).
+
+STATUS lines: bare idle `no id supplied · enter a token id or account UUID`; UUID resolving `looking up · resolving token id`; UUID miss `not found · no buddy for this UUID on this network`; miss state pins `not found · no buddy for this token on this network` (UUID attempts from the miss state report in the feedback line, not STATUS). NEXT STEPS stays plugin-first ("Run `/buddy-onchain` in Claude Code…") with the input as the secondary path; the miss state frames it as trying another id — browse register, never "find your buddy".
+
+The prompt owns one sync warn slot with two messages, both replaying via key-bump remount: `! enter a valid token id or account uuid` (empty/malformed) and `! not found — try a different token id` (known token-id miss). The not-found warn fires when the submitted id equals the miss state's own id (warn in place, no navigation — the page wouldn't change) and when a retry navigation lands on another miss (router-state flag; the new console is near-identical, so without the warn the attempt reads as a no-op). Async UUID lookup feedback (`looking up buddy…` / `! no buddy found for that UUID on this network` / pre-deploy) renders in its own line below the prompt; typing clears the sticky warn and resets the async feedback, so the two never describe different attempts. Direct links mount warn-free. Miss consoles are keyed by tokenId so retry navigations reset input/warn state.
 
 ### `/hatch` handoff source
 

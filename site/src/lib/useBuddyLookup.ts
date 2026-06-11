@@ -8,6 +8,12 @@
 //     re-derives from UUID/hash.
 
 import { useQuery } from '@tanstack/react-query';
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  getAbiItem,
+  toFunctionSelector,
+} from 'viem';
 import { computeIdentityHash } from '~shared/computeIdentityHash';
 import { publicClient } from '../config/publicClient';
 import { BUDDY_NFT_ABI } from '../config/contract';
@@ -29,6 +35,7 @@ type BuddyLookupData =
 
 type BuddyTokenData =
   | { state: 'pre-deploy' }
+  | { state: 'miss' }
   | { state: 'hit'; svg: string };
 
 export type BuddyLookupResult =
@@ -54,6 +61,41 @@ class BuddyLookupError extends Error {
     this.kind = kind;
     if (cause instanceof Error && cause.stack) this.stack = cause.stack;
   }
+}
+
+const ERC721_NONEXISTENT_TOKEN_ERROR = getAbiItem({
+  abi: BUDDY_NFT_ABI,
+  name: 'ERC721NonexistentToken',
+});
+if (!ERC721_NONEXISTENT_TOKEN_ERROR) {
+  throw new Error('BUDDY_NFT_ABI missing ERC721NonexistentToken');
+}
+const ERC721_NONEXISTENT_TOKEN_SIGNATURE = `${
+  ERC721_NONEXISTENT_TOKEN_ERROR.name
+}(${ERC721_NONEXISTENT_TOKEN_ERROR.inputs.map((input) => input.type).join(',')})`;
+
+// Bare signature is intentional: hashing the formatted `error ...` ABI item
+// yields a different value than the EVM custom-error selector.
+export const ERC721_NONEXISTENT_TOKEN_SELECTOR = toFunctionSelector(
+  ERC721_NONEXISTENT_TOKEN_SIGNATURE,
+);
+
+// Deterministic does-not-exist revert from tokenURI(missing id). Must run on
+// the raw viem cause BEFORE wrapping in BuddyLookupError — the wrapper drops
+// `cause`, so the viem error tree is unreachable afterwards.
+export function isNonexistentTokenRevert(cause: unknown): boolean {
+  const revert =
+    cause instanceof BaseError
+      ? cause.walk((e) => e instanceof ContractFunctionRevertedError)
+      : cause;
+  if (!(revert instanceof ContractFunctionRevertedError)) return false;
+  const signature = revert.signature?.toLowerCase();
+  const raw = typeof revert.raw === 'string' ? revert.raw.toLowerCase() : undefined;
+  return (
+    revert.data?.errorName === 'ERC721NonexistentToken' ||
+    signature === ERC721_NONEXISTENT_TOKEN_SELECTOR ||
+    raw?.startsWith(ERC721_NONEXISTENT_TOKEN_SELECTOR) === true
+  );
 }
 
 function reshapeError(error: Error): BuddyLookupErrorState {
@@ -141,6 +183,12 @@ export function useBuddyToken(
           args: [tokenId],
         })) as string;
       } catch (cause) {
+        // ERC721NonexistentToken is a lookup result, not a failure: the
+        // token id is well-formed, no buddy is minted under it. Same
+        // verdict the sibling hook reaches via tokenId === 0n.
+        if (isNonexistentTokenRevert(cause)) {
+          return { state: 'miss' };
+        }
         throw new BuddyLookupError('tokenUri', cause);
       }
 
