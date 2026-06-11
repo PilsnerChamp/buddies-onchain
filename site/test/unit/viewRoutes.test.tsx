@@ -62,6 +62,84 @@ function renderViewAt(path: string): void {
   );
 }
 
+type RouteEntry = string | { pathname: string; state?: unknown };
+
+function renderBareViewWithTokenStub({
+  withLocationProbe = false,
+}: {
+  withLocationProbe?: boolean;
+} = {}): ReturnType<typeof renderWithClient> {
+  const viewElement = withLocationProbe ? (
+    <>
+      <LocationProbe />
+      <View />
+    </>
+  ) : (
+    <View />
+  );
+
+  return renderWithClient(
+    <MemoryRouter initialEntries={['/view']}>
+      <Routes>
+        <Route path="/view" element={viewElement} />
+        <Route path="/view/:tokenId" element={<TokenStub />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function renderBareViewWithTokenPage(): ReturnType<typeof renderWithClient> {
+  return renderWithClient(
+    <MemoryRouter initialEntries={['/view']}>
+      <Routes>
+        <Route
+          path="/view"
+          element={
+            <>
+              <LocationProbe />
+              <View />
+            </>
+          }
+        />
+        <Route
+          path="/view/:tokenId"
+          element={
+            <>
+              <LocationProbe />
+              <ViewToken />
+            </>
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function tokenRouteWithProbe(entry: RouteEntry): JSX.Element {
+  return (
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route
+          path="/view/:tokenId"
+          element={
+            <>
+              <LocationProbe />
+              <ViewToken />
+            </>
+          }
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+function renderTokenRouteWithProbe(
+  entry: RouteEntry,
+  queryClient?: QueryClient,
+): ReturnType<typeof renderWithClient> {
+  return renderWithClient(tokenRouteWithProbe(entry), queryClient);
+}
+
 function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -133,14 +211,7 @@ describe('/view manual lookup', () => {
   });
 
   it('digit input navigates straight to /view/<tokenId> with no contract read', async () => {
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view']}>
-        <Routes>
-          <Route path="/view" element={<View />} />
-          <Route path="/view/:tokenId" element={<TokenStub />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderBareViewWithTokenStub();
 
     submitLookup('42');
 
@@ -153,30 +224,7 @@ describe('/view manual lookup', () => {
       status: 'success',
       data: { state: 'miss' },
     });
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view']}>
-        <Routes>
-          <Route
-            path="/view"
-            element={
-              <>
-                <LocationProbe />
-                <View />
-              </>
-            }
-          />
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderBareViewWithTokenPage();
 
     submitLookup('42');
 
@@ -196,22 +244,7 @@ describe('/view manual lookup', () => {
       if (uuid === null) return { status: 'idle' };
       return { status: 'success', data: { state: 'hit', tokenId: 42n } };
     });
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view']}>
-        <Routes>
-          <Route
-            path="/view"
-            element={
-              <>
-                <LocationProbe />
-                <View />
-              </>
-            }
-          />
-          <Route path="/view/:tokenId" element={<TokenStub />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderBareViewWithTokenStub({ withLocationProbe: true });
 
     submitLookup(VALID_UUID);
 
@@ -272,18 +305,18 @@ describe('/view/<tokenId> token page', () => {
 
   it('rejects non-numeric token ids with NotFound, not a home redirect', () => {
     renderViewAt('/view/garbage');
-    expect(screen.getByText('! not found — token id must be a positive number')).toBeTruthy();
+    expect(screen.getByText('! not found — token id must be a positive integer within uint256')).toBeTruthy();
   });
 
   it('rejects token ids beyond uint256 as invalid, not a miss', () => {
     renderViewAt(`/view/${(1n << 256n).toString()}`);
-    expect(screen.getByText('! not found — token id must be a positive number')).toBeTruthy();
+    expect(screen.getByText('! not found — token id must be a positive integer within uint256')).toBeTruthy();
     expect(useBuddyTokenMock).not.toHaveBeenCalled();
   });
 
   it('rejects UUID-shaped path segments; /view/:uuid is gone', () => {
     renderViewAt(`/view/${VALID_UUID}`);
-    expect(screen.getByText('! not found — token id must be a positive number')).toBeTruthy();
+    expect(screen.getByText('! not found — token id must be a positive integer within uint256')).toBeTruthy();
     expect(useBuddyLookupMock).not.toHaveBeenCalled();
     expect(useBuddyTokenMock).not.toHaveBeenCalled();
   });
@@ -350,21 +383,7 @@ describe('/view/<tokenId> token page', () => {
         ? { status: 'success', data: { state: 'miss' } }
         : { status: 'loading' },
     );
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view/999']}>
-        <Routes>
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderTokenRouteWithProbe('/view/999');
 
     submitLookup('42');
 
@@ -392,21 +411,7 @@ describe('/view/<tokenId> token page', () => {
       if (uuid === null) return { status: 'idle' };
       return { status: 'success', data: { state: 'hit', tokenId: 1n } };
     });
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view/999']}>
-        <Routes>
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderTokenRouteWithProbe('/view/999');
 
     submitLookup(VALID_UUID);
 
@@ -424,21 +429,7 @@ describe('/view/<tokenId> token page', () => {
     });
     const queryClient = createTestQueryClient();
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
-    const routeTree = (): JSX.Element => (
-      <MemoryRouter initialEntries={['/view/999']}>
-        <Routes>
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>
-    );
+    const routeTree = (): JSX.Element => tokenRouteWithProbe('/view/999');
     const { rerender } = renderWithClient(routeTree(), queryClient);
     const initialLocationKey = screen
       .getByTestId('location')
@@ -469,21 +460,7 @@ describe('/view/<tokenId> token page', () => {
       status: 'success',
       data: { state: 'miss' },
     });
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view/999']}>
-        <Routes>
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderTokenRouteWithProbe('/view/999');
 
     submitLookup('999');
 
@@ -498,21 +475,7 @@ describe('/view/<tokenId> token page', () => {
       status: 'success',
       data: { state: 'miss' },
     });
-    renderWithClient(
-      <MemoryRouter initialEntries={['/view/999']}>
-        <Routes>
-          <Route
-            path="/view/:tokenId"
-            element={
-              <>
-                <LocationProbe />
-                <ViewToken />
-              </>
-            }
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderTokenRouteWithProbe('/view/999');
 
     // No warn on the directly-visited miss card.
     expect(
@@ -540,25 +503,11 @@ describe('/view/<tokenId> token page', () => {
       status: 'success',
       data: { state: 'miss' },
     });
-    const renderMiss = (entry: string | { pathname: string; state?: unknown }): void => {
-      renderWithClient(
-        <MemoryRouter initialEntries={[entry]}>
-          <Routes>
-            <Route
-              path="/view/:tokenId"
-              element={
-                <>
-                  <LocationProbe />
-                  <ViewToken />
-                </>
-              }
-            />
-          </Routes>
-        </MemoryRouter>,
-      );
-    };
 
-    renderMiss({ pathname: '/view/4', state: { retriedMiss: true } });
+    renderTokenRouteWithProbe({
+      pathname: '/view/4',
+      state: { retriedMiss: true },
+    });
 
     expect(
       screen.getByText('! not found — try a different token id'),
@@ -573,7 +522,7 @@ describe('/view/<tokenId> token page', () => {
     ).toBeTruthy();
 
     cleanup();
-    renderMiss('/view/4');
+    renderTokenRouteWithProbe('/view/4');
 
     expect(
       screen.queryByText('! not found — try a different token id'),

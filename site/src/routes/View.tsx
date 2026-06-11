@@ -7,8 +7,6 @@
 
 import { LookupConsole } from '../components/LookupConsole';
 
-import './View.css';
-
 export function View(): JSX.Element {
   return <LookupConsole variant={{ kind: 'bare' }} />;
 }

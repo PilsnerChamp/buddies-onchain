@@ -1,0 +1,145 @@
+/*
+ * Lookup console styles. Shared by bare `/view` and the `/view/<tokenId>`
+ * miss state.
+ *
+ * The lookup UI is a single SYNOPSIS-style action-prompt input shaped like
+ * terminal text:
+ *
+ *   > /view [<token-id> | <account-uuid>] ▊
+ *
+ * The brackets are visual register (terminal-style optional argument);
+ * the input is borderless and inherits monospace font + colour so the
+ * whole row reads as one line of terminal text. Form submission via
+ * Enter on the input.
+ */
+
+/* ── Action prompt input ─────────────────────────────────────────────
+ * Terminal-style action prompt that doubles as a paste target. Chrome
+ * (border, radius, padding, negative gutter, full-row flex) lives on
+ * `.terminal-action-row` in `man-page-extras.css`. Rules below own
+ * console-specific overrides (zero gap, route-prompt input layout). */
+.view-action-form {
+  margin: 0;
+}
+
+.view-action {
+  /* Override the shared `gap: 10px` — the `/view [<input>]` layout owns
+   * its own spacing via per-token margins below. */
+  gap: 0;
+}
+
+.view-action__sigil {
+  color: var(--color-text-primary);
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+.view-action__command {
+  color: var(--accent);
+  margin-right: 8px;
+}
+
+.view-action__bracket {
+  color: var(--color-text-tertiary);
+}
+
+.view-action__input {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font: inherit;
+  color: var(--color-text-primary);
+  padding: 0 2px;
+  /* Roomy enough to fit a full UUID (36 chars). Flexes if the row
+   * is narrower than the natural width. */
+  flex: 1 1 36ch;
+  min-width: 0;
+}
+.view-action__input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* Cursor block sits flush right of the closing bracket. */
+.view-action .blinking-cursor__block {
+  margin-left: 10px;
+}
+
+/* Cursor: pointer on the row makes the click affordance discoverable
+ * even before hover-fill kicks in. */
+.view-action {
+  cursor: pointer;
+}
+
+/* The inner input is its own focus target inside the click-target row.
+ * Reset cursor to the standard text caret over the input itself so the
+ * "click here to type" affordance still reads naturally on hover. */
+.view-action__input {
+  cursor: text;
+}
+
+/* Screen-reader-only utility for the visually-hidden label + the
+ * always-present submit button (kept for Safari single-input form
+ * Enter behaviour). Standard sr-only pattern. */
+.view-action__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Warn line — `! enter a valid token id or account uuid`. Re-mounts via React key
+ * bump on each failed click attempt; the opacity fade-in keyframe
+ * replays from frame 0 so the user sees the message animate even when
+ * the text content is unchanged. Mirrors cold-hero's walkthrough
+ * remount idiom. Opacity-only mount animation, no transform, no layout
+ * shift — see `docs/site/terminal-ui.md` § Replay-on-click. */
+.view-action__warn {
+  margin: var(--space-2) 0 0;
+  color: var(--warn);
+  animation: view-action-warn-in 200ms ease-out;
+}
+@keyframes view-action-warn-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-action__warn {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .view-action__input {
+    flex: 1 1 auto;
+  }
+}
+
+/* ── Async UUID lookup feedback ─────────────────────────────────────── */
+.view-uuid__feedback {
+  animation: view-action-warn-in 200ms ease-out;
+}
+.view-uuid__feedback.view-uuid__warn {
+  color: var(--warn);
+  margin: 0 0 var(--space-3);
+}
+.view-uuid__feedback.view-uuid__loading {
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .view-uuid__feedback {
+    animation: none;
+  }
+}

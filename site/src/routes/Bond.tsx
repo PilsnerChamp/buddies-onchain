@@ -16,6 +16,7 @@
 
 import { ManPageSection } from '../components/ManPageSection';
 import { RouteMetadata, type SeeAlsoRoute } from '../components/RouteMetadata';
+import { RouteStatus } from '../components/RouteStatus';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import { ACTIVE_NETWORK } from '../config/network';
 import { ROUTES } from '../config/routes';
@@ -37,13 +38,7 @@ export function Bond(): JSX.Element {
       </p>
 
       <ManPageSection heading="STATUS">
-        <p className="route-status">
-          stage 2
-          <span className="route-status__sep"> · </span>
-          <span className="route-status__detail route-status__detail--warn">
-            not yet implemented
-          </span>
-        </p>
+        <RouteStatus lead="stage 2" detail="not yet implemented" tone="warn" />
       </ManPageSection>
 
       <ManPageSection heading="DESCRIPTION">

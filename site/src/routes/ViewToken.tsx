@@ -30,6 +30,22 @@ export function ViewToken(): JSX.Element {
 
 function ViewTokenSurface({ tokenId }: { tokenId: bigint }): JSX.Element {
   const result = useBuddyToken(tokenId, ACTIVE_NETWORK.chainId);
+  // Retry navigations stamp router state so a retry that lands on another
+  // miss mounts with the not-found warn visible — otherwise the new console
+  // is near-identical to the old one and the attempt reads as a no-op.
+  // The flag is consumed immediately, but only after the route has resolved
+  // to a miss, so reload/back-forward mounts are warn-free again.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const retriedMiss = Boolean(
+    (location.state as { retriedMiss?: boolean } | null)?.retriedMiss,
+  );
+  const isMiss = result.status === 'success' && result.data.state === 'miss';
+
+  useEffect(() => {
+    if (!isMiss || !retriedMiss) return;
+    navigate(viewTokenPath(tokenId), { replace: true, state: null });
+  }, [isMiss, navigate, retriedMiss, tokenId]);
 
   if (result.status === 'loading') {
     return (
@@ -65,29 +81,15 @@ function ViewTokenSurface({ tokenId }: { tokenId: bigint }): JSX.Element {
     // element, and without the key React preserves the console's input/warn
     // state across navigations — the mount-time not-found warn would never
     // re-apply.
-    return <MissConsole key={tokenId.toString()} tokenId={tokenId} />;
+    return (
+      <LookupConsole
+        key={tokenId.toString()}
+        variant={{ kind: 'miss', tokenId, retried: retriedMiss }}
+      />
+    );
   }
 
   return <HappyPath tokenId={tokenId} svg={result.data.svg} />;
-}
-
-function MissConsole({ tokenId }: { tokenId: bigint }): JSX.Element {
-  // Retry navigations stamp router state so a retry that lands on another
-  // miss mounts with the not-found warn visible — otherwise the new console
-  // is near-identical to the old one and the attempt reads as a no-op.
-  // The flag is consumed immediately so reload/back-forward mounts are
-  // warn-free again.
-  const location = useLocation();
-  const navigate = useNavigate();
-  const retried = Boolean(
-    (location.state as { retriedMiss?: boolean } | null)?.retriedMiss,
-  );
-  useEffect(() => {
-    if (!retried) return;
-    navigate(viewTokenPath(tokenId), { replace: true, state: null });
-  }, [navigate, retried, tokenId]);
-
-  return <LookupConsole variant={{ kind: 'miss', tokenId, retried }} />;
 }
 
 function NotFoundView(): JSX.Element {
@@ -95,7 +97,7 @@ function NotFoundView(): JSX.Element {
     <TerminalRouteShell showCursor>
       <RouteSeo robots="noindex, follow" canonicalPath={ROUTES.view} />
       <p className="view-uuid__warn" role="alert">
-        ! not found — token id must be a positive number
+        ! not found — token id must be a positive integer within uint256
       </p>
     </TerminalRouteShell>
   );

@@ -53,6 +53,7 @@ import type { ProviderBytes16 } from '~shared/providerBytes16';
 import { ManPageRow } from '../components/ManPageRow';
 import { ManPageSection } from '../components/ManPageSection';
 import { RouteMetadata, type SeeAlsoRoute } from '../components/RouteMetadata';
+import { RouteStatus, type RouteStatusTone } from '../components/RouteStatus';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import '../components/BlinkingCursor.css';
 import { getNetwork } from '../config/chains';
@@ -274,15 +275,11 @@ function WarmHatchPage({
       </p>
 
       <ManPageSection heading="STATUS">
-        <p className="route-status">
-          <span>{statusLine.lead}</span>
-          <span className="route-status__sep"> · </span>
-          <span
-            className={`route-status__detail route-status__detail--${statusLine.tone}`}
-          >
-            {statusLine.detail}
-          </span>
-        </p>
+        <RouteStatus
+          lead={<span>{statusLine.lead}</span>}
+          detail={statusLine.detail}
+          tone={statusLine.tone}
+        />
       </ManPageSection>
 
       <ManPageSection heading="DESCRIPTION">
@@ -333,7 +330,10 @@ function WarmHatchPage({
 }
 
 // ── STATUS line composer ─────────────────────────────────────────────────
-type StatusTone = 'normal' | 'awaiting' | 'pre-deploy' | 'hatched';
+type StatusTone = Extract<
+  RouteStatusTone,
+  'normal' | 'awaiting' | 'pre-deploy' | 'hatched'
+>;
 type StatusLine = {
   lead: string;
   detail: string;

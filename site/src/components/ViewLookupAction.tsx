@@ -82,9 +82,8 @@ export function ViewLookupAction({
   const [warnKey, setWarnKey] = useState(0);
 
   const normalized = input.trim();
-  const lowered = normalized.toLowerCase();
   const tokenId = parseTokenId(normalized);
-  const isUuid = isValidUuid(lowered);
+  const isUuid = isValidUuid(normalized);
   const canSubmit = tokenId !== null || isUuid;
   const isInvalid = normalized !== '' && !canSubmit;
   // Live invalid feedback while typing wins the slot; otherwise the sticky
@@ -110,7 +109,7 @@ export function ViewLookupAction({
       onValidTokenId(tokenId);
       return;
     }
-    onValidUuid(lowered);
+    onValidUuid(normalized);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
