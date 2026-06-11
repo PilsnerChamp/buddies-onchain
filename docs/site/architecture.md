@@ -73,7 +73,7 @@ No third-party script (analytics, error reporter) may read `location.href` or th
 
 `useBuddyLookup` (`site/src/lib/useBuddyLookup.ts`) splits into two TanStack Query calls against `publicClient`: a UUID → `tokenId` resolver (`getTokenIdByIdentity`) for manual `/view`, and a `tokenId` → metadata loader (`tokenURI`) for `/view/<tokenId>`. The token page loads by `tokenId` directly and skips the identity-hash step. Both run with no wallet connected.
 
-The `tokenURI` payload is decoded to `{ svg, provider }`: the SVG drives the buddy render, and `provider` is read from the `Provider` attribute, round-tripped through `shared/providerBytes16.ts` to validate the label. `<ViewToken>` shows the provider as a man-page row.
+The `tokenURI` payload is decoded to the inline SVG, which renders as the terminal frame's interior — edge to edge, no chrome between SVG and frame. Token metadata (including the `Provider` attribute) stays on-chain-only; the token page surfaces the art, not a metadata register.
 
 Identity hash matches the plugin via the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`. This runs for manual `/view` lookup only — the `/hatch` mint path takes a pre-computed `identityHash` from the fragment and never hashes a UUID. Cache key includes `chainId`. Stale time 30s.
 

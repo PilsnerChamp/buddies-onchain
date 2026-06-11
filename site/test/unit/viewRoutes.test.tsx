@@ -191,13 +191,10 @@ describe('/view/<tokenId> token page', () => {
       data: {
         state: 'hit',
         svg: '<svg><text>buddy #42</text></svg>',
-        provider: 'claude',
       },
     });
     renderViewAt('/view/42');
 
-    expect(screen.getByText('provider')).toBeTruthy();
-    expect(screen.getByText('claude')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'buddy' }).innerHTML).toContain(
       'buddy #42',
     );

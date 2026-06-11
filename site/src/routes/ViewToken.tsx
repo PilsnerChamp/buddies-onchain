@@ -7,7 +7,6 @@ import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { ManPageRow } from '../components/ManPageRow';
 import { RouteSeo } from '../components/RouteMetadata';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import { ACTIVE_NETWORK } from '../config/network';
@@ -64,13 +63,7 @@ function ViewTokenSurface({ tokenId }: { tokenId: bigint }): JSX.Element {
     );
   }
 
-  return (
-    <HappyPath
-      tokenId={tokenId}
-      svg={result.data.svg}
-      provider={result.data.provider}
-    />
-  );
+  return <HappyPath tokenId={tokenId} svg={result.data.svg} />;
 }
 
 function NotFoundView(): JSX.Element {
@@ -87,19 +80,14 @@ function NotFoundView(): JSX.Element {
 function HappyPath({
   tokenId,
   svg,
-  provider,
 }: {
   tokenId: bigint;
   svg: string;
-  provider: string;
 }): JSX.Element {
   return (
     <BuddyRenderErrorBoundary tokenId={tokenId}>
       <RouteSeo canonicalPath={viewTokenPath(tokenId)} />
       <TerminalRouteShell>
-        <div className="view-token__register" aria-label="token metadata">
-          <ManPageRow k="provider" v={provider} />
-        </div>
         <div
           className="view-uuid__buddy"
           role="img"

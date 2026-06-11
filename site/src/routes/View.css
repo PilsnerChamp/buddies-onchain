@@ -170,9 +170,6 @@
   padding: 0;
   max-height: none;
 }
-.view-token__register {
-  margin: 0 0 var(--space-4);
-}
 .view-uuid__buddy > svg {
   width: 100%;
   height: auto;
