@@ -136,7 +136,7 @@ function failureLineFor(category: HatchErrorCategory): string {
     case 'wallet-rejected':
       return 'wallet connection cancelled';
     case 'wrong-network':
-      return `wrong network — switch to ${ACTIVE_NETWORK.displayName} (${ACTIVE_NETWORK.chainId})`;
+      return `wrong network — switch wallet to ${ACTIVE_NETWORK.displayName} (${ACTIVE_NETWORK.chainId})`;
     case 'generic':
       return 'hatch failed — no buddy created';
   }
