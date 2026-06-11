@@ -5,10 +5,10 @@
 // values past the ABI bound can never exist, so they fail validity
 // (NotFound / inline error), not existence (miss card).
 
-const MAX_UINT256 = (1n << 256n) - 1n;
+import { maxUint256 } from 'viem';
 
 export function parseTokenId(raw: string): bigint | null {
   if (!/^[0-9]+$/.test(raw)) return null;
   const tokenId = BigInt(raw);
-  return tokenId > 0n && tokenId <= MAX_UINT256 ? tokenId : null;
+  return tokenId > 0n && tokenId <= maxUint256 ? tokenId : null;
 }

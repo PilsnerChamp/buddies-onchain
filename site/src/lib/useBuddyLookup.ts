@@ -8,17 +8,13 @@
 //     re-derives from UUID/hash.
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  BaseError,
-  ContractFunctionRevertedError,
-  getAbiItem,
-  toFunctionSelector,
-} from 'viem';
+import { getAbiItem, toFunctionSelector } from 'viem';
 import { computeIdentityHash } from '~shared/computeIdentityHash';
 import { publicClient } from '../config/publicClient';
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
 import { decodeTokenUriToSvg } from './decodeTokenUri';
+import { getRevertInfo } from './revertInfo';
 
 type BuddyLookupErrorKind = 'tokenId' | 'tokenUri';
 
@@ -84,11 +80,8 @@ export const ERC721_NONEXISTENT_TOKEN_SELECTOR = toFunctionSelector(
 // the raw viem cause BEFORE wrapping in BuddyLookupError — the wrapper drops
 // `cause`, so the viem error tree is unreachable afterwards.
 export function isNonexistentTokenRevert(cause: unknown): boolean {
-  const revert =
-    cause instanceof BaseError
-      ? cause.walk((e) => e instanceof ContractFunctionRevertedError)
-      : cause;
-  if (!(revert instanceof ContractFunctionRevertedError)) return false;
+  const { contractRevert: revert } = getRevertInfo(cause);
+  if (revert === null) return false;
   const signature = revert.signature?.toLowerCase();
   const raw = typeof revert.raw === 'string' ? revert.raw.toLowerCase() : undefined;
   return (

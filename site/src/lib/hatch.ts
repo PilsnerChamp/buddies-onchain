@@ -17,6 +17,7 @@ import type { ProviderBytes16 } from '~shared/providerBytes16';
 import { BUDDY_NFT_ABI } from '../config/contract';
 import { getNetwork } from '../config/chains';
 import { ACTIVE_NETWORK } from '../config/network';
+import { getRevertInfo } from './revertInfo';
 
 const REDIRECT_COUNTDOWN_SECONDS = 5;
 const IS_LOCAL_DEV = ACTIVE_NETWORK.key === 'local';
@@ -270,33 +271,11 @@ function toPublicState(state: InternalHatchState): HatchState {
   }
 }
 
-function errorNamesFrom(err: unknown): string[] {
-  const names: string[] = [];
-  let cursor: unknown = err;
-  for (let i = 0; i < 8 && cursor && typeof cursor === 'object'; i++) {
-    const node = cursor as {
-      name?: string;
-      cause?: unknown;
-      data?: { errorName?: string };
-      details?: string;
-      shortMessage?: string;
-      message?: string;
-    };
-    if (node.name) names.push(node.name);
-    if (node.data?.errorName) names.push(node.data.errorName);
-    if (node.shortMessage) names.push(node.shortMessage);
-    if (node.details) names.push(node.details);
-    if (node.message) names.push(node.message);
-    cursor = node.cause;
-  }
-  return names.map((entry) => entry.toLowerCase());
-}
-
 // Inspects viem/wallet errors and categorizes them. Wallet and RPC
 // providers vary in how much typed detail they preserve, so this uses typed
 // sentinels first and string sniffing last.
 function categorizeWriteError(err: unknown): HatchErrorCategory {
-  const names = errorNamesFrom(err);
+  const { errorNames: names } = getRevertInfo(err);
   if (
     names.some(
       (entry) =>

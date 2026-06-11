@@ -30,19 +30,11 @@ function base64ToUtf8(b64: string): string {
   return new TextDecoder('utf-8').decode(bytes);
 }
 
-export type DecodedTokenAttribute = {
-  trait_type?: string;
-  value?: unknown;
-};
-
-export type DecodedTokenMetadata = {
-  name?: string;
-  description?: string;
+type DecodedTokenMetadata = {
   image: string;
-  attributes?: ReadonlyArray<DecodedTokenAttribute>;
 };
 
-export function decodeTokenUri(tokenUri: string): DecodedTokenMetadata {
+function decodeTokenUri(tokenUri: string): DecodedTokenMetadata {
   if (!tokenUri.startsWith(JSON_PREFIX)) {
     throw new Error('decodeTokenUri: missing data:application/json prefix');
   }
@@ -60,7 +52,7 @@ export function decodeTokenUri(tokenUri: string): DecodedTokenMetadata {
   return parsed as DecodedTokenMetadata;
 }
 
-export function decodeTokenMetadataToSvg(meta: DecodedTokenMetadata): string {
+function decodeTokenMetadataToSvg(meta: DecodedTokenMetadata): string {
   if (!meta.image.startsWith(SVG_PREFIX)) {
     throw new Error('decodeTokenUriToSvg: image missing data:image/svg+xml prefix');
   }

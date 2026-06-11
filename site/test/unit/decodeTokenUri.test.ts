@@ -12,10 +12,7 @@
 // SVG through the encoder is enough to lock the public decoder behavior.
 
 import { describe, it, expect } from 'vitest';
-import {
-  decodeTokenUri,
-  decodeTokenUriToSvg,
-} from '../../src/lib/decodeTokenUri';
+import { decodeTokenUriToSvg } from '../../src/lib/decodeTokenUri';
 
 // Helper: encode a UTF-8 string to base64 the way browsers do (matches
 // the production `atob` round-trip in `base64ToUtf8`).
@@ -42,25 +39,7 @@ function buildTokenUri(svg: string, extras: Record<string, unknown> = {}): strin
 }
 
 describe('decodeTokenUriToSvg', () => {
-  it('decodes full metadata attributes, including Provider', () => {
-    const tokenUri = buildTokenUri('<svg />');
-    const metadata = decodeTokenUri(tokenUri);
-
-    expect(metadata.attributes).toContainEqual({
-      trait_type: 'Provider',
-      value: 'claude',
-    });
-  });
-
-  it('round-trips an SVG through the full decode pipeline', () => {
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect /></svg>';
-    const tokenUri = buildTokenUri(svg);
-    expect(decodeTokenUriToSvg(tokenUri)).toBe(svg);
-  });
-
-  it('preserves UTF-8 characters in the SVG (e.g. ▊ block + middle-dot)', () => {
-    // The on-chain SVG embeds CSS `content:` rules with multi-byte glyphs.
-    // The decoder must round-trip them, not mojibake.
+  it('round-trips an SVG through the full UTF-8 decode pipeline', () => {
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg"><text>BUDDIES·ONCHAIN ▊</text></svg>';
     const tokenUri = buildTokenUri(svg);
@@ -71,6 +50,16 @@ describe('decodeTokenUriToSvg', () => {
     expect(() => decodeTokenUriToSvg('not-a-data-uri')).toThrow(
       /missing data:application\/json prefix/,
     );
+  });
+
+  it('throws on malformed base64 in the metadata payload', () => {
+    const tokenUri = 'data:application/json;base64,***';
+    expect(() => decodeTokenUriToSvg(tokenUri)).toThrow();
+  });
+
+  it('throws on malformed metadata JSON', () => {
+    const tokenUri = `data:application/json;base64,${utf8ToBase64('not-json')}`;
+    expect(() => decodeTokenUriToSvg(tokenUri)).toThrow();
   });
 
   it('throws when the parsed JSON has no string `image`', () => {
