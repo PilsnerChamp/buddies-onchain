@@ -12,6 +12,7 @@ import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
 import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ReclaimAttestationHelper} from "./helpers/ReclaimAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
@@ -22,8 +23,9 @@ import {HatchHelper} from "./helpers/HatchHelper.sol";
 contract GasCeilingsTest is Test, HatchHelper {
     // Baseline: 229_357 gas; ~20% headroom rounded up for hatch storage/write-path drift.
     uint256 private constant HATCH_GAS_CEILING = 280_000;
-    // Baseline: 92_507 gas (cold-slot, post `vm.cool`); ~10% headroom rounded up for EIP-712 verification drift.
-    uint256 private constant BOND_GAS_CEILING = 102_000;
+    // Baseline: 97_262 gas (cold-slot, post `vm.cool`; was 92_507 before the Decision-10 seed check
+    // added one cold SLOAD + a calldata word); ~10% headroom rounded up for EIP-712 verification drift.
+    uint256 private constant BOND_GAS_CEILING = 107_000;
     // Baseline: 5_309_133 gas; ~20% headroom rounded up for custodial SVG/base64 rendering drift.
     uint256 private constant TOKEN_URI_CUSTODIAL_GAS_CEILING = 6_400_000;
     // Baseline: 5_312_924 gas; ~20% headroom rounded up for bonded name/SVG/base64 rendering drift.
@@ -34,6 +36,9 @@ contract GasCeilingsTest is Test, HatchHelper {
     uint256 private constant BUDDY_RENDERER_TOKEN_URI_GAS_CEILING = 6_300_000;
     // Baseline: 13_775 gas; ~20% headroom rounded up for admin renderer-rotation drift.
     uint256 private constant SET_RENDERER_GAS_CEILING = 17_000;
+    // Baseline: 251_214 gas (cold-slot, post `vm.cool`: EIP-712 verify + provider validation +
+    // burn + full replacement hatch write-set); ~19% headroom for reclaim-path drift.
+    uint256 private constant RECLAIM_AND_HATCH_GAS_CEILING = 300_000;
 
     string private constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string private constant BOND_NAME = "buddy";
@@ -99,6 +104,37 @@ contract GasCeilingsTest is Test, HatchHelper {
         emit log_named_uint("bond gas (cold)", gasUsed);
         assertEq(nft.ownerOf(tokenId), recipient, "bond recipient did not receive token");
         assertLe(gasUsed, BOND_GAS_CEILING, "bond gas exceeds ceiling");
+    }
+
+    function test_gasCeiling_reclaimAndHatch() public {
+        // Squat: true identity hash, wrong (non-derived) seed.
+        bytes32 identityHash = _identityHash(TEST_UUID);
+        uint32 derivedSeed = _prngSeed(TEST_UUID);
+        uint256 squatTokenId = nft.hatch(identityHash, derivedSeed ^ 0x5eed, CLAUDE_PROVIDER);
+
+        BuddyNFT.ReclaimAttestation memory attestation = BuddyNFT.ReclaimAttestation({
+            tokenId: squatTokenId,
+            identityHash: identityHash,
+            prngSeed: derivedSeed,
+            provider: CLAUDE_PROVIDER,
+            reclaimer: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+        bytes memory signature = _signReclaimAttestation(attestation);
+
+        // Same cold-tx metering rationale as test_gasCeiling_bond: `vm.cool`
+        // resets the warmed slots so the metered call pays EIP-2929 cold prices.
+        vm.cool(address(nft));
+
+        vm.prank(recipient);
+        uint256 gasBefore = gasleft();
+        uint256 newTokenId = nft.reclaimAndHatch(attestation, signature);
+        uint256 gasUsed = gasBefore - gasleft();
+
+        emit log_named_uint("reclaimAndHatch gas (cold)", gasUsed);
+        assertEq(newTokenId, squatTokenId + 1, "replacement tokenId mismatch");
+        assertEq(nft.ownerOf(newTokenId), address(nft), "replacement not custodial");
+        assertLe(gasUsed, RECLAIM_AND_HATCH_GAS_CEILING, "reclaimAndHatch gas exceeds ceiling");
     }
 
     function test_gasCeiling_tokenURI_custodial() public {
@@ -193,6 +229,7 @@ contract GasCeilingsTest is Test, HatchHelper {
         return BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: _identityHash(uuid),
+            prngSeed: _prngSeed(uuid),
             recipient: recipient_,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -200,6 +237,15 @@ contract GasCeilingsTest is Test, HatchHelper {
 
     function _signBondAttestation(BuddyNFT.BondAttestation memory attestation) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _signReclaimAttestation(BuddyNFT.ReclaimAttestation memory attestation)
+        internal
+        view
+        returns (bytes memory)
+    {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ReclaimAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

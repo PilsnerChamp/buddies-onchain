@@ -11,8 +11,9 @@ import {BuddyNFT} from "../../contracts/BuddyNFT.sol";
 ///      across the bond test suites. Per-suite signing stays inline because it
 ///      needs the `vm.sign` cheatcode bound to a Test contract.
 library BondAttestationHelper {
-    bytes32 internal constant TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
+    bytes32 internal constant TYPEHASH = keccak256(
+        "BondAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,address recipient,uint64 expiry)"
+    );
 
     /// @dev Domain separator for the canonical (current chain, target contract) pair.
     function domainSeparator(address verifyingContract) internal view returns (bytes32) {
@@ -36,7 +37,12 @@ library BondAttestationHelper {
     function hashStruct(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
-                TYPEHASH, attestation.tokenId, attestation.identityHash, attestation.recipient, attestation.expiry
+                TYPEHASH,
+                attestation.tokenId,
+                attestation.identityHash,
+                attestation.prngSeed,
+                attestation.recipient,
+                attestation.expiry
             )
         );
     }

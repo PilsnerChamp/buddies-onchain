@@ -27,6 +27,9 @@ import {BondAttestationHelper} from "../test/helpers/BondAttestationHelper.sol";
 ///           RECIPIENT_KEY  — bonding wallet private key (must hold Sepolia ETH)
 ///           BUDDY_NFT      — deployed BuddyNFT address
 ///           TOKEN_ID       — hatched tokenId to bond
+///           ATTESTED_SEED  — uint32 prngSeed DERIVED FROM THE ACCOUNT UUID off-chain
+///                            (signer-spec invariant: never echo chain state; the
+///                            buddyPrngSeed() read below is fail-fast UX only)
 ///           BUDDY_NAME     — display name to set at bond
 ///           EXPIRY         — optional unix expiry; defaults to now + 1 day
 ///
@@ -39,6 +42,7 @@ contract BondSepolia is Script {
         uint256 recipientPk = vm.envUint("RECIPIENT_KEY");
         address nftAddr = vm.envAddress("BUDDY_NFT");
         uint256 tokenId = vm.envUint("TOKEN_ID");
+        uint32 attestedSeed = uint32(vm.envUint("ATTESTED_SEED"));
         string memory name = vm.envString("BUDDY_NAME");
         uint64 expiry = uint64(vm.envOr("EXPIRY", block.timestamp + 1 days));
 
@@ -51,10 +55,12 @@ contract BondSepolia is Script {
         bytes32 identityHash = nft.buddyIdentityHash(tokenId);
         require(identityHash != bytes32(0), "tokenId not hatched");
         require(nft.ownerOf(tokenId) == nftAddr, "token not in custody (already bonded?)");
+        // Fail-fast UX only — the attested value stays the UUID-derived env input.
+        require(nft.buddyPrngSeed(tokenId) == attestedSeed, "stored seed != ATTESTED_SEED (squat? wrong derivation?)");
         require(expiry > block.timestamp, "expiry in the past");
 
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId, identityHash: identityHash, recipient: recipient, expiry: expiry
+            tokenId: tokenId, identityHash: identityHash, prngSeed: attestedSeed, recipient: recipient, expiry: expiry
         });
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(nftAddr, attestation));
 

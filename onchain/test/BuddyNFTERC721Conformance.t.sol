@@ -190,6 +190,7 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

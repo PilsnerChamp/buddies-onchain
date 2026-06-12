@@ -1,0 +1,85 @@
+{
+  "description": "EIP-712 attestation digest parity vectors for BondAttestation + ReclaimAttestation -- TypeScript and Solidity must match byte-exact. Domain is synthetic-but-pinned (Base Sepolia chainId, fixed verifying contract); a consumer reproducing typehash, structHash, domainSeparator, and digest for these inputs matches the contract preimage. providerHex32 is bytes32(provider): the bytes16 label left-aligned and right-padded, exactly as abi.encode hashes it.",
+  "generatedBy": "onchain/script/GenerateAttestationVectors.s.sol",
+  "domain": {
+    "name": "BuddyNFT",
+    "version": "1",
+    "chainId": 84532,
+    "verifyingContract": "0x1111111111111111111111111111111111111111",
+    "separator": "0x847c9cb0d7f542838dcae164138ee55aa9d819f6d4eb2d7d90d09fb04d5f23b3"
+  },
+  "bondAttestation": {
+    "typeString": "BondAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,address recipient,uint64 expiry)",
+    "typehash": "0x8512edf9ebf470740f031f4a1974f3c2473540f7ec486940106978a581bd0f3b",
+    "vectorCount": 3,
+    "vectors": [
+      {
+        "tokenId": 1,
+        "identityHash": "0x3fea5f748f6f8e6f37b83f3ea59e19cd0b21b89ead53b08fe2d539135af227dd",
+        "prngSeed": 1530910344,
+        "recipient": "0x00000000000000000000000000000000000000a1",
+        "expiry": 1765432100,
+        "structHash": "0x8d67b8022083b05507cba7181b9ed8356b831dc38899cac0f3f2127699d0f41e",
+        "digest": "0xfdbd6de519afe41cdb46d5dd95b74b544676dc0b2c4cef8c845702fdba663de7"
+      },
+      {
+        "tokenId": 42,
+        "identityHash": "0x948cfab60f879cf5e5dea9fe837663223d2179ca342b3884fb5f402effcb0b03",
+        "prngSeed": 0,
+        "recipient": "0x00000000000000000000000000000000000000b2",
+        "expiry": 4102444800,
+        "structHash": "0x459bbd75057566dfc87392c7df8a0b19a78e782a38ca4e5aa122159eaf89eb67",
+        "digest": "0x2953e814ca2371f27e7a7332b5add89026ca0bb0cdffc9351a15c7404c20ae7c"
+      },
+      {
+        "tokenId": 7777777,
+        "identityHash": "0x0d2c97ee5a5d65c72c29da94fc24fa254a51780d33c8e6d7b888574df2377a9b",
+        "prngSeed": 4294967295,
+        "recipient": "0x00000000000000000000000000000000000000c3",
+        "expiry": 2000000000,
+        "structHash": "0xcde871c33a59a1bfda1908d8819273e6c0d69d3ecc3a8c73858df7deab828bc2",
+        "digest": "0x3e6ce7dfc7392a1cb076ac1498b2efd11e3abe66e419e3e3b52b19bf6daf2389"
+      }
+    ]
+  },
+  "reclaimAttestation": {
+    "typeString": "ReclaimAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,bytes16 provider,address reclaimer,uint64 expiry)",
+    "typehash": "0xfe2cde1fbb73b72ca429e2899d5374d4719edf5dcde303986f77053b89e1069b",
+    "vectorCount": 3,
+    "vectors": [
+      {
+        "tokenId": 1,
+        "identityHash": "0x3fea5f748f6f8e6f37b83f3ea59e19cd0b21b89ead53b08fe2d539135af227dd",
+        "prngSeed": 1530910344,
+        "provider": "claude",
+        "providerHex32": "0x636c617564650000000000000000000000000000000000000000000000000000",
+        "reclaimer": "0x00000000000000000000000000000000000000a1",
+        "expiry": 1765432100,
+        "structHash": "0x044b2f03e2950f8b7f2926a6e9a1ecf14e7810079cb973e9688b84a4baabca05",
+        "digest": "0x220c90d86607ccbce2ce036f11c1bb93bc33dd3944ea845a7ebdba9a45204ddc"
+      },
+      {
+        "tokenId": 42,
+        "identityHash": "0x948cfab60f879cf5e5dea9fe837663223d2179ca342b3884fb5f402effcb0b03",
+        "prngSeed": 0,
+        "provider": "codex",
+        "providerHex32": "0x636f646578000000000000000000000000000000000000000000000000000000",
+        "reclaimer": "0x00000000000000000000000000000000000000b2",
+        "expiry": 4102444800,
+        "structHash": "0x01133f9c3bf68e41dac8f7051cc3e6f8ab1f39b7c0ca8e91ed09272f6b04a688",
+        "digest": "0x3a654bfa8c8aea4978b5933579bf49c15d3bc8d4563a0040c2c1b5eaced20ea4"
+      },
+      {
+        "tokenId": 7777777,
+        "identityHash": "0x0d2c97ee5a5d65c72c29da94fc24fa254a51780d33c8e6d7b888574df2377a9b",
+        "prngSeed": 4294967295,
+        "provider": "a-b-c-d-e-f-0123",
+        "providerHex32": "0x612d622d632d642d652d662d3031323300000000000000000000000000000000",
+        "reclaimer": "0x00000000000000000000000000000000000000c3",
+        "expiry": 2000000000,
+        "structHash": "0xaa6fb6cf878e9454557a6ae664ed28feef4bf776ede0ca23fa3114a92c65b4f8",
+        "digest": "0xbb5ce4aa3e8f08fdfa754a15cd9110f30f76b79a55ad831fceb2e8b23872ea69"
+      }
+    ]
+  }
+}

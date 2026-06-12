@@ -82,31 +82,42 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         assertEq(freshNft.buddyName(tokenId), name);
     }
 
-    function testFuzz_bond_attestationFields(
-        uint256 tokenId,
-        bytes32 identityHash,
-        address attestationRecipient,
-        uint256 expiry,
-        uint8 matchMask
-    ) public {
+    /// @dev Fuzz candidates ride in a struct (single stack slot) — six flat
+    ///      params plus the per-field locals blow the legacy-codegen stack.
+    struct BondFieldCandidates {
+        uint256 tokenId;
+        bytes32 identityHash;
+        uint32 prngSeed;
+        address recipient;
+        uint256 expiry;
+        uint8 matchMask;
+    }
+
+    function testFuzz_bond_attestationFields(BondFieldCandidates memory candidates) public {
         BuddyNFT freshNft = _newBondingNft();
         (uint256 validTokenId, bytes32 validIdentityHash,) =
             _hatchAndPrepare(freshNft, TEST_UUID, recipient, _validExpiry());
 
-        bool tokenIdMatches = matchMask & 0x01 != 0;
-        bool identityHashMatches = matchMask & 0x02 != 0;
-        bool recipientMatches = matchMask & 0x04 != 0;
-        bool expiryMatches = matchMask & 0x08 != 0;
+        bool tokenIdMatches = candidates.matchMask & 0x01 != 0;
+        bool identityHashMatches = candidates.matchMask & 0x02 != 0;
+        bool recipientMatches = candidates.matchMask & 0x04 != 0;
+        bool expiryMatches = candidates.matchMask & 0x08 != 0;
+        bool seedMatches = candidates.matchMask & 0x10 != 0;
 
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenIdMatches ? validTokenId : _differentTokenId(tokenId, validTokenId),
-            identityHash: identityHashMatches ? validIdentityHash : _differentHash(identityHash, validIdentityHash),
-            recipient: recipientMatches ? recipient : _differentAddress(attestationRecipient, recipient),
-            expiry: expiryMatches ? _validExpiry() : _expiredExpiry(expiry)
+            tokenId: tokenIdMatches ? validTokenId : _differentTokenId(candidates.tokenId, validTokenId),
+            identityHash: identityHashMatches
+                ? validIdentityHash
+                : _differentHash(candidates.identityHash, validIdentityHash),
+            prngSeed: seedMatches ? _prngSeed(TEST_UUID) : _differentSeed(candidates.prngSeed, _prngSeed(TEST_UUID)),
+            recipient: recipientMatches ? recipient : _differentAddress(candidates.recipient, recipient),
+            expiry: expiryMatches ? _validExpiry() : _expiredExpiry(candidates.expiry)
         });
         bytes memory signature = _signBondAttestation(freshNft, attestation);
 
-        if (!tokenIdMatches || !identityHashMatches || !recipientMatches) {
+        // All four field checks (tokenId, identityHash, prngSeed, recipient)
+        // precede the expiry check in bond(), so any field mismatch wins.
+        if (!tokenIdMatches || !identityHashMatches || !seedMatches || !recipientMatches) {
             vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
         } else if (!expiryMatches) {
             vm.expectRevert(BuddyNFT.AttestationExpired.selector);
@@ -115,7 +126,7 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         vm.prank(recipient);
         freshNft.bond(validTokenId, BOND_NAME, attestation, signature);
 
-        if (tokenIdMatches && identityHashMatches && recipientMatches && expiryMatches) {
+        if (tokenIdMatches && identityHashMatches && seedMatches && recipientMatches && expiryMatches) {
             assertEq(freshNft.ownerOf(validTokenId), recipient);
             assertEq(freshNft.buddyName(validTokenId), BOND_NAME);
         }
@@ -218,7 +229,11 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         tokenId = _hatchUuid(target, uuid);
         identityHash = _identityHash(uuid);
         attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId, identityHash: identityHash, recipient: bondRecipient, expiry: expiry
+            tokenId: tokenId,
+            identityHash: identityHash,
+            prngSeed: _prngSeed(uuid),
+            recipient: bondRecipient,
+            expiry: expiry
         });
     }
 
@@ -264,6 +279,13 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
             return candidate;
         }
         return bytes32(uint256(validHash) ^ 1);
+    }
+
+    function _differentSeed(uint32 candidate, uint32 validSeed) internal pure returns (uint32) {
+        if (candidate != validSeed) {
+            return candidate;
+        }
+        return validSeed ^ 1;
     }
 
     function _differentAddress(address candidate, address validAddress) internal pure returns (address) {

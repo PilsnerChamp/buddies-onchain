@@ -107,6 +107,7 @@ contract BuddyBondRenderFlipTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: _identityHash(TEST_UUID),
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

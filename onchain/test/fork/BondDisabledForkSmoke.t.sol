@@ -75,6 +75,7 @@ contract BondDisabledForkSmokeTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: _identityHash(uuid),
+            prngSeed: _prngSeed(uuid),
             recipient: address(this),
             expiry: uint64(block.timestamp + 1 hours)
         });

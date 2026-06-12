@@ -88,9 +88,13 @@ contract BondForkRehearsalTest is Test, HatchHelper {
         assertEq(preJson.readString(".attributes[5].value"), "Hatched", "pre-bond Stage must be Hatched");
 
         address recipient = makeAddr("fork-rehearsal-recipient");
+        // prngSeed is UUID-derived (signer-spec invariant), never read back from
+        // chain state. Requires the seed-aware (Decision-10) bytecode on the live
+        // deploy — against the older seedless deploy this call fails on selector.
         BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: _identityHash(uuid),
+            prngSeed: _prngSeed(uuid),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });

@@ -51,10 +51,26 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     // Enums & Structs
     // -------------------------------------------------------------------------
 
+    /// @dev Member order MUST equal the typehash string order — `abi.encode`
+    ///      hashes by position; a silent reorder breaks every signed digest.
     struct BondAttestation {
         uint256 tokenId;
         bytes32 identityHash;
+        uint32 prngSeed;
         address recipient;
+        uint64 expiry;
+    }
+
+    /// @dev Distinct struct + typehash from BondAttestation on purpose:
+    ///      action-specific domain separation, so a signed bond can never be
+    ///      replayed as a reclaim or vice versa. Member order MUST equal the
+    ///      typehash string order.
+    struct ReclaimAttestation {
+        uint256 tokenId;
+        bytes32 identityHash;
+        uint32 prngSeed;
+        bytes16 provider;
+        address reclaimer;
         uint64 expiry;
     }
 
@@ -64,6 +80,9 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
 
     event Awakened(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed hatcher, bytes16 provider);
     event BuddyBonded(uint256 indexed tokenId, bytes32 indexed identityHash, address indexed recipient, string name);
+    event Reclaimed(
+        uint256 indexed oldTokenId, uint256 indexed newTokenId, bytes32 indexed identityHash, address reclaimer
+    );
     event RendererUpdated(address indexed renderer);
     event AttestationSignerUpdated(address indexed signer);
     event BondingEnabled();
@@ -72,8 +91,13 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     // Constants
     // -------------------------------------------------------------------------
 
-    bytes32 private constant BOND_ATTESTATION_TYPEHASH =
-        keccak256("BondAttestation(uint256 tokenId,bytes32 identityHash,address recipient,uint64 expiry)");
+    bytes32 private constant BOND_ATTESTATION_TYPEHASH = keccak256(
+        "BondAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,address recipient,uint64 expiry)"
+    );
+
+    bytes32 private constant RECLAIM_ATTESTATION_TYPEHASH = keccak256(
+        "ReclaimAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,bytes16 provider,address reclaimer,uint64 expiry)"
+    );
 
     // -------------------------------------------------------------------------
     // Storage
@@ -256,22 +280,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
 
         _validateProvider(provider);
 
-        IBuddyNFT.BuddyTraits memory traits = _deriveTraits(prngSeed);
-
-        tokenId = _nextTokenId++;
-
-        _tokenTraits[tokenId] = traits;
-        _tokenPrngSeeds[tokenId] = prngSeed;
-        _tokenProviders[tokenId] = provider;
-        _tokenIdentityHashes[tokenId] = identityHash;
-        _identityHashToTokenId[identityHash] = tokenId;
-        _minted[identityHash] = true;
-        _tokenStages[tokenId] = IBuddyNFT.OwnershipStage.Custodial;
-        _hatcher[tokenId] = msg.sender;
-
-        _mint(address(this), tokenId);
-
-        emit Awakened(tokenId, identityHash, msg.sender, provider);
+        tokenId = _mintBuddy(identityHash, prngSeed, provider);
     }
 
     function bond(uint256 tokenId, string calldata name, BondAttestation calldata attestation, bytes calldata signature)
@@ -292,6 +301,13 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
         }
 
         if (attestation.identityHash != _tokenIdentityHashes[tokenId]) {
+            revert InvalidAttestation();
+        }
+
+        // The signer attests the UUID-DERIVED seed (never an echo of chain
+        // state); the contract owns this comparison. A token hatched with a
+        // seed that does not derive from its identity UUID can never bond.
+        if (attestation.prngSeed != _tokenPrngSeeds[tokenId]) {
             revert InvalidAttestation();
         }
 
@@ -317,6 +333,79 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
         emit Locked(tokenId);
         emit MetadataUpdate(tokenId);
         emit BuddyBonded(tokenId, _tokenIdentityHashes[tokenId], msg.sender, name);
+    }
+
+    /// @notice Atomically burn a squatted custodial token and re-hatch the identity
+    ///         with its true UUID-derived seed, in one transaction (no re-squat race).
+    /// @dev Under a signer attesting the true UUID-derived seed, honest tokens are
+    ///      unreclaimable: the attested seed must DIFFER from the stored seed
+    ///      (inverse of the bond() predicate), so only a squat hatched with a wrong
+    ///      seed qualifies. The guarantee is signer-conditional, not structural — a
+    ///      signer attesting an arbitrary different seed reaches any custodial token
+    ///      (owner and signer are one trust class; see SECURITY.md). Bonded tokens are
+    ///      unreachable (Custodial stage gate). The replacement token stays
+    ///      custodial; bonding it is a separate, seed-checked bond() step.
+    function reclaimAndHatch(ReclaimAttestation calldata attestation, bytes calldata signature)
+        external
+        returns (uint256 newTokenId)
+    {
+        if (!bondingEnabled) {
+            revert BondingNotEnabled();
+        }
+
+        uint256 oldTokenId = attestation.tokenId;
+
+        // _requireOwned FIRST: a burned or never-minted attested tokenId reverts
+        // ERC721NonexistentToken, closing replay-against-burned-id (the squat's
+        // per-token mappings survive its burn, so field checks alone would pass).
+        _requireOwned(oldTokenId);
+
+        if (_tokenStages[oldTokenId] != IBuddyNFT.OwnershipStage.Custodial) {
+            revert Soulbound();
+        }
+
+        bytes32 identityHash = attestation.identityHash;
+
+        if (_tokenIdentityHashes[oldTokenId] != identityHash) {
+            revert InvalidAttestation();
+        }
+
+        // Inverse predicate of bond(): the attested UUID-derived seed must NOT
+        // match storage. A matching seed means the token is honest — refuse.
+        if (attestation.prngSeed == _tokenPrngSeeds[oldTokenId]) {
+            revert InvalidAttestation();
+        }
+
+        // Leaked-signature / relayer protection: only the attested reclaimer
+        // may submit.
+        if (attestation.reclaimer != msg.sender) {
+            revert InvalidAttestation();
+        }
+
+        if (attestation.expiry < block.timestamp) {
+            revert AttestationExpired();
+        }
+
+        // Same charset invariant hatch() enforces: every minted token's provider
+        // is validated, replacement mints included — a sloppy signer cannot
+        // smuggle a malformed label into storage.
+        _validateProvider(attestation.provider);
+
+        _verifySignature(_hashReclaimAttestation(attestation), signature);
+
+        // _mintBuddy below consumes exactly _nextTokenId; pre-read so Reclaimed
+        // can lead the event sequence (Reclaimed, burn Transfer, mint Transfer,
+        // Awakened) for indexers.
+        emit Reclaimed(oldTokenId, _nextTokenId, identityHash, msg.sender);
+
+        // Existing _update gate already permits burn-from-custody (from ==
+        // address(this) && Custodial). The squat's per-token mappings go dead
+        // behind _requireOwned; only the identity registry is released.
+        _burn(oldTokenId);
+        delete _minted[identityHash];
+        delete _identityHashToTokenId[identityHash];
+
+        newTokenId = _mintBuddy(identityHash, attestation.prngSeed, attestation.provider);
     }
 
     // -------------------------------------------------------------------------
@@ -363,6 +452,26 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     // -------------------------------------------------------------------------
     // Internal Helpers
     // -------------------------------------------------------------------------
+
+    /// @dev Full hatch write-set + identity-registry pointing, shared verbatim by
+    ///      hatch() and reclaimAndHatch() so the replacement mint can never drift
+    ///      from a normal hatch. Callers own validation and registry release.
+    function _mintBuddy(bytes32 identityHash, uint32 prngSeed, bytes16 provider) private returns (uint256 tokenId) {
+        tokenId = _nextTokenId++;
+
+        _tokenTraits[tokenId] = _deriveTraits(prngSeed);
+        _tokenPrngSeeds[tokenId] = prngSeed;
+        _tokenProviders[tokenId] = provider;
+        _tokenIdentityHashes[tokenId] = identityHash;
+        _identityHashToTokenId[identityHash] = tokenId;
+        _minted[identityHash] = true;
+        _tokenStages[tokenId] = IBuddyNFT.OwnershipStage.Custodial;
+        _hatcher[tokenId] = msg.sender;
+
+        _mint(address(this), tokenId);
+
+        emit Awakened(tokenId, identityHash, msg.sender, provider);
+    }
 
     function _validateName(string memory name_) internal pure {
         if (bytes(name_).length > MAX_NAME_LENGTH) {
@@ -424,7 +533,22 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
                 BOND_ATTESTATION_TYPEHASH,
                 attestation.tokenId,
                 attestation.identityHash,
+                attestation.prngSeed,
                 attestation.recipient,
+                attestation.expiry
+            )
+        );
+    }
+
+    function _hashReclaimAttestation(ReclaimAttestation calldata attestation) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                RECLAIM_ATTESTATION_TYPEHASH,
+                attestation.tokenId,
+                attestation.identityHash,
+                attestation.prngSeed,
+                attestation.provider,
+                attestation.reclaimer,
                 attestation.expiry
             )
         );

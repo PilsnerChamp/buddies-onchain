@@ -67,6 +67,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -148,6 +149,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -164,6 +166,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: fakeTokenId,
             identityHash: fakeHash,
+            prngSeed: 0,
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -220,6 +223,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId + 1, // wrong tokenId
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -236,6 +240,27 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: keccak256("wrong"), // wrong hash
+            prngSeed: _prngSeed(TEST_UUID),
+            recipient: recipient,
+            expiry: uint64(block.timestamp + 1 hours)
+        });
+        bytes memory sig = _signBondAttestation(att);
+
+        vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
+        vm.prank(recipient);
+        nft.bond(tokenId, BOND_NAME, att, sig);
+    }
+
+    function test_bond_revertsPrngSeedMismatch() public {
+        (uint256 tokenId, bytes32 identityHash,) = _hatchAndPrepare();
+
+        // Attested seed differs from the stored (UUID-derived) seed. The
+        // signature is valid over the wrong-seed attestation, isolating the
+        // revert to the contract-side seed equality check.
+        BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
+            tokenId: tokenId,
+            identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID) ^ 1, // wrong seed
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -253,6 +278,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: wrongRecipient, // wrong recipient
             expiry: uint64(block.timestamp + 1 hours)
         });
@@ -270,6 +296,7 @@ contract BuddyNFTBondTest is Test, HatchHelper {
         BuddyNFT.BondAttestation memory att = BuddyNFT.BondAttestation({
             tokenId: tokenId,
             identityHash: identityHash,
+            prngSeed: _prngSeed(TEST_UUID),
             recipient: recipient,
             expiry: uint64(block.timestamp - 1) // expired
         });

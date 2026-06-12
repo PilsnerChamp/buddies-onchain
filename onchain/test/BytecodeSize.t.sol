@@ -18,7 +18,9 @@ import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 contract BytecodeSizeTest is Test {
     uint256 private constant EIP170_RUNTIME_CODE_LIMIT = 24_576;
 
-    // Baseline: 12_638 bytes; ~10% headroom rounded up to catch BuddyNFT bytecode drift.
+    // Baseline: 13_582 bytes (was 12_490 before Decision-10/11 added the seed-checked bond +
+    // reclaimAndHatch). Ceiling deliberately HELD at 14_000 — only ~3% headroom remains, so the
+    // next BuddyNFT addition trips this gate loudly and forces a deliberate ceiling decision.
     uint256 private constant BUDDY_NFT_SIZE_CEILING = 14_000;
     // Baseline: 21_121 bytes; ~7% headroom — tight on purpose because EIP-170 is only 3,455
     // bytes above the baseline. Renderer additions of ~1.4 KB trip this ceiling well before
