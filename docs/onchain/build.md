@@ -10,15 +10,15 @@ Foundry workflow for the BuddyNFT contract suite.
 
 ## Install dependencies
 
-`onchain/lib/` is gitignored. There are no submodules. Reinstall after every clean clone:
+`onchain/lib/` is gitignored. There are no submodules. This step is the dependency source for a clean clone, so pin both deps to a release tag — floating versions drift bytecode and tests, breaking the "anyone can recompute" guarantee. Reinstall after every clean clone:
 
 ```bash
 cd onchain
-forge install --no-git foundry-rs/forge-std
-forge install --no-git OpenZeppelin/openzeppelin-contracts
+forge install --no-git foundry-rs/forge-std@v1.9.7
+forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.1.0
 ```
 
-Both commands are idempotent. Remappings live in `onchain/foundry.toml` — already set up for the installed paths.
+Pin to the release you build against, e.g. the tags above. The maintainer sets these to the exact versions the project builds and tests against — the contract targets solc 0.8.24 and OpenZeppelin Contracts v5.x (`onchain/foundry.toml`). Both commands are idempotent. Remappings live in `onchain/foundry.toml` — already set up for the installed paths.
 
 ## Build
 
@@ -105,8 +105,8 @@ After a clean clone:
 
 ```bash
 cd onchain
-forge install --no-git foundry-rs/forge-std
-forge install --no-git OpenZeppelin/openzeppelin-contracts
+forge install --no-git foundry-rs/forge-std@v1.9.7
+forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.1.0
 forge build
 forge test
 ```

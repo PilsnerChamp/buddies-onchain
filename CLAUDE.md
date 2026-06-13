@@ -37,7 +37,7 @@ Commands and URLs are declarative. They state what they do; no defensive copy or
 
 Run Foundry commands from `onchain/`. Run repo, plugin, site, shared, and docs commands from the repo root unless a module doc says otherwise.
 
-Required tooling: Bun, Foundry, and a Node-compatible environment. Install Foundry dependencies into `onchain/lib/` with `forge install --no-git foundry-rs/forge-std` and `forge install --no-git OpenZeppelin/openzeppelin-contracts`.
+Required tooling: Bun, Foundry, a Node-compatible environment, and `uv` (the `.claude/` status line and Setup hook are PEP 723 scripts run via `uv`). Install Foundry dependencies into `onchain/lib/` with `forge install --no-git foundry-rs/forge-std` and `forge install --no-git OpenZeppelin/openzeppelin-contracts` (pin versions for reproducible builds — see `docs/onchain/build.md`).
 
 Module build/run references: `docs/onchain/build.md`, `docs/plugin/architecture.md`, `docs/site/architecture.md`.
 
@@ -58,7 +58,7 @@ Module build/run references: `docs/onchain/build.md`, `docs/plugin/architecture.
 
 ## License and project files
 
-MIT — see `LICENSE`. Buddies Onchain is an unofficial community project.
+MIT — see `LICENSE`.
 
 The short-form disclaimer lives in exactly three homes: `README.md`, `plugin/README.md`, and the contractURI description. This file is not a disclaimer home and does not restate it.
 

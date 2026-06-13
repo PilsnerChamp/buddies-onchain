@@ -110,7 +110,7 @@ describe("formatLookupBlock", () => {
     expect(out).not.toContain("see all hatched buddies:");
   });
 
-  test("preserves alignment-sensitive cardLines verbatim (Codex finding 9)", () => {
+  test("preserves alignment-sensitive cardLines verbatim", () => {
     // Sprite art lives or dies by exact ASCII column alignment. Leading
     // spaces, trailing spaces, unicode separators, and stray backticks
     // must round-trip unchanged through `formatLookupBlock`.

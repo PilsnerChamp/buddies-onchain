@@ -1,8 +1,7 @@
 // Single selector powering the SEE ALSO contract row on `/`, and the footer
 // contract strip on `/hatch` and `/view/<tokenId>`. Cross-surface drift is
 // structurally impossible when every surface reads from this one function.
-// Signed statement is a site-root file (`/official-links.signature.txt`),
-// authored by authenticity-ops; this selector only drives the display string.
+// This selector only drives the display string for the contract row.
 //
 // Returns `{ address, statusChunks, href, isClickable }`. Pre-deploy display
 // literal uses the Unicode horizontal ellipsis U+2026 (`…`), NOT three ASCII

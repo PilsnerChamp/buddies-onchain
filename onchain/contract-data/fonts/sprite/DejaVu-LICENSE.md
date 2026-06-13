@@ -1,7 +1,7 @@
 # DejaVu Sans Mono License
 
 **Font:** DejaVu Sans Mono v2.37
-**Source:** System-installed `/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf`
+**Source:** DejaVu Fonts project — <https://dejavu-fonts.github.io> (release v2.37, `DejaVuSansMono.ttf`)
 
 Fonts are (c) Bitstream (see below). DejaVu changes are in public domain.
 

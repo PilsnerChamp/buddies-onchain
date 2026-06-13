@@ -1,0 +1,14 @@
+{
+  "name": "buddies-onchain",
+  "owner": {
+    "name": "Buddies Onchain",
+    "url": "https://github.com/PilsnerChamp/buddies-onchain"
+  },
+  "plugins": [
+    {
+      "name": "buddy-onchain",
+      "source": "./plugin",
+      "description": "One account. One buddy. Lives on-chain. Run /buddy-onchain to find your buddy; /buddy-onchain off|lite|full to tune ambient mode."
+    }
+  ]
+}

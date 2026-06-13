@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Validates contributor changes across the three product domains. Guards the
+# cross-domain parity hazard CONTRIBUTING.md warns about (plugin/contract trait
+# drift) — nothing else re-runs these suites on a PR.
+
+jobs:
+  onchain:
+    name: onchain (Foundry)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: onchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Install Foundry deps
+        run: |
+          forge install --no-git foundry-rs/forge-std@v1.9.7
+          forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.1.0
+      - name: Build
+        run: forge build
+      - name: Test
+        run: forge test -vvv
+
+  plugin:
+    name: plugin (Bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Test
+        run: bun test
+      - name: Bundle reproducibility (rebuild ~= committed dist/index.js)
+        # Informational: Bun's bundler output is version-sensitive, so this warns
+        # rather than fails CI. To make it a hard gate, pin bun-version on setup-bun.
+        continue-on-error: true
+        run: |
+          bun run build
+          git diff --exit-code -- dist/index.js deployments/ \
+            || echo "::warning::dist/index.js or deployments/ differ from committed — run 'bun run build' and commit"
+
+  site:
+    name: site (Vite/Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Test
+        run: bun run test
+      - name: Build
+        run: bun run build

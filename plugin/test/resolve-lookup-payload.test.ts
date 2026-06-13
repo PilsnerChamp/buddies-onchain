@@ -350,7 +350,7 @@ describe("resolveLookupPayload — status mapping", () => {
     expect(result!.cardLines).toEqual(EXPECTED_SLEEPING_CARD_ROWS);
   });
 
-  test("URLs are absolute (Codex finding 10) — sepolia routes to prod origin", async () => {
+  test("URLs are absolute — sepolia routes to prod origin", async () => {
     setPublicClientForTest(fakeReadContractClient(async () => 0n));
     const result = await resolveLookupPayload({
       accountUuidOverride: FIXTURE_ACCOUNT_UUID,

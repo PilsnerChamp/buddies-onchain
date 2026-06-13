@@ -35,7 +35,7 @@ Validation (`InvalidProvider` on any breach):
 
 A full 16-byte value with no padding is valid. The renderer trims the padding tail for the `Provider` attribute.
 
-Token name is empty at hatch and never written here. Gas ~212,462.
+Token name is empty at hatch and never written here. Gas ~229,357.
 
 The chain proves `traits == Mulberry32.deriveTraits(storedSeed)` — consistency anyone can recompute, not authenticity. It does not prove the seed came from any particular identity. `identityHash` is the privacy, lookup, and uniqueness key only; uniqueness keys on `_minted[identityHash]` alone. Authenticity is re-established at Stage 2 (`bond()`, dormant in v1).
 
@@ -45,6 +45,7 @@ The chain proves `traits == Mulberry32.deriveTraits(storedSeed)` — consistency
 struct BondAttestation {
     uint256 tokenId;
     bytes32 identityHash;
+    uint32 prngSeed;
     address recipient;
     uint64 expiry;
 }
@@ -59,14 +60,38 @@ function bond(
 
 Reverts `BondingNotEnabled` until the maintainer calls `enableBonding()`. When active: stage gate (`Custodial` only) acts as the replay guard, EIP-712 signature verifies against `_attestationSigner`, name is written, token transfers from `address(this)` to `msg.sender`, stage flips to `Bonded`. Bonded is terminal. After the flip, emits `Locked(tokenId)` (ERC-5192) and `MetadataUpdate(tokenId)` (ERC-4906) — see [Marketplace interfaces](#marketplace-interfaces).
 
+`bond()` re-checks the supplied `prngSeed` against the token's stored seed (squat resistance, Decision-10/11): a token hatched with a seed that does not derive from its identity UUID can never bond. An integrator signing a `BondAttestation` must include `prngSeed` — the EIP-712 digest hashes all five fields by position, so an omitted or wrong seed never matches.
+
+## Reclaim (dormant in v1)
+
+```solidity
+struct ReclaimAttestation {
+    uint256 tokenId;
+    bytes32 identityHash;
+    uint32 prngSeed;
+    bytes16 provider;
+    address reclaimer;
+    uint64 expiry;
+}
+
+function reclaimAndHatch(
+    ReclaimAttestation calldata attestation,
+    bytes calldata signature
+) external returns (uint256 newTokenId);
+```
+
+Distinct struct and EIP-712 typehash from `BondAttestation` — a signed bond can never replay as a reclaim or vice versa. Reverts `BondingNotEnabled` until `enableBonding()`. Signer-gated recovery of a squatted custodial token: it burns the stale token and re-hatches the identity to a new custodial token and seed in one transaction, with no gap for a re-squat. New token id, new traits, re-validated provider label, same identity hash.
+
+When active, on-chain checks: `_requireOwned(tokenId)` first (a burned or never-minted id reverts), stage gate (`Custodial` only), stored identity-hash match, and the inverse of the `bond()` predicate — the attested `prngSeed` must *differ* from the stored seed, so an honest token can never be reclaimed. The attested `reclaimer` must submit the call (a leaked signature is useless in other hands), expiry is enforced, provider is re-validated, EIP-712 signature verifies against `_attestationSigner`. Then `_burn(oldTokenId)`, the identity registry is released, and `_mintBuddy` issues the replacement. The replacement stays `Custodial` — bonding it is a separate, seed-checked `bond()` step. Emits `Reclaimed(oldTokenId, newTokenId, identityHash, reclaimer)`. Bonded tokens are out of reach. Owner and signer are one trust class — see [`SECURITY.md`](../../SECURITY.md#known-limitations).
+
 ## Invariants
 
 - `ownerOf(tokenId) == address(this)` for every `Custodial` token, always.
-- No transfer path out of `address(this)` except `bond()` while `bondingEnabled == true`.
+- No custody exit out of `address(this)` except `bond()` (transfer) and `reclaimAndHatch()` (burn), both while `bondingEnabled == true`.
 - `bondingEnabled` is one-way. Once `true`, it cannot be set back to `false`.
 - `enableBonding()` requires `_attestationSigner != address(0)`.
 - `approve` and `setApprovalForAll` revert `Soulbound()`.
-- `_update()` allows mint (`from == address(0)`) and the bond path (`from == address(this) && stage == Custodial`). Everything else reverts `Soulbound()`.
+- `_update()` allows two branches: mint (`from == address(0)`) and a one-way custodial exit (`from == address(this) && stage == Custodial`). The custodial-exit branch covers both the `bond()` transfer to `msg.sender` and the `reclaimAndHatch()` burn (`to == address(0)`). Everything else reverts `Soulbound()`.
 
 ## Storage layout
 

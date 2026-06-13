@@ -29,10 +29,10 @@ Committed manifest for the `hatch-coverage` suite. This is axis-value coverage, 
 
 ```bash
 # After PRNG, domain count, identity hash, or hatch-salt changes:
-just coverage-uuids-gen
+bash onchain/tools/renderer/regen-hatch-coverage-uuids.sh
 
 # Every sprites-verify run:
-just coverage-uuids-check
+cd onchain && forge script script/CheckHatchCoverageUuids.s.sol
 ```
 
 `coverage-uuids-gen` runs the Solidity UUID scanners, rewrites `onchain/test/helpers/HatchCoverageUuids.sol`, and rewrites `manifest.json`.
