@@ -9,7 +9,7 @@ A soulbound (non-transferable) identity artifact for developers who use AI codin
 - Fully on-chain SVG. The renderer lives in contract bytecode; nothing is hosted off-chain.
 - Deterministic trait derivation, backed by inspectable math. The plugin computes a seed from your account UUID client-side; the contract stores that seed and derives traits from it via Mulberry32. Same account, same buddy, every deployment.
 - Consistency you can recompute. The traits on-chain provably match the stored seed — anyone can re-run the derivation and confirm `traits == _deriveTraits(seed)`. The raw UUID never crosses the wire; only the seed and an identity hash do. What the chain proves is that the traits follow from the seed, not that the seed came from any particular account — that link is established off-chain, and is what a later bonding stage attests.
-- One account, one buddy. The token is held at the contract, bound to the identity hash — not to a wallet.
+- One account, one buddy. The token is bound to the identity hash; at the `Hatched` stage it is held by the contract, not in a wallet.
 - The identity hash is the same on every deployment. It is derived only from your account, not from any chain, contract, or deployment. Binding it to a deployment would let a redeploy quietly change your buddy; the canonical record means nobody can.
 - Two public stages: `Hatched` (the token sits at the contract address) and `Bonded` (dormant in v1).
 
