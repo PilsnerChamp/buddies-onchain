@@ -17,7 +17,7 @@ import {BuddyDomain} from "./libraries/BuddyDomain.sol";
 import {Mulberry32} from "./libraries/Mulberry32.sol";
 
 /// @title BuddyNFT
-/// @notice Soulbound ERC721 for Claude Code Buddy companions on Base L2.
+/// @notice Soulbound ERC721 for AI-coding-tool buddy companions on Base L2.
 /// @dev Hatches custodially to the contract and bonds later via attestation.
 contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     uint256 public constant MAX_NAME_LENGTH = 14;
@@ -154,7 +154,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
         return string.concat(
             "data:application/json;utf8,",
             '{"name":"Buddies Onchain","description":"',
-            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. Born from the Claude Code terminal buddy. An unofficial community project, not endorsed by Anthropic.",
+            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools, born in the terminal and bound to your account.",
             '","image":"',
             BuddyDomain.SITE_ORIGIN,
             "/og-home.svg",

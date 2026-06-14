@@ -60,6 +60,6 @@ Module build/run references: `docs/onchain/build.md`, `docs/plugin/architecture.
 
 MIT — see `LICENSE`.
 
-The short-form disclaimer lives in exactly three homes: `README.md`, `plugin/README.md`, and the contractURI description. This file is not a disclaimer home and does not restate it.
+The short-form disclaimer lives in exactly two homes: `README.md` and `plugin/README.md`. This file is not a disclaimer home and does not restate it.
 
 Other reference files: `NOTICE` (third-party font attributions only — not the disclaimer), `SECURITY.md`, `CONTRIBUTING.md`.

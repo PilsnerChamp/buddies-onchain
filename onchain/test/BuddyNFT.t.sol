@@ -45,7 +45,7 @@ contract BuddyNFTTest is Test {
         assertEq(vm.parseJsonString(json, ".name"), "Buddies Onchain");
         assertEq(
             vm.parseJsonString(json, ".description"),
-            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools: a fully on-chain SVG with deterministic traits derived from the account, held at the contract and bound to an identity hash, not a wallet. Born from the Claude Code terminal buddy. An unofficial community project, not endorsed by Anthropic."
+            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools, born in the terminal and bound to your account."
         );
         assertEq(vm.parseJsonString(json, ".image"), "https://buddies-onchain.xyz/og-home.svg");
         assertEq(vm.parseJsonString(json, ".external_link"), "https://buddies-onchain.xyz");
