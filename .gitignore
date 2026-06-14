@@ -14,6 +14,8 @@ out/
 cache/
 onchain/lib/
 onchain/broadcast/
+# Internal QA artifact — coverage/mutation report, regenerated on demand via `forge coverage`.
+onchain/test/COVERAGE.md
 
 # Deployment manifests: commit canonical chains only.
 #   31337 (local anvil) — deterministic, tracked.

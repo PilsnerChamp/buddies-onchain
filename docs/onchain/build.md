@@ -14,8 +14,8 @@ Foundry workflow for the BuddyNFT contract suite.
 
 ```bash
 cd onchain
-forge install --no-git foundry-rs/forge-std@v1.9.7
-forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.1.0
+forge install --no-git foundry-rs/forge-std@v1.16.1
+forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.6.1
 ```
 
 Pin to the release you build against, e.g. the tags above. The maintainer sets these to the exact versions the project builds and tests against — the contract targets solc 0.8.24 and OpenZeppelin Contracts v5.x (`onchain/foundry.toml`). Both commands are idempotent. Remappings live in `onchain/foundry.toml` — already set up for the installed paths.
@@ -105,8 +105,8 @@ After a clean clone:
 
 ```bash
 cd onchain
-forge install --no-git foundry-rs/forge-std@v1.9.7
-forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.1.0
+forge install --no-git foundry-rs/forge-std@v1.16.1
+forge install --no-git OpenZeppelin/openzeppelin-contracts@v5.6.1
 forge build
 forge test
 ```
