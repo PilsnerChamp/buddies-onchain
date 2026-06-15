@@ -4,7 +4,9 @@ import { assertDeploymentConfig } from '../../src/config/deploymentValidation';
 
 const LOCAL_CHAIN_ID = 31337;
 const SEPOLIA_CHAIN_ID = 84532;
-const SEPOLIA_BUDDY_NFT = '0x5b5c71B100931CEEA7823E400713f5D330F7DA4C';
+// Synthetic non-local fixtures only; not live Base Sepolia deployment pointers.
+const SAMPLE_BUDDY_NFT = '0x000000000000000000000000000000000000bEEF';
+const SAMPLE_BLOCK_TEXT = '123456';
 
 describe('assertDeploymentConfig', () => {
   it('does not require fallback vars for local/unset-chain builds', () => {
@@ -37,8 +39,8 @@ describe('assertDeploymentConfig', () => {
         activeChainId: SEPOLIA_CHAIN_ID,
         localChainId: LOCAL_CHAIN_ID,
         hasCommittedManifest: false,
-        address: SEPOLIA_BUDDY_NFT,
-        block: '42844299',
+        address: SAMPLE_BUDDY_NFT,
+        block: SAMPLE_BLOCK_TEXT,
       }),
     ).not.toThrow();
   });
@@ -59,7 +61,7 @@ describe('assertDeploymentConfig', () => {
           localChainId: LOCAL_CHAIN_ID,
           hasCommittedManifest: false,
           address,
-          block: '42844299',
+          block: SAMPLE_BLOCK_TEXT,
         }),
       ).toThrow(/VITE_BUDDY_NFT_ADDRESS/);
     },
@@ -76,7 +78,7 @@ describe('assertDeploymentConfig', () => {
           activeChainId: SEPOLIA_CHAIN_ID,
           localChainId: LOCAL_CHAIN_ID,
           hasCommittedManifest: false,
-          address: SEPOLIA_BUDDY_NFT,
+          address: SAMPLE_BUDDY_NFT,
           block,
         }),
       ).toThrow(/VITE_BUDDY_NFT_BLOCK/);
