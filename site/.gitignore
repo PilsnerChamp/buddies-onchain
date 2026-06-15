@@ -1,6 +1,8 @@
 node_modules
 dist
-.env
+# Env files (mirror root convention):
+#   .env       = non-secrets, committed (public surface, e.g. VITE_CHAIN, VITE_WALLETCONNECT_PROJECT_ID)
+#   .env.local = secrets, ignored
 .env.local
 .env.*.local
 *.log

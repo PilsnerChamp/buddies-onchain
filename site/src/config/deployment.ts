@@ -26,9 +26,24 @@
 // Production builds are
 // unaffected — the JSON is bundled at build time and the path is irrelevant at runtime.
 
+import { NETWORKS } from '~shared/networks';
+import { ACTIVE_NETWORK } from './network';
+import {
+  parseBuddyNftAddress,
+  parseBuddyNftBlock,
+} from './deploymentValidation';
+
+type DeploymentEnv = {
+  readonly [key: string]: unknown;
+  readonly VITE_BUDDY_NFT_ADDRESS?: string;
+  readonly VITE_BUDDY_NFT_BLOCK?: string;
+};
+
 export type Deployment = {
   chainId: number;
-  deployer: `0x${string}`;
+  // Present in committed manifests. Env fallback data intentionally omits it
+  // because the site does not consume deployer and S1 must not synthesize one.
+  deployer?: `0x${string}`;
   buddyNftBlock: number;
   addresses?: Partial<Record<string, `0x${string}`>>;
 };
@@ -61,6 +76,53 @@ export function buildDeployments(
   return Object.fromEntries(deployments);
 }
 
+function buildFallbackDeployment(
+  env: DeploymentEnv,
+  activeChainId: number,
+): Deployment {
+  const buddyNftAddress = parseBuddyNftAddress(env.VITE_BUDDY_NFT_ADDRESS);
+  if (buddyNftAddress === null) {
+    throw new Error(
+      `Missing or invalid VITE_BUDDY_NFT_ADDRESS for chain ${activeChainId}.`,
+    );
+  }
+
+  const buddyNftBlock = parseBuddyNftBlock(env.VITE_BUDDY_NFT_BLOCK);
+  if (buddyNftBlock === null) {
+    throw new Error(
+      `Missing or invalid VITE_BUDDY_NFT_BLOCK for chain ${activeChainId}.`,
+    );
+  }
+
+  return {
+    chainId: activeChainId,
+    buddyNftBlock,
+    addresses: { BuddyNFT: buddyNftAddress },
+  };
+}
+
+export function buildDeploymentsWithEnv(
+  modules: Record<string, Deployment>,
+  env: DeploymentEnv,
+  activeChainId: number,
+): Partial<Record<number, Deployment>> {
+  const deployments = buildDeployments(modules);
+
+  // Manifest precedence: a deployment JSON for the active chain wins over
+  // env fallback values. Local/CI also stays buildable without fallback vars.
+  if (
+    deployments[activeChainId] !== undefined ||
+    activeChainId === NETWORKS.local.chainId
+  ) {
+    return deployments;
+  }
+
+  return {
+    ...deployments,
+    [activeChainId]: buildFallbackDeployment(env, activeChainId),
+  };
+}
+
 const deploymentModules = import.meta.glob<Deployment>(
   '../../../onchain/deployments/*.json',
   { eager: true, import: 'default' },
@@ -70,4 +132,8 @@ const deploymentModules = import.meta.glob<Deployment>(
 // error). Map is `Partial` because consumers must handle `undefined` for any
 // chainId without a committed deployment JSON.
 export const deployments: Partial<Record<number, Deployment>> =
-  buildDeployments(deploymentModules);
+  buildDeploymentsWithEnv(
+    deploymentModules,
+    import.meta.env,
+    ACTIVE_NETWORK.chainId,
+  );

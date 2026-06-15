@@ -41,6 +41,8 @@ Required tooling: Bun, Foundry, a Node-compatible environment, and `uv` (the `.c
 
 Module build/run references: `docs/onchain/build.md`, `docs/plugin/architecture.md`, `docs/site/architecture.md`.
 
+Env files (incl. `site/`): `.env` = non-secrets, committed; `.env.local`/`.env.*.local` = secrets, gitignored. `VITE_`-prefixed vars bundle into the client (public) — never a secret in one.
+
 ## Contribution conventions
 
 - Code-first: prefer self-documenting names and inline comments. Do not add standalone docs without maintainer approval.

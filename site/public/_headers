@@ -1,0 +1,12 @@
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://sepolia.base.org https://mainnet.base.org wss://relay.walletconnect.org https://verify.walletconnect.org https://verify.walletconnect.com https://api.web3modal.org; frame-ancestors 'none'; form-action 'self'
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: interest-cohort=(), camera=(), microphone=(), geolocation=(), payment=()
+  X-Content-Type-Options: nosniff
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Report-Only preview candidates for S5 (not enforced now):
+# - frame-src https://verify.walletconnect.org
+# - connect-src candidates: https://rpc.walletconnect.org, https://rpc.wallet.coinbase.com, https://pulse.walletconnect.org, https://echo.walletconnect.com, https://secure.walletconnect.org
+# - note: https://keys.coinbase.com is a window.open popup — needs no CSP directive.

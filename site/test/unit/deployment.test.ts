@@ -12,14 +12,22 @@
 //    fixtures so the integrity-assertion branches (chainId mismatch + path
 //    shape) can be tested without having to shadow Vite's build-time glob
 //    resolution.
+//
+// 3. The pure `buildDeploymentsWithEnv(modules, env, activeChainId)` helper —
+//    exercised with explicit env objects for the Cloudflare Pages fallback
+//    path, without stubbing `import.meta.env`.
 
 import { describe, it, expect } from 'vitest';
 
 import {
   buildDeployments,
+  buildDeploymentsWithEnv,
   deployments,
   type Deployment,
 } from '../../src/config/deployment';
+
+const ANVIL_BUDDY_NFT = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+const SEPOLIA_BUDDY_NFT = '0x5b5c71B100931CEEA7823E400713f5D330F7DA4C';
 
 describe('deployments (live glob)', () => {
   it('loads the committed anvil deployment at chainId 31337', () => {
@@ -30,9 +38,7 @@ describe('deployments (live glob)', () => {
     expect(d.chainId).toBe(31337);
     expect(d.deployer).toBe('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266');
     expect(d.buddyNftBlock).toBe(5);
-    expect(d.addresses?.BuddyNFT).toBe(
-      '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
-    );
+    expect(d.addresses?.BuddyNFT).toBe(ANVIL_BUDDY_NFT);
   });
 
   it('returns undefined for an unknown chainId', () => {
@@ -48,15 +54,13 @@ describe('buildDeployments (integrity assertions)', () => {
         deployer: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         buddyNftBlock: 3,
         addresses: {
-          BuddyNFT: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+          BuddyNFT: ANVIL_BUDDY_NFT,
         },
       },
     };
     const out = buildDeployments(fixture);
     expect(out[31337]?.chainId).toBe(31337);
-    expect(out[31337]?.addresses?.BuddyNFT).toBe(
-      '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
-    );
+    expect(out[31337]?.addresses?.BuddyNFT).toBe(ANVIL_BUDDY_NFT);
   });
 
   it('throws when payload chainId disagrees with the filename', () => {
@@ -99,12 +103,123 @@ describe('buildDeployments (integrity assertions)', () => {
   });
 });
 
+describe('buildDeploymentsWithEnv (active-chain env fallback)', () => {
+  it('keeps committed manifest precedence over env fallback values', () => {
+    const fixture: Record<string, Deployment> = {
+      '../../../onchain/deployments/84532.json': {
+        chainId: 84532,
+        deployer: '0xCe629Bc471eC71dBCB666610BEe4cC0cf2044887',
+        buddyNftBlock: 42_844_299,
+        addresses: { BuddyNFT: SEPOLIA_BUDDY_NFT },
+      },
+    };
+
+    const out = buildDeploymentsWithEnv(
+      fixture,
+      {
+        VITE_BUDDY_NFT_ADDRESS: '0x1111111111111111111111111111111111111111',
+        VITE_BUDDY_NFT_BLOCK: '1',
+      },
+      84532,
+    );
+
+    expect(out[84532]?.addresses?.BuddyNFT).toBe(SEPOLIA_BUDDY_NFT);
+    expect(out[84532]?.buddyNftBlock).toBe(42_844_299);
+    expect(out[84532]?.deployer).toBe(
+      '0xCe629Bc471eC71dBCB666610BEe4cC0cf2044887',
+    );
+  });
+
+  it('builds selected non-local deployment data from env when no manifest exists', () => {
+    const fixture: Record<string, Deployment> = {
+      '../../../onchain/deployments/31337.json': {
+        chainId: 31337,
+        deployer: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+        buddyNftBlock: 5,
+        addresses: { BuddyNFT: ANVIL_BUDDY_NFT },
+      },
+    };
+
+    const out = buildDeploymentsWithEnv(
+      fixture,
+      {
+        VITE_BUDDY_NFT_ADDRESS: SEPOLIA_BUDDY_NFT,
+        VITE_BUDDY_NFT_BLOCK: '42844299',
+      },
+      84532,
+    );
+
+    const fallback = out[84532];
+    expect(fallback).toBeDefined();
+    if (fallback === undefined) throw new Error('unreachable');
+
+    expect(fallback).toEqual({
+      chainId: 84532,
+      buddyNftBlock: 42_844_299,
+      addresses: { BuddyNFT: SEPOLIA_BUDDY_NFT },
+    });
+    expect(fallback).not.toHaveProperty('deployer');
+    expect(out[31337]?.addresses?.BuddyNFT).toBe(ANVIL_BUDDY_NFT);
+  });
+
+  it.each([
+    {
+      name: 'missing address',
+      env: { VITE_BUDDY_NFT_BLOCK: '42844299' },
+      message: /VITE_BUDDY_NFT_ADDRESS/,
+    },
+    {
+      name: 'invalid address',
+      env: {
+        VITE_BUDDY_NFT_ADDRESS: 'not-an-address',
+        VITE_BUDDY_NFT_BLOCK: '42844299',
+      },
+      message: /VITE_BUDDY_NFT_ADDRESS/,
+    },
+    {
+      name: 'zero address',
+      env: {
+        VITE_BUDDY_NFT_ADDRESS: '0x0000000000000000000000000000000000000000',
+        VITE_BUDDY_NFT_BLOCK: '42844299',
+      },
+      message: /VITE_BUDDY_NFT_ADDRESS/,
+    },
+    {
+      name: 'missing block',
+      env: { VITE_BUDDY_NFT_ADDRESS: SEPOLIA_BUDDY_NFT },
+      message: /VITE_BUDDY_NFT_BLOCK/,
+    },
+    {
+      name: 'invalid block',
+      env: {
+        VITE_BUDDY_NFT_ADDRESS: SEPOLIA_BUDDY_NFT,
+        VITE_BUDDY_NFT_BLOCK: '42.5',
+      },
+      message: /VITE_BUDDY_NFT_BLOCK/,
+    },
+  ])(
+    'fails fast for selected non-local chain with no manifest and $name',
+    ({ env, message }) => {
+      expect(() => buildDeploymentsWithEnv({}, env, 84532)).toThrow(message);
+    },
+  );
+
+  it('does not require env fallback for local builds with no manifest', () => {
+    expect(buildDeploymentsWithEnv({}, {}, 31337)).toEqual({});
+  });
+});
+
 describe('Deployment type shape (compile-time)', () => {
-  it('allows omitting `addresses` (and individual contract entries)', () => {
-    // Type-only assertion — the test compiles iff `addresses` and any
-    // entry under it are optional. Consumers must use
-    // `d?.addresses?.BuddyNFT` and the type forces that pattern (see
-    // `docs/network-config.md` § Deployment manifests).
+  it('allows fallback-shaped data without `deployer` and optional `addresses`', () => {
+    // Type-only assertion — the test compiles iff env fallback data may omit
+    // `deployer`, and iff `addresses` plus any entry under it are optional.
+    // Consumers must use `d?.addresses?.BuddyNFT` and the type forces that
+    // pattern (see `docs/network-config.md` § Deployment manifests).
+    const _fallbackOnly: Deployment = {
+      chainId: 84532,
+      buddyNftBlock: 42_844_299,
+      addresses: { BuddyNFT: SEPOLIA_BUDDY_NFT },
+    };
     const _noAddresses: Deployment = {
       chainId: 31337,
       deployer: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
@@ -117,6 +232,7 @@ describe('Deployment type shape (compile-time)', () => {
       addresses: {},
     };
     // Touch the bindings so `noUnusedLocals` doesn't reject them.
+    expect(_fallbackOnly.chainId).toBe(84532);
     expect(_noAddresses.chainId).toBe(31337);
     expect(_emptyAddresses.chainId).toBe(31337);
   });

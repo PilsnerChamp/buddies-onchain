@@ -1,6 +1,6 @@
 # Site architecture
 
-Static dApp at `https://buddies-onchain.xyz/`. Vercel-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:tokenId`, `/bond`) don't pull it.
+Static dApp at `https://buddies-onchain.xyz/`. Cloudflare Pages-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:tokenId`, `/bond`) don't pull it.
 
 ## Stack
 
