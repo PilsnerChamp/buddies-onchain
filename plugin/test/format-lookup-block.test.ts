@@ -26,6 +26,8 @@ describe("formatLookupBlock", () => {
   const LITE_LINE = "your buddy appears every 3rd prompt (mode: `lite`).";
   const OFF_LINE = "your buddy is silent on prompts (mode: `off`).";
   const CHANGE_HINT = "change: `/buddy-onchain lite|full|off`";
+  const COLD_NOTE =
+    "after hatching, re-run `/buddy-onchain` or restart the session to see it wake.";
 
   const decisionCases = [
     {
@@ -58,6 +60,7 @@ describe("formatLookupBlock", () => {
         "BUDDY_RENDER_BEGIN",
         cell.message,
         cell.url,
+        ...(cell.buddyStatus === "cold" ? [COLD_NOTE] : []),
         "",
         LITE_LINE,
         CHANGE_HINT,
@@ -80,6 +83,7 @@ describe("formatLookupBlock", () => {
         "shiny RARE",
         "===",
         "```",
+        "",
         "go see your buddy onchain:",
         "https://buddies-onchain.xyz/view/123",
         "",
@@ -204,6 +208,7 @@ describe("formatLookupBlock", () => {
         "BUDDY_RENDER_BEGIN",
         "your buddy is sleeping - hatch it onchain:",
         HATCH_URL,
+        COLD_NOTE,
         "",
         ...cell.expectedLines,
         "BUDDY_RENDER_END",

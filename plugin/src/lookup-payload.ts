@@ -361,6 +361,7 @@ function pushCard(lines: string[], payload: LookupPayload): void {
   lines.push("```");
   lines.push(...payload.cardLines);
   lines.push("```");
+  lines.push("");
 }
 
 export function formatLookupBlock(payload: LookupPayload): string {
@@ -375,6 +376,12 @@ export function formatLookupBlock(payload: LookupPayload): string {
 
   lines.push(decision.message);
   lines.push(url);
+
+  if (payload.buddyStatus === "cold") {
+    lines.push(
+      "after hatching, re-run `/buddy-onchain` or restart the session to see it wake.",
+    );
+  }
 
   if (payload.openseaCollectionUrl !== null) {
     lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
