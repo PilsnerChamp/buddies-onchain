@@ -9074,7 +9074,8 @@ function loadDeployment(chainId, dirOverride) {
   return d;
 }
 function getActiveNetwork() {
-  const d = loadDeployment(ACTIVE_NETWORK.chainId);
+  const deploymentDirOverride = process.env.BUDDY_TEST_DEPLOYMENTS_DIR || undefined;
+  const d = loadDeployment(ACTIVE_NETWORK.chainId, deploymentDirOverride);
   return {
     ...ACTIVE_NETWORK,
     buddyNft: d?.addresses?.BuddyNFT ?? null,
@@ -18418,6 +18419,7 @@ function pushCard(lines, payload) {
   lines.push("```");
   lines.push(...payload.cardLines);
   lines.push("```");
+  lines.push("");
 }
 function formatLookupBlock(payload) {
   const lines = ["BUDDY_RENDER_BEGIN"];
@@ -18428,6 +18430,9 @@ function formatLookupBlock(payload) {
   const url = decision.urlTarget === "view" ? payload.viewUrl : payload.hatchUrl;
   lines.push(decision.message);
   lines.push(url);
+  if (payload.buddyStatus === "cold") {
+    lines.push("after hatching, re-run `/buddy-onchain` or restart the session to see it wake.");
+  }
   if (payload.openseaCollectionUrl !== null) {
     lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
   }

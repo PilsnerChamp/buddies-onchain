@@ -48,6 +48,12 @@ function freshClaudeRoot(): string {
   return root;
 }
 
+function freshDeploymentsDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), "buddy-session-deployments-"));
+  tmpRoots.push(dir);
+  return dir;
+}
+
 function writeClaudeConfig(root: string, accountUuid: string): void {
   writeFileSync(
     join(root, ".claude.json"),
@@ -553,9 +559,13 @@ describe("SessionStart soft-fail discipline", () => {
 describe("SessionStart identity invalidation", () => {
   test("BUDDY_NETWORK=sepolia invalidates mainnet-cached warmth", async () => {
     const root = freshClaudeRoot();
+    const deploymentsDir = freshDeploymentsDir();
     seedState(root, MAINNET_IDENTITY, "warm", "full");
 
-    const result = await runSessionStart(root, { BUDDY_NETWORK: "sepolia" });
+    const result = await runSessionStart(root, {
+      BUDDY_NETWORK: "sepolia",
+      BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
+    });
     const state = JSON.parse(readFileSync(statePath(root), "utf8")) as BuddyStateV4;
 
     expect(result.exitCode).toBe(0);

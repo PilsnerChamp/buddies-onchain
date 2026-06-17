@@ -144,7 +144,9 @@ export function loadDeployment(
  *   deploy-pipeline guarantee, not a user-state issue).
  */
 export function getActiveNetwork(): PluginNetworkInfo {
-  const d = loadDeployment(ACTIVE_NETWORK.chainId);
+  // Test-only subprocess seam; BUDDY_TEST_* prefix marks this as non-user config.
+  const deploymentDirOverride = process.env.BUDDY_TEST_DEPLOYMENTS_DIR || undefined;
+  const d = loadDeployment(ACTIVE_NETWORK.chainId, deploymentDirOverride);
   return {
     ...ACTIVE_NETWORK,
     buddyNft: (d?.addresses?.BuddyNFT as `0x${string}` | undefined) ?? null,

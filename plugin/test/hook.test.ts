@@ -53,6 +53,12 @@ function freshClaudeDir(): string {
   return dir;
 }
 
+function freshDeploymentsDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), "buddy-hook-deployments-"));
+  tmpDirs.push(dir);
+  return dir;
+}
+
 function statePath(claudeDir: string): string {
   return join(claudeDir, "plugins", "buddy-onchain", ".buddy-state");
 }
@@ -947,6 +953,7 @@ describe("hook — ambient route", () => {
 
   test("ambient cold fire-turn uses production hatch origin on sepolia", async () => {
     const claudeDir = freshClaudeDir();
+    const deploymentsDir = freshDeploymentsDir();
     seedBuddyState(claudeDir, {
       mode: "full",
       hatch: "cold",
@@ -961,7 +968,10 @@ describe("hook — ambient route", () => {
       { prompt: "sepolia cold nudge" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "sepolia" },
+      {
+        BUDDY_NETWORK: "sepolia",
+        BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
+      },
     );
     const context = additionalContext(result.stdout);
 
@@ -1109,6 +1119,11 @@ describe("hook — ambient route", () => {
 
   test("identity rotation via slash clears stale warm cache before next ambient sleeping sprite", async () => {
     const claudeDir = freshClaudeDir();
+    const deploymentsDir = freshDeploymentsDir();
+    const env = {
+      BUDDY_NETWORK: "sepolia",
+      BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
+    };
     seedBuddyState(claudeDir, {
       mode: "full",
       hatch: "warm",
@@ -1127,7 +1142,7 @@ describe("hook — ambient route", () => {
       { prompt: "/buddy-onchain" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "sepolia" },
+      env,
     );
     const stateAfterSlash = JSON.parse(readFileSync(statePath(claudeDir), "utf8"));
 
@@ -1142,7 +1157,7 @@ describe("hook — ambient route", () => {
       { prompt: "ambient after identity rotation" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "sepolia" },
+      env,
     );
 
     expect(ambient.exitCode).toBe(0);
