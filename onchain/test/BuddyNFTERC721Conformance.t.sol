@@ -104,8 +104,8 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         assertTrue(nft.locked(tokenId));
     }
 
-    function test_ownership_balanceAfterBond_bonded() public {
-        uint256 tokenId = _hatchAndBond();
+    function test_ownership_balanceAfterClaim_bonded() public {
+        uint256 tokenId = _hatchAndClaim();
 
         assertEq(nft.balanceOf(recipient), 1);
         assertEq(nft.balanceOf(address(nft)), 0);
@@ -120,7 +120,7 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
     }
 
     function test_approve_revertsSoulbound_bonded() public {
-        uint256 tokenId = _hatchAndBond();
+        uint256 tokenId = _hatchAndClaim();
 
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         vm.prank(recipient);
@@ -135,7 +135,7 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
     }
 
     function test_setApprovalForAll_revertsSoulbound_bonded() public {
-        _hatchAndBond();
+        _hatchAndClaim();
 
         vm.expectRevert(BuddyNFT.Soulbound.selector);
         vm.prank(recipient);
@@ -149,7 +149,7 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
     }
 
     function test_getApproved_returnsZero_bonded() public {
-        uint256 tokenId = _hatchAndBond();
+        uint256 tokenId = _hatchAndClaim();
 
         assertEq(nft.getApproved(tokenId), address(0));
     }
@@ -197,7 +197,7 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         });
     }
 
-    function _hatchAndBond() internal returns (uint256 tokenId) {
+    function _hatchAndClaim() internal returns (uint256 tokenId) {
         BuddyNFT.ClaimAttestation memory att;
         (tokenId,, att) = _hatchAndPrepare();
         bytes memory sig = _signClaimAttestation(att);

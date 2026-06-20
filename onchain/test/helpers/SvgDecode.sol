@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 
 /// @title SvgDecode
-/// @notice Canonical tokenURI/SVG decode + substring helpers shared across the bond
+/// @notice Canonical tokenURI/SVG decode + substring helpers shared across the claim
 ///         render-flip suites. Single source of truth so the hermetic (§1) and fork
 ///         (§2) tests assert against byte-identical decode logic instead of per-suite
 ///         copies that can silently drift.

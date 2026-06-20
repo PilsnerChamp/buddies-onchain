@@ -143,7 +143,7 @@ contract GasCeilingsTest is Test, HatchHelper {
     }
 
     function test_gasCeiling_tokenURI_bonded() public {
-        uint256 tokenId = _hatchAndBond();
+        uint256 tokenId = _hatchAndClaim();
 
         uint256 gasBefore = gasleft();
         string memory tokenUri = nft.tokenURI(tokenId);
@@ -206,7 +206,7 @@ contract GasCeilingsTest is Test, HatchHelper {
         assertLe(gasUsed, SET_RENDERER_GAS_CEILING, "setRenderer gas exceeds ceiling");
     }
 
-    function _hatchAndBond() internal returns (uint256 tokenId) {
+    function _hatchAndClaim() internal returns (uint256 tokenId) {
         tokenId = _hatchUuid(nft, TEST_UUID);
         BuddyNFT.ClaimAttestation memory attestation = _claimAttestation(TEST_UUID, recipient);
         bytes memory signature = _signClaimAttestation(attestation);
