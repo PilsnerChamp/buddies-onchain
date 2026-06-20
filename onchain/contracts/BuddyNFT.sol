@@ -278,6 +278,13 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
     /// @notice The single Stage-2 door. Atomically resolves the identity's state
     ///         and brings the buddy home to `msg.sender`, minting/repairing as
     ///         needed, in one transaction — no separate bond/reclaim selectors.
+    /// @dev Vocabulary split is deliberate: `claim()` is the single public
+    ///      Stage-2 ACTION (the user's verb/door); the terminal state is
+    ///      `OwnershipStage.Bonded` (soulbound, non-transferable), rendered
+    ///      on-chain as "Bonded". Internal helpers stay state/mechanic-named
+    ///      (`_bondCustodialToken`, `_replaceWrongSeedToken`) because their
+    ///      branches produce the Bonded state. This is not stale two-door naming;
+    ///      do not rename them to `_claim*`.
     /// @dev Whole call is atomic: there is no repair-only success. All token state
     ///      below is read from LIVE storage, never from the calldata attestation:
     ///      `provider`/`name` are SOFT metadata (set/overwritten at claim, never
