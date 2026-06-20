@@ -11,8 +11,7 @@ import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Mulberry32} from "../contracts/libraries/Mulberry32.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
-import {ReclaimAttestationHelper} from "./helpers/ReclaimAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
@@ -23,9 +22,10 @@ import {HatchHelper} from "./helpers/HatchHelper.sol";
 contract GasCeilingsTest is Test, HatchHelper {
     // Baseline: 229_357 gas; ~20% headroom rounded up for hatch storage/write-path drift.
     uint256 private constant HATCH_GAS_CEILING = 280_000;
-    // Baseline: 97_262 gas (cold-slot, post `vm.cool`; was 92_507 before the Decision-10 seed check
-    // added one cold SLOAD + a calldata word); ~10% headroom rounded up for EIP-712 verification drift.
-    uint256 private constant BOND_GAS_CEILING = 107_000;
+    // Cold-slot (post `vm.cool`) honest-custodial claim: EIP-712 verify + provider/name set +
+    // transfer + stage flip. Ceiling holds ~15% headroom over the observed baseline; re-measure
+    // and re-pin on EIP-712/storage-path drift.
+    uint256 private constant CLAIM_HONEST_GAS_CEILING = 130_000;
     // Baseline: 5_309_133 gas; ~20% headroom rounded up for custodial SVG/base64 rendering drift.
     uint256 private constant TOKEN_URI_CUSTODIAL_GAS_CEILING = 6_400_000;
     // Baseline: 5_312_924 gas; ~20% headroom rounded up for bonded name/SVG/base64 rendering drift.
@@ -36,9 +36,10 @@ contract GasCeilingsTest is Test, HatchHelper {
     uint256 private constant BUDDY_RENDERER_TOKEN_URI_GAS_CEILING = 6_300_000;
     // Baseline: 13_775 gas; ~20% headroom rounded up for admin renderer-rotation drift.
     uint256 private constant SET_RENDERER_GAS_CEILING = 17_000;
-    // Baseline: 251_214 gas (cold-slot, post `vm.cool`: EIP-712 verify + provider validation +
-    // burn + full replacement hatch write-set); ~19% headroom for reclaim-path drift.
-    uint256 private constant RECLAIM_AND_HATCH_GAS_CEILING = 300_000;
+    // Cold-slot (post `vm.cool`) wrong-seed claim: EIP-712 verify + provider/name validation +
+    // burn + full replacement hatch write-set + bond. Heaviest claim branch; ceiling holds
+    // generous headroom over the observed baseline. Re-measure and re-pin on drift.
+    uint256 private constant CLAIM_WRONG_SEED_GAS_CEILING = 360_000;
 
     string private constant TEST_UUID = "123e4567-e89b-42d3-a456-426614174000";
     string private constant BOND_NAME = "buddy";
@@ -85,56 +86,49 @@ contract GasCeilingsTest is Test, HatchHelper {
         assertLe(gasUsed, HATCH_GAS_CEILING, "hatch gas exceeds ceiling");
     }
 
-    function test_gasCeiling_bond() public {
+    function test_gasCeiling_claim_honestCustodial() public {
         uint256 tokenId = _hatchUuid(nft, TEST_UUID);
-        BuddyNFT.BondAttestation memory attestation = _bondAttestation(tokenId, TEST_UUID, recipient);
-        bytes memory signature = _signBondAttestation(attestation);
+        BuddyNFT.ClaimAttestation memory attestation = _claimAttestation(TEST_UUID, recipient);
+        bytes memory signature = _signClaimAttestation(attestation);
 
-        // Hatch warmed every slot bond() will touch (token stage, identity hash,
-        // signer, bondingEnabled). Real-world bond is a separate transaction with
+        // Hatch warmed every slot claim() will touch (token stage, identity hash,
+        // signer, bondingEnabled). Real-world claim is a separate transaction with
         // cold access-list. `vm.cool` resets the account + all its slots so the
         // metered call reflects the cold-tx EIP-2929 prices the on-chain user pays.
         vm.cool(address(nft));
 
         vm.prank(recipient);
         uint256 gasBefore = gasleft();
-        nft.bond(tokenId, BOND_NAME, attestation, signature);
+        nft.claim(attestation, signature);
         uint256 gasUsed = gasBefore - gasleft();
 
-        emit log_named_uint("bond gas (cold)", gasUsed);
-        assertEq(nft.ownerOf(tokenId), recipient, "bond recipient did not receive token");
-        assertLe(gasUsed, BOND_GAS_CEILING, "bond gas exceeds ceiling");
+        emit log_named_uint("claim honest-custodial gas (cold)", gasUsed);
+        assertEq(nft.ownerOf(tokenId), recipient, "claim recipient did not receive token");
+        assertLe(gasUsed, CLAIM_HONEST_GAS_CEILING, "honest claim gas exceeds ceiling");
     }
 
-    function test_gasCeiling_reclaimAndHatch() public {
-        // Squat: true identity hash, wrong (non-derived) seed.
+    function test_gasCeiling_claim_wrongSeedReplace() public {
+        // Squat: true identity hash, wrong (non-derived) seed -> claim replaces + bonds.
         bytes32 identityHash = _identityHash(TEST_UUID);
         uint32 derivedSeed = _prngSeed(TEST_UUID);
         uint256 squatTokenId = nft.hatch(identityHash, derivedSeed ^ 0x5eed, CLAUDE_PROVIDER);
 
-        BuddyNFT.ReclaimAttestation memory attestation = BuddyNFT.ReclaimAttestation({
-            tokenId: squatTokenId,
-            identityHash: identityHash,
-            prngSeed: derivedSeed,
-            provider: CLAUDE_PROVIDER,
-            reclaimer: recipient,
-            expiry: uint64(block.timestamp + 1 hours)
-        });
-        bytes memory signature = _signReclaimAttestation(attestation);
+        BuddyNFT.ClaimAttestation memory attestation = _claimAttestation(TEST_UUID, recipient);
+        bytes memory signature = _signClaimAttestation(attestation);
 
-        // Same cold-tx metering rationale as test_gasCeiling_bond: `vm.cool`
-        // resets the warmed slots so the metered call pays EIP-2929 cold prices.
+        // Same cold-tx metering rationale as the honest claim: `vm.cool` resets the
+        // warmed slots so the metered call pays EIP-2929 cold prices.
         vm.cool(address(nft));
 
         vm.prank(recipient);
         uint256 gasBefore = gasleft();
-        uint256 newTokenId = nft.reclaimAndHatch(attestation, signature);
+        uint256 newTokenId = nft.claim(attestation, signature);
         uint256 gasUsed = gasBefore - gasleft();
 
-        emit log_named_uint("reclaimAndHatch gas (cold)", gasUsed);
+        emit log_named_uint("claim wrong-seed replace gas (cold)", gasUsed);
         assertEq(newTokenId, squatTokenId + 1, "replacement tokenId mismatch");
-        assertEq(nft.ownerOf(newTokenId), address(nft), "replacement not custodial");
-        assertLe(gasUsed, RECLAIM_AND_HATCH_GAS_CEILING, "reclaimAndHatch gas exceeds ceiling");
+        assertEq(nft.ownerOf(newTokenId), recipient, "replacement not claimed to recipient");
+        assertLe(gasUsed, CLAIM_WRONG_SEED_GAS_CEILING, "wrong-seed claim gas exceeds ceiling");
     }
 
     function test_gasCeiling_tokenURI_custodial() public {
@@ -214,38 +208,30 @@ contract GasCeilingsTest is Test, HatchHelper {
 
     function _hatchAndBond() internal returns (uint256 tokenId) {
         tokenId = _hatchUuid(nft, TEST_UUID);
-        BuddyNFT.BondAttestation memory attestation = _bondAttestation(tokenId, TEST_UUID, recipient);
-        bytes memory signature = _signBondAttestation(attestation);
+        BuddyNFT.ClaimAttestation memory attestation = _claimAttestation(TEST_UUID, recipient);
+        bytes memory signature = _signClaimAttestation(attestation);
 
         vm.prank(recipient);
-        nft.bond(tokenId, BOND_NAME, attestation, signature);
+        nft.claim(attestation, signature);
     }
 
-    function _bondAttestation(uint256 tokenId, string memory uuid, address recipient_)
+    function _claimAttestation(string memory uuid, address recipient_)
         internal
         view
-        returns (BuddyNFT.BondAttestation memory)
+        returns (BuddyNFT.ClaimAttestation memory)
     {
-        return BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        return BuddyNFT.ClaimAttestation({
             identityHash: _identityHash(uuid),
             prngSeed: _prngSeed(uuid),
+            provider: CLAUDE_PROVIDER,
+            name: BOND_NAME,
             recipient: recipient_,
             expiry: uint64(block.timestamp + 1 hours)
         });
     }
 
-    function _signBondAttestation(BuddyNFT.BondAttestation memory attestation) internal view returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
-        return abi.encodePacked(r, s, v);
-    }
-
-    function _signReclaimAttestation(BuddyNFT.ReclaimAttestation memory attestation)
-        internal
-        view
-        returns (bytes memory)
-    {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ReclaimAttestationHelper.digest(address(nft), attestation));
+    function _signClaimAttestation(BuddyNFT.ClaimAttestation memory attestation) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ClaimAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

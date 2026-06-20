@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Deploy} from "../script/Deploy.s.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 contract DeploySmokeTest is Test, HatchHelper {
@@ -38,18 +38,19 @@ contract DeploySmokeTest is Test, HatchHelper {
         assertEq(tokenId, 1, "first hatch tokenId mismatch");
 
         address recipient = makeAddr("deploy-smoke-recipient");
-        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        BuddyNFT.ClaimAttestation memory attestation = BuddyNFT.ClaimAttestation({
             identityHash: _identityHash(TEST_UUID),
             prngSeed: _prngSeed(TEST_UUID),
+            provider: CLAUDE_PROVIDER,
+            name: BOND_NAME,
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
-        bytes memory signature = _signBondAttestation(d.nft, attestation, signerPk);
+        bytes memory signature = _signClaimAttestation(d.nft, attestation, signerPk);
 
         vm.prank(recipient);
-        d.nft.bond(tokenId, BOND_NAME, attestation, signature);
-        assertEq(d.nft.ownerOf(tokenId), recipient, "bond recipient did not receive token");
+        d.nft.claim(attestation, signature);
+        assertEq(d.nft.ownerOf(tokenId), recipient, "claim recipient did not receive token");
 
         string memory tokenUri = d.nft.tokenURI(tokenId);
         assertTrue(_startsWith(tokenUri, JSON_PREFIX), "tokenURI missing JSON data URI prefix");
@@ -59,12 +60,12 @@ contract DeploySmokeTest is Test, HatchHelper {
         assertTrue(_hasNonDefaultTraits(traits), "buddy traits are all default values");
     }
 
-    function _signBondAttestation(BuddyNFT nft, BuddyNFT.BondAttestation memory attestation, uint256 signerPk)
+    function _signClaimAttestation(BuddyNFT nft, BuddyNFT.ClaimAttestation memory attestation, uint256 signerPk)
         internal
         view
         returns (bytes memory)
     {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ClaimAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

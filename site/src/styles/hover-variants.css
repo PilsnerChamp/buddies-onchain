@@ -5,7 +5,7 @@
  * All actionable rows share this single treatment per
  * `docs/site/terminal-ui.md` § Cross-cutting interaction
  * rules — action prompts (`> claude ▊`, `> /hatch <uuid> ▊`,
- * `> /view [uuid] ▊`, disabled `> /bond ▊`), every SEE ALSO row (route
+ * `> /view [uuid] ▊`, disabled `> /claim ▊`), every SEE ALSO row (route
  * link + descriptor + repo + contract), and the AUTHOR `@PilsnerChamp`
  * X-link row.
  *
@@ -95,7 +95,7 @@
     text-shadow var(--hover-transition-duration) linear;
 }
 
-/* Inert row (e.g. pre-deploy contract row, disabled `> /bond ▊` action
+/* Inert row (e.g. pre-deploy contract row, disabled `> /claim ▊` action
  * prompt). NO hover affordance, NO cursor change, NO transition. Reads
  * as "this is not interactive" at a glance. */
 .hover-row--inert {

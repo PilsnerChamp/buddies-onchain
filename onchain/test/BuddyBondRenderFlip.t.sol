@@ -7,7 +7,7 @@ import {BuddyNFT} from "../contracts/BuddyNFT.sol";
 import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
 import {Deploy} from "../script/Deploy.s.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {SvgDecode} from "./helpers/SvgDecode.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
@@ -104,15 +104,16 @@ contract BuddyBondRenderFlipTest is Test, HatchHelper {
     }
 
     function _bond(uint256 tokenId) internal {
-        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        BuddyNFT.ClaimAttestation memory attestation = BuddyNFT.ClaimAttestation({
             identityHash: _identityHash(TEST_UUID),
             prngSeed: _prngSeed(TEST_UUID),
+            provider: CLAUDE_PROVIDER,
+            name: BOND_NAME,
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ClaimAttestationHelper.digest(address(nft), attestation));
         vm.prank(recipient);
-        nft.bond(tokenId, BOND_NAME, attestation, abi.encodePacked(r, s, v));
+        nft.claim(attestation, abi.encodePacked(r, s, v));
     }
 }

@@ -4,8 +4,13 @@
  * Reads the shared JSON vectors at
  * `onchain/test/vectors/attestation-digest-vectors.json` -- the same file the
  * Foundry test suite consumes -- and asserts that TypeScript reproduces the
- * exact Solidity preimage for BondAttestation and ReclaimAttestation:
- * typehash, structHash, domain separator, and final digest.
+ * exact Solidity preimage for the single ClaimAttestation: typehash,
+ * structHash, domain separator, and final digest.
+ *
+ * `ClaimAttestation` is the one Stage-2 attestation; it supersedes the old
+ * BondAttestation + ReclaimAttestation. The `name` field is dynamic and is
+ * hashed as `keccak256(bytes(name))` in the struct-hash preimage (NOT inlined
+ * raw), per EIP-712 -- exactly as the contract encodes it.
  *
  * This is the off-chain signing compatibility guarantee. The manual
  * keccak256/abi.encode path proves byte-for-byte parity with the contract
@@ -37,23 +42,14 @@ interface DomainVector {
   separator: Hex;
 }
 
-interface BondVector {
-  tokenId: number | string;
-  identityHash: Hex;
-  prngSeed: number;
-  recipient: Hex;
-  expiry: number | string;
-  structHash: Hex;
-  digest: Hex;
-}
-
-interface ReclaimVector {
-  tokenId: number | string;
+interface ClaimVector {
   identityHash: Hex;
   prngSeed: number;
   provider: string;
   providerHex32: Hex;
-  reclaimer: Hex;
+  name: string;
+  nameHash: Hex;
+  recipient: Hex;
   expiry: number | string;
   structHash: Hex;
   digest: Hex;
@@ -70,8 +66,7 @@ interface VectorFile {
   description: string;
   generatedBy: string;
   domain: DomainVector;
-  bondAttestation: AttestationSection<BondVector>;
-  reclaimAttestation: AttestationSection<ReclaimVector>;
+  claimAttestation: AttestationSection<ClaimVector>;
 }
 
 // Resolve path relative to the repo root. Bun's CWD is the repo root when
@@ -94,23 +89,13 @@ const vectorFile = JSON.parse(raw) as VectorFile;
 const DOMAIN_TYPE_STRING =
   "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)";
 
-const BOND_TYPED_DATA_TYPES = {
-  BondAttestation: [
-    { name: "tokenId", type: "uint256" },
-    { name: "identityHash", type: "bytes32" },
-    { name: "prngSeed", type: "uint32" },
-    { name: "recipient", type: "address" },
-    { name: "expiry", type: "uint64" },
-  ],
-} as const;
-
-const RECLAIM_TYPED_DATA_TYPES = {
-  ReclaimAttestation: [
-    { name: "tokenId", type: "uint256" },
+const CLAIM_TYPED_DATA_TYPES = {
+  ClaimAttestation: [
     { name: "identityHash", type: "bytes32" },
     { name: "prngSeed", type: "uint32" },
     { name: "provider", type: "bytes16" },
-    { name: "reclaimer", type: "address" },
+    { name: "name", type: "string" },
+    { name: "recipient", type: "address" },
     { name: "expiry", type: "uint64" },
   ],
 } as const;
@@ -128,6 +113,10 @@ function uint(value: number | string): bigint {
 
 function hashTypeString(typeString: string): Hex {
   return keccak256(stringToBytes(typeString));
+}
+
+function nameHash(name: string): Hex {
+  return keccak256(stringToBytes(name));
 }
 
 function domainSeparator(domain: DomainVector): Hex {
@@ -155,30 +144,7 @@ function digestFor(separator: Hex, structHash: Hex): Hex {
   return keccak256(concatHex(["0x1901", separator, structHash]));
 }
 
-function bondStructHash(typehash: Hex, vector: BondVector): Hex {
-  return keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "uint32" },
-        { type: "address" },
-        { type: "uint64" },
-      ],
-      [
-        typehash,
-        uint(vector.tokenId),
-        vector.identityHash,
-        vector.prngSeed,
-        vector.recipient,
-        uint(vector.expiry),
-      ]
-    )
-  );
-}
-
-function providerBytes16(vector: ReclaimVector): Hex {
+function providerBytes16(vector: ClaimVector): Hex {
   expect(vector.providerHex32.length).toBe(66);
 
   const provider = `0x${vector.providerHex32.slice(2, 34)}` as Hex;
@@ -190,29 +156,32 @@ function providerBytes16(vector: ReclaimVector): Hex {
   return provider;
 }
 
-function reclaimStructHash(
+// The `name` field is dynamic: EIP-712 hashes it to a bytes32 before the
+// struct-hash encode (`keccak256(bytes(name))`), NOT inlined as a raw string.
+function claimStructHash(
   typehash: Hex,
-  vector: ReclaimVector,
-  provider: Hex
+  vector: ClaimVector,
+  provider: Hex,
+  hashedName: Hex
 ): Hex {
   return keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
-        { type: "uint256" },
         { type: "bytes32" },
         { type: "uint32" },
         { type: "bytes16" },
+        { type: "bytes32" },
         { type: "address" },
         { type: "uint64" },
       ],
       [
         typehash,
-        uint(vector.tokenId),
         vector.identityHash,
         vector.prngSeed,
         provider,
-        vector.reclaimer,
+        hashedName,
+        vector.recipient,
         uint(vector.expiry),
       ]
     )
@@ -234,14 +203,10 @@ describe("attestation digest parity vectors (shared with Foundry)", () => {
     expect(vectorFile.domain.version).toBe("1");
     expect(vectorFile.domain.chainId).toBe(84532);
 
-    expect(vectorFile.bondAttestation.vectorCount).toBe(
-      vectorFile.bondAttestation.vectors.length
+    expect(vectorFile.claimAttestation.vectorCount).toBe(
+      vectorFile.claimAttestation.vectors.length
     );
-    expect(vectorFile.reclaimAttestation.vectorCount).toBe(
-      vectorFile.reclaimAttestation.vectors.length
-    );
-    expect(vectorFile.bondAttestation.vectorCount).toBeGreaterThan(0);
-    expect(vectorFile.reclaimAttestation.vectorCount).toBeGreaterThan(0);
+    expect(vectorFile.claimAttestation.vectorCount).toBeGreaterThan(0);
   });
 });
 
@@ -251,68 +216,40 @@ describe("EIP-712 domain separator matches JSON vector", () => {
   });
 });
 
-describe("BondAttestation EIP-712 preimages match JSON vectors", () => {
-  const typehash = hashTypeString(vectorFile.bondAttestation.typeString);
+describe("ClaimAttestation EIP-712 preimages match JSON vectors", () => {
+  const typehash = hashTypeString(vectorFile.claimAttestation.typeString);
   const separator = domainSeparator(vectorFile.domain);
 
   test("typeString hashes to the pinned typehash", () => {
-    expect(typehash).toBe(vectorFile.bondAttestation.typehash);
+    expect(typehash).toBe(vectorFile.claimAttestation.typehash);
   });
 
-  for (const [index, vector] of vectorFile.bondAttestation.vectors.entries()) {
-    test(`vector ${index}: structHash, digest, and hashTypedData match`, () => {
-      const structHash = bondStructHash(typehash, vector);
+  for (const [index, vector] of vectorFile.claimAttestation.vectors.entries()) {
+    test(`vector ${index}: provider, nameHash, structHash, digest, and hashTypedData match`, () => {
+      const provider = providerBytes16(vector);
+      const hashedName = nameHash(vector.name);
+      const structHash = claimStructHash(
+        typehash,
+        vector,
+        provider,
+        hashedName
+      );
       const digest = digestFor(separator, structHash);
       const typedDataDigest = hashTypedData({
         domain: typedDataDomain,
-        primaryType: "BondAttestation",
-        types: BOND_TYPED_DATA_TYPES,
+        primaryType: "ClaimAttestation",
+        types: CLAIM_TYPED_DATA_TYPES,
         message: {
-          tokenId: uint(vector.tokenId),
           identityHash: vector.identityHash,
           prngSeed: vector.prngSeed,
+          provider,
+          name: vector.name,
           recipient: vector.recipient,
           expiry: uint(vector.expiry),
         },
       });
 
-      expect(structHash).toBe(vector.structHash);
-      expect(digest).toBe(vector.digest);
-      expect(typedDataDigest).toBe(vector.digest);
-    });
-  }
-});
-
-describe("ReclaimAttestation EIP-712 preimages match JSON vectors", () => {
-  const typehash = hashTypeString(vectorFile.reclaimAttestation.typeString);
-  const separator = domainSeparator(vectorFile.domain);
-
-  test("typeString hashes to the pinned typehash", () => {
-    expect(typehash).toBe(vectorFile.reclaimAttestation.typehash);
-  });
-
-  for (const [
-    index,
-    vector,
-  ] of vectorFile.reclaimAttestation.vectors.entries()) {
-    test(`vector ${index}: provider, structHash, digest, and hashTypedData match`, () => {
-      const provider = providerBytes16(vector);
-      const structHash = reclaimStructHash(typehash, vector, provider);
-      const digest = digestFor(separator, structHash);
-      const typedDataDigest = hashTypedData({
-        domain: typedDataDomain,
-        primaryType: "ReclaimAttestation",
-        types: RECLAIM_TYPED_DATA_TYPES,
-        message: {
-          tokenId: uint(vector.tokenId),
-          identityHash: vector.identityHash,
-          prngSeed: vector.prngSeed,
-          provider,
-          reclaimer: vector.reclaimer,
-          expiry: uint(vector.expiry),
-        },
-      });
-
+      expect(hashedName).toBe(vector.nameHash);
       expect(structHash).toBe(vector.structHash);
       expect(digest).toBe(vector.digest);
       expect(typedDataDigest).toBe(vector.digest);

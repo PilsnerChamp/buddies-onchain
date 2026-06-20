@@ -1,6 +1,6 @@
 # Site architecture
 
-Static dApp at `https://buddies-onchain.xyz/`. Cloudflare Pages-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:tokenId`, `/bond`) don't pull it.
+Static dApp at `https://buddies-onchain.xyz/`. Cloudflare Pages-hosted SPA. Wallet code lives behind a lazy chunk so wallet-free routes (`/`, `/view`, `/view/:tokenId`, `/claim`) don't pull it.
 
 ## Stack
 
@@ -19,7 +19,7 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 
 - `main.tsx` — root mount. Hosts `<QueryClientProvider>` (stays in entry chunk).
 - `App.tsx` — router shell. Lazy-imports `HatchLayout` and `Hatch`.
-- `routes/` — `Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Bond.tsx`.
+- `routes/` — `Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Claim.tsx`.
 - `layouts/HatchLayout.tsx` — wraps `/hatch` in `<WagmiProvider>` + `<RainbowKitProvider>`. Lazy-loaded.
 - `components/` — `TerminalFrame`, `TerminalRouteShell`, `ManPageRow`, `ManPageSection`, `ColdHeroTerminal`, `BlinkingCursor`, `DotGridBackground`, `ViewLookupAction`, `RouteMetadata` (shared separator + AUTHOR + SEE ALSO + contract row).
 - `lib/` — `useBuddyLookup.ts`, `decodeTokenUri.ts`, `hatch.ts`, `seeAlsoContractRow.ts`, `useArrowRowNav.ts`, `repoLinks.ts`, `pluginCommands.ts`, `authorLinks.ts`, `onchainConstants.ts`.
@@ -36,7 +36,7 @@ Source list in `site/package.json`. Build: `bun --cwd site run build` (runs `tsc
 | `/hatch` | `<HatchGate />` inside `<HatchLayout>` | yes (lazy) |
 | `/view` | `<View />` (lookup console — token id or account UUID) | no |
 | `/view/:tokenId` | `<ViewToken />` | no |
-| `/bond` | `<Bond />` | no |
+| `/claim` | `<Claim />` | no |
 | `*` | `<Navigate to="/" replace />` | no |
 
 Routes in `site/src/config/routes.ts`. No route carries a UUID — no UUID ever appears in a path. `/view/:tokenId` is numeric-only — non-numeric, `tokenId <= 0`, or beyond `uint256` renders NotFound, not a redirect. A well-formed id with no minted buddy renders the lookup console in its miss state (`terminal-ui.md` § Lookup console), distinct from both NotFound and load errors.
@@ -61,7 +61,7 @@ Bare `/view` and the `/view/<tokenId>` miss state render one `<LookupConsole>` (
 
 ## Wagmi-chunk split
 
-`<WagmiProvider>` and `<RainbowKitProvider>` mount only inside `HatchLayout`, which `App.tsx` references via `React.lazy`. Vite emits a separate chunk for the wagmi + RainbowKit graph. Cold loads of `/`, `/view`, `/view/<tokenId>`, `/bond` skip it entirely.
+`<WagmiProvider>` and `<RainbowKitProvider>` mount only inside `HatchLayout`, which `App.tsx` references via `React.lazy`. Vite emits a separate chunk for the wagmi + RainbowKit graph. Cold loads of `/`, `/view`, `/view/<tokenId>`, `/claim` skip it entirely.
 
 `Hatch` is also lazy. `App.tsx` is statically loaded, so a static `Hatch` import would pull wagmi hooks into the entry bundle and nullify the layout split. A single `<Suspense fallback={null}>` covers both lazy boundaries on the `/hatch` parent route.
 
@@ -90,4 +90,4 @@ Active chain is selected at build time via `VITE_CHAIN={local|sepolia|mainnet}` 
 - `man-page-extras.css` — shared route primitives (`.terminal-action-row`, `.terminal-command-token`, `.terminal-inline-link`).
 - `hover-variants.css` — interactive-state utilities reused across primitives.
 
-Per-route CSS files (`Hatch.css`, `View.css`, `Bond.css`) scope to the route shell; primitives live in the shared sheets.
+Per-route CSS files (`Hatch.css`, `View.css`, `Claim.css`) scope to the route shell; primitives live in the shared sheets.

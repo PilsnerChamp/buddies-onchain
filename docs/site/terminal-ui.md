@@ -13,7 +13,7 @@ Every man-page route opens with a `>` echo line — the literal command the page
 | `/view` | `> /view --help` |
 | `/view/<tokenId>` miss | `> /view <tokenId>` |
 | `/view/<tokenId>` hit | no man-page header — renders the SVG card only |
-| `/bond` | `> /bond --help` |
+| `/claim` | `> /claim --help` |
 
 `/hatch` is bare — no UUID or identity hash in the header or the action prompt. The plugin handoff arrives in the fragment and is scrubbed before render (see [`/hatch` handoff](#hatch-handoff-source)). The echo line is terminal-verbatim. Truncation belongs to REQUIREMENTS and stream lines, not the command header.
 
@@ -32,7 +32,7 @@ No surface truncates a UUID — the typed `/view` UUID stays in component state 
 
 ## STATUS state matrix
 
-Locked copy per state. Hatch route only — `/view`, `/bond`, etc. use simpler one-line status.
+Locked copy per state. Hatch route only — `/view`, `/claim`, etc. use simpler one-line status.
 
 | Condition | STATUS line | Stream / error behavior |
 |---|---|---|
@@ -122,7 +122,7 @@ Each row is one `<Link>` / `<a>` styled as a CSS subgrid that aligns inner `__k`
 ### Cold-shape parity (cross-route)
 
 - Repo row label: literal `github`; descriptor is the `PilsnerChamp/buddies-onchain` shorthand.
-- `/bond` row in SEE ALSO: plain `stage 2` only — never `stage 2 · not yet implemented`. Deeper disclosure stays on `/bond`'s own STATUS line.
+- `/claim` row in SEE ALSO: plain `stage 2` only — never `stage 2 · not yet implemented`. Deeper disclosure stays on `/claim`'s own STATUS line.
 - Contract row chunks join with ASCII ` - ` separators (not ` · `).
 - Each route self-omits its own row.
 
@@ -130,11 +130,11 @@ Each row is one `<Link>` / `<a>` styled as a CSS subgrid that aligns inner `__k`
 
 | Route | SEE ALSO order |
 |---|---|
-| `/` | `/hatch` (when relevant) → `/view` → `/bond` → repo → contract |
-| `/hatch` | `/view` → `/bond` → repo → contract |
-| `/view` | `/hatch` → `/bond` → repo → contract |
-| `/view/<tokenId>` miss | `/` → `/view` → `/bond` → repo → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
-| `/bond` | `/` → `/hatch` → `/view` → repo → contract |
+| `/` | `/hatch` (when relevant) → `/view` → `/claim` → repo → contract |
+| `/hatch` | `/view` → `/claim` → repo → contract |
+| `/view` | `/hatch` → `/claim` → repo → contract |
+| `/view/<tokenId>` miss | `/` → `/view` → `/claim` → repo → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
+| `/claim` | `/` → `/hatch` → `/view` → repo → contract |
 
 ### Contract row linkability
 
@@ -146,7 +146,7 @@ The focal row after NEXT STEP/STEPS. Doubles as cursor-of-record. Three modes:
 
 - **Active** — focusable `<button>` (or an input-owning row for `/view`: clickable wrapper `<div>` with deliberately no `role="button"` because the labelled `<input>` and hidden submit button own keyboard/screen-reader semantics). Sigil + cmd token + blinking cursor block. Click / Enter triggers action.
 - **Committed** — plain `<p>` (or `<div>`). Same sigil + cmd, no cursor, no click target. Used while a multi-step flow is running (`/hatch` post-click).
-- **Muted** — plain `<p>` with `aria-disabled`. Muted colour scheme, optional static cursor slot for visual parity (`/bond` disabled prompt, `/hatch` pre-deploy).
+- **Muted** — plain `<p>` with `aria-disabled`. Muted colour scheme, optional static cursor slot for visual parity (`/claim` disabled prompt, `/hatch` pre-deploy).
 
 Always-on transparent 1px border on the row baseline so the highlight variant's border-color flip causes no layout shift.
 
@@ -159,7 +159,7 @@ Per-route mapping:
 | `/view` | `> /view [<token-id> \| <account-uuid>] ▊` (unified lookup console — active row wrapping `<input>`; row click triggers attempt; click on input focuses for typing) |
 | `/view/<tokenId>` miss | same prompt — the miss state renders the same `<LookupConsole>` as bare `/view`; STATUS and the command header are the only differences |
 | `/view/<tokenId>` loading / error / pre-deploy | no action prompt; tail `> ▊` cursor is cursor-of-record |
-| `/bond` | `> /bond ▊` (muted, inert, holds cursor slot for parity) |
+| `/claim` | `> /claim ▊` (muted, inert, holds cursor slot for parity) |
 
 ## Cursor slot exclusivity
 
@@ -167,7 +167,7 @@ Every route renders exactly one blinking cursor at any moment. Two blinking curs
 
 - Action prompt present → action prompt owns the cursor → `<TerminalRouteShell>` mounts without `showCursor`.
 - Action prompt absent → tail `> ▊` cursor mounts via `<TerminalRouteShell showCursor>`. Only `/view/<tokenId>` loading / error / pre-deploy states do this today.
-- Muted disabled action prompt (`/bond`) carries a static (non-blinking) cursor slot — counts as inert visual parity, not a competing cursor.
+- Muted disabled action prompt (`/claim`) carries a static (non-blinking) cursor slot — counts as inert visual parity, not a competing cursor.
 
 ## Cross-cutting interaction rules
 
@@ -192,7 +192,7 @@ Constraints: opacity / colour / `text-shadow` transitions only. No `transform`, 
 - Cold action prompt (`> claude ▊` button)
 - `/hatch` action prompt (active button only — committed `<p>` does not)
 - `/view` lookup console input wrapper (bare and miss states)
-- `/bond` disabled action prompt (`.hover-row--inert` so no hover fires)
+- `/claim` disabled action prompt (`.hover-row--inert` so no hover fires)
 - All SEE ALSO row anchors on every route (and the inert pre-deploy contract row's `<div>`, also `--inert`)
 - AUTHOR link (`@PilsnerChamp` X-link row)
 
@@ -216,14 +216,14 @@ Bare `/view` and the `/view/<tokenId>` miss state render the same `<LookupConsol
 
 ## Route-specific copy
 
-### `/bond` placeholder
+### `/claim` placeholder
 
 ```
 STATUS
     ! stage 2 · not yet implemented
 ```
 
-The warn pill (`! ...`) carries the long form on `/bond` itself. SEE ALSO rows on other routes display only `stage 2`.
+The warn pill (`! ...`) carries the long form on `/claim` itself. SEE ALSO rows on other routes display only `stage 2`.
 
 ### Lookup console (`/view` bare + `/view/<tokenId>` miss)
 
@@ -271,7 +271,7 @@ Single full-width row of `-` glyphs between the NEXT STEP block and the route me
 
 ## Per-route gaps
 
-Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <tokenId>` for miss cards, and `> /bond --help`. The active hatch action prompt carries bare `> /hatch ▊` below NEXT STEP — no UUID, no identity hash.
+Route command headers pin page identity: `> /hatch --help`, `> /view --help`, `> /view <tokenId>` for miss cards, and `> /claim --help`. The active hatch action prompt carries bare `> /hatch ▊` below NEXT STEP — no UUID, no identity hash.
 
 ## OG card
 
@@ -279,7 +279,7 @@ Default `og-home.png` renders the cold-hero terminal. The terminal is the projec
 
 ## File map
 
-- Routes: `site/src/routes/Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Bond.tsx`
+- Routes: `site/src/routes/Home.tsx`, `Hatch.tsx`, `View.tsx`, `ViewToken.tsx`, `Claim.tsx`
 - Shared shell: `site/src/components/TerminalRouteShell.tsx`, `TerminalFrame.tsx`, `BlinkingCursor.tsx`
 - Cold action prompt: `site/src/components/ColdHeroTerminal.tsx`
 - View action prompt: `site/src/components/ViewLookupAction.tsx`

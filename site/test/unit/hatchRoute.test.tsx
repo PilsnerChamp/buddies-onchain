@@ -189,7 +189,7 @@ describe('/hatch — terminal frame + structure', () => {
 
   it('SEE ALSO renders cold-shape footer parity (plain `stage 2`, github↔repo-shorthand, ASCII separators, /hatch self-omits)', () => {
     const { container } = renderHatchAt('/hatch');
-    expect(screen.getByText('/bond')).toBeTruthy();
+    expect(screen.getByText('/claim')).toBeTruthy();
     expect(screen.getByText('stage 2')).toBeTruthy();
     const seeAlsoText = container.querySelector('.see-also')?.textContent ?? '';
     expect(seeAlsoText).not.toContain('not yet implemented');

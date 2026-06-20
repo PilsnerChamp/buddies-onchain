@@ -10,12 +10,12 @@ import {IBuddyNFT} from "../../contracts/interfaces/IBuddyNFT.sol";
 
 /// @title BondDisabledForkSmoke
 /// @notice Bonding-DISABLED launch-posture smoke test against the ACTUALLY DEPLOYED
-///         Base Sepolia BuddyNFT. The complement of BondForkRehearsal: that one gates
+///         Base Sepolia BuddyNFT. The complement of ClaimForkRehearsal: that one gates
 ///         the bonding-ENABLED rehearsal; this one asserts the live deploy is still in
-///         hatch-only posture — `bondingEnabled == false` and `bond()` reverts
+///         hatch-only posture — `bondingEnabled == false` and `claim()` reverts
 ///         `BondingNotEnabled` even on a freshly-hatched token. Re-runnable, zero side
 ///         effects: the fork forks live, the hatch hits the discarded local fork, and
-///         the negative `bond()` reverts before it can mutate anything.
+///         the negative `claim()` reverts before it can mutate anything.
 /// @dev    Runnable with ONLY a fork URL — no private keys, no pasted address. The
 ///         deployed address loads from the `deployments/84532.json` manifest written by
 ///         deploy.sh (repo source of truth). Skips cleanly (vm.skip) when the RPC env or
@@ -23,7 +23,7 @@ import {IBuddyNFT} from "../../contracts/interfaces/IBuddyNFT.sol";
 ///
 ///         Drift gate that DOES fire against the live deploy:
 ///           - bonding must be DISABLED (flips the day prod enables bonding — at which
-///             point this test is expected to be retired for BondForkRehearsal).
+///             point this test is expected to be retired for ClaimForkRehearsal).
 ///
 ///         Env:
 ///           SEPOLIA_RPC_URL  — Base Sepolia RPC (e.g. https://sepolia.base.org)
@@ -57,7 +57,7 @@ contract BondDisabledForkSmokeTest is Test, HatchHelper {
 
         // The posture gate: the live deploy must still be hatch-only. If this fails, the
         // deploy has been flipped to bonding-enabled and this test should yield to
-        // BondForkRehearsal.
+        // ClaimForkRehearsal.
         assertFalse(nft.bondingEnabled(), "live deploy: bonding is ENABLED (posture flipped)");
 
         // Hatch a fresh token on the discarded fork so the negative bond targets a real,
@@ -69,21 +69,22 @@ contract BondDisabledForkSmokeTest is Test, HatchHelper {
         uint256 tokenId = _hatchUuid(nft, uuid);
         assertEq(uint8(nft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Custodial), "hatched stage not Custodial");
 
-        // `bondingEnabled` is the FIRST check in bond() (before ownership/stage/attestation),
-        // so a well-formed-but-irrelevant attestation still reverts here. expiry in the
-        // future keeps the revert unambiguously the bonding gate.
-        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        // `bondingEnabled` is the FIRST check in claim() (before identity/provider/name/
+        // recipient/expiry/signature), so a well-formed-but-irrelevant attestation still
+        // reverts here. expiry in the future keeps the revert unambiguously the bonding gate.
+        BuddyNFT.ClaimAttestation memory attestation = BuddyNFT.ClaimAttestation({
             identityHash: _identityHash(uuid),
             prngSeed: _prngSeed(uuid),
+            provider: CLAUDE_PROVIDER,
+            name: "Smoke",
             recipient: address(this),
             expiry: uint64(block.timestamp + 1 hours)
         });
 
         vm.expectRevert(BuddyNFT.BondingNotEnabled.selector);
-        nft.bond(tokenId, "Smoke", attestation, "");
+        nft.claim(attestation, "");
 
-        emit log_named_uint("bond reverted BondingNotEnabled on fork, tokenId", tokenId);
+        emit log_named_uint("claim reverted BondingNotEnabled on fork, tokenId", tokenId);
     }
 
     /// @dev Valid RFC 4122 v4 UUID seeded from block + address entropy. Deterministic

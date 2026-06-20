@@ -147,7 +147,7 @@ describe('Home (cold landing) — canonical man-page shape', () => {
     expect(document.querySelector('.terminal-frame__prompt')).toBeNull();
   });
 
-  it('SEE ALSO row order is /view → /bond → github → contract', () => {
+  it('SEE ALSO row order is /view → /claim → github → contract', () => {
     renderHome();
     const seeHeading = screen.getByRole('heading', { level: 2, name: 'SEE ALSO' });
     const section = seeHeading.closest('section');
@@ -162,7 +162,7 @@ describe('Home (cold landing) — canonical man-page shape', () => {
     const keyCells = grid!.querySelectorAll('.see-also__label');
     const labels = Array.from(keyCells).map((c) => c.textContent?.trim() ?? '');
     expect(labels[0]).toBe('/view');
-    expect(labels[1]).toBe('/bond');
+    expect(labels[1]).toBe('/claim');
     // Repo row left column is the literal label `github` (clickable);
     // the `user/repo` shorthand lives in the right (value) column.
     expect(labels[2]).toBe('github');
@@ -173,7 +173,7 @@ describe('Home (cold landing) — canonical man-page shape', () => {
     const seeHeading = screen.getByRole('heading', { level: 2, name: 'SEE ALSO' });
     const section = seeHeading.closest('section');
     const text = (section!.textContent ?? '').replace(/\s+/g, ' ');
-    // `/bond` row carries plain `stage 2` per docs/site/terminal-ui.md
+    // `/claim` row carries plain `stage 2` per docs/site/terminal-ui.md
     // § SEE ALSO row pattern — no warn pill.
     expect(text).toContain('stage 2');
     expect(text).not.toContain('not yet implemented');

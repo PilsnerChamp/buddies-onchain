@@ -70,7 +70,7 @@ import './Hatch.css';
 
 const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
   { to: ROUTES.view, description: 'look up any buddy' },
-  { to: ROUTES.bond, description: 'stage 2' },
+  { to: ROUTES.claim, description: 'stage 2' },
 ];
 
 // Canonical DESCRIPTION text for warm /hatch. Hard-wrapped via

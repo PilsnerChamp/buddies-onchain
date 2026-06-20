@@ -14,7 +14,7 @@
  * step numbering, status sentence layout) stays in each route's own file.
  */
 
-/* ── SEE ALSO grid (used by /, /hatch, /view, /view/<tokenId>, /bond) ─── */
+/* ── SEE ALSO grid (used by /, /hatch, /view, /view/<tokenId>, /claim) ─── */
 /*
  * Row-anchor markup: `<div class="see-also">` holds `<Link
  * class="see-also__row">` children (or `<div>` for the inert pre-deploy
@@ -123,7 +123,7 @@
 /* ── Terminal action row primitive ────────────────────────────────────
  * Full-row hit target shared by every action-prompt slot (`> claude ▊` on
  * `/`, `> /hatch <uuid> ▊` on `/hatch`, `> /view [<uuid>] ▊` on `/view`,
- * `> /bond ▊` on `/bond`). The always-on transparent 1px border + 2px
+ * `> /claim ▊` on `/claim`). The always-on transparent 1px border + 2px
  * radius + ±8px negative horizontal margin are the layout-stable hover
  * baseline so toggling `.hover-row` post-interaction does not shift
  * layout. Routes layer route-specific tweaks on top. */
@@ -158,7 +158,7 @@
   opacity: 0.6;
 }
 
-/* Inert variant — disabled prompt (e.g. `> /bond ▊` placeholder). Muted
+/* Inert variant — disabled prompt (e.g. `> /claim ▊` placeholder). Muted
  * colour, no cursor change, no transition. */
 .terminal-action-row--inert {
   color: var(--color-text-tertiary);

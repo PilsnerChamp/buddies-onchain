@@ -242,7 +242,10 @@ contract BuddyRendererTest is Test {
         _setMockToken(1, _defaultTraits(), "", uint32(0xB1), IBuddyNFT.OwnershipStage.Custodial, "claude");
 
         string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
-        assertEq(json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")), "claude");
+        assertEq(
+            json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")),
+            "claude"
+        );
     }
 
     function test_tokenURI_providerAttribute_fullSixteenBytesUnchanged() public {
@@ -250,7 +253,10 @@ contract BuddyRendererTest is Test {
         _setMockToken(1, _defaultTraits(), "", uint32(0xB2), IBuddyNFT.OwnershipStage.Custodial, "abcdefgh12345678");
 
         string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
-        assertEq(json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")), "abcdefgh12345678");
+        assertEq(
+            json.readString(string.concat(".attributes[", vm.toString(_attributeIndex(json, "Provider")), "].value")),
+            "abcdefgh12345678"
+        );
     }
 
     function test_tokenURI_providerAttribute_orderingAfterStage() public {

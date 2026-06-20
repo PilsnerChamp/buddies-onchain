@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
@@ -93,13 +93,13 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
     }
 
     function test_locked_stageMatrix_custodialFalseBondedTrue() public {
-        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
-        bytes memory sig = _signBondAttestation(att);
+        (uint256 tokenId,, BuddyNFT.ClaimAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signClaimAttestation(att);
 
         assertFalse(nft.locked(tokenId));
 
         vm.prank(recipient);
-        nft.bond(tokenId, BOND_NAME, att, sig);
+        nft.claim(att, sig);
 
         assertTrue(nft.locked(tokenId));
     }
@@ -165,43 +165,44 @@ contract BuddyNFTERC721ConformanceTest is Test, HatchHelper {
         _hatchUuid(nft, TEST_UUID);
     }
 
-    function test_bond_emitsTransferEvent() public {
-        (uint256 tokenId,, BuddyNFT.BondAttestation memory att) = _hatchAndPrepare();
-        bytes memory sig = _signBondAttestation(att);
+    function test_claim_emitsTransferEvent() public {
+        (uint256 tokenId,, BuddyNFT.ClaimAttestation memory att) = _hatchAndPrepare();
+        bytes memory sig = _signClaimAttestation(att);
 
         vm.expectEmit(true, true, true, false, address(nft));
         emit Transfer(address(nft), recipient, tokenId);
 
         vm.prank(recipient);
-        nft.bond(tokenId, BOND_NAME, att, sig);
+        nft.claim(att, sig);
     }
 
-    function _signBondAttestation(BuddyNFT.BondAttestation memory att) internal view returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), att));
+    function _signClaimAttestation(BuddyNFT.ClaimAttestation memory att) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ClaimAttestationHelper.digest(address(nft), att));
         return abi.encodePacked(r, s, v);
     }
 
     function _hatchAndPrepare()
         internal
-        returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory att)
+        returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.ClaimAttestation memory att)
     {
         tokenId = _hatchUuid(nft, TEST_UUID);
         identityHash = _identityHash(TEST_UUID);
-        att = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        att = BuddyNFT.ClaimAttestation({
             identityHash: identityHash,
             prngSeed: _prngSeed(TEST_UUID),
+            provider: CLAUDE_PROVIDER,
+            name: BOND_NAME,
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
     }
 
     function _hatchAndBond() internal returns (uint256 tokenId) {
-        BuddyNFT.BondAttestation memory att;
+        BuddyNFT.ClaimAttestation memory att;
         (tokenId,, att) = _hatchAndPrepare();
-        bytes memory sig = _signBondAttestation(att);
+        bytes memory sig = _signClaimAttestation(att);
 
         vm.prank(recipient);
-        nft.bond(tokenId, BOND_NAME, att, sig);
+        nft.claim(att, sig);
     }
 }

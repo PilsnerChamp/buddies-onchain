@@ -7,7 +7,7 @@ import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {BuddyNFT} from "../contracts/BuddyNFT.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
 contract BuddyNFTFuzzTest is Test, HatchHelper {
@@ -58,77 +58,73 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         assertGt(traits.snark, 0);
     }
 
-    function testFuzz_bond_nameLength(string memory name) public {
+    function testFuzz_claim_nameLength(string memory name) public {
         vm.assume(bytes(name).length <= 256);
 
         BuddyNFT freshNft = _newBondingNft();
-        (uint256 tokenId,, BuddyNFT.BondAttestation memory attestation) =
-            _hatchAndPrepare(freshNft, TEST_UUID, recipient, _validExpiry());
-        bytes memory signature = _signBondAttestation(freshNft, attestation);
+        (uint256 tokenId, BuddyNFT.ClaimAttestation memory attestation) =
+            _hatchAndPrepare(freshNft, TEST_UUID, name, recipient, _validExpiry());
+        bytes memory signature = _signClaimAttestation(freshNft, attestation);
 
         uint256 nameLength = bytes(name).length;
         if (nameLength > freshNft.MAX_NAME_LENGTH()) {
             vm.expectRevert(abi.encodeWithSelector(BuddyNFT.NameTooLong.selector, nameLength));
             vm.prank(recipient);
-            freshNft.bond(tokenId, name, attestation, signature);
+            freshNft.claim(attestation, signature);
             return;
         }
 
         vm.prank(recipient);
-        freshNft.bond(tokenId, name, attestation, signature);
+        freshNft.claim(attestation, signature);
 
         assertEq(freshNft.ownerOf(tokenId), recipient);
         assertEq(uint8(freshNft.getStage(tokenId)), uint8(IBuddyNFT.OwnershipStage.Bonded));
         assertEq(freshNft.buddyName(tokenId), name);
     }
 
-    /// @dev Fuzz candidates ride in a struct (single stack slot) — six flat
-    ///      params plus the per-field locals blow the legacy-codegen stack.
-    struct BondFieldCandidates {
-        uint256 tokenId;
-        bytes32 identityHash;
-        uint32 prngSeed;
+    /// @dev Fuzz candidates ride in a struct (single stack slot) — the per-field
+    ///      locals plus flat params blow the legacy-codegen stack otherwise.
+    ///      Only the recipient + expiry fields are pure equality reverts in claim()
+    ///      (recipient mismatch -> InvalidAttestation; expired -> AttestationExpired,
+    ///      recipient checked first). identityHash / seed / provider / name are NOT
+    ///      equality reverts: they route branches or are soft-corrected at claim, so
+    ///      they aren't fuzzed here as revert sources.
+    struct ClaimFieldCandidates {
         address recipient;
         uint256 expiry;
         uint8 matchMask;
     }
 
-    function testFuzz_bond_attestationFields(BondFieldCandidates memory candidates) public {
+    function testFuzz_claim_recipientAndExpiry(ClaimFieldCandidates memory candidates) public {
         BuddyNFT freshNft = _newBondingNft();
-        (uint256 validTokenId, bytes32 validIdentityHash,) =
-            _hatchAndPrepare(freshNft, TEST_UUID, recipient, _validExpiry());
+        _hatchUuid(freshNft, TEST_UUID);
 
-        bool tokenIdMatches = candidates.matchMask & 0x01 != 0;
-        bool identityHashMatches = candidates.matchMask & 0x02 != 0;
-        bool recipientMatches = candidates.matchMask & 0x04 != 0;
-        bool expiryMatches = candidates.matchMask & 0x08 != 0;
-        bool seedMatches = candidates.matchMask & 0x10 != 0;
+        bool recipientMatches = candidates.matchMask & 0x01 != 0;
+        bool expiryMatches = candidates.matchMask & 0x02 != 0;
 
-        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenIdMatches ? validTokenId : _differentTokenId(candidates.tokenId, validTokenId),
-            identityHash: identityHashMatches
-                ? validIdentityHash
-                : _differentHash(candidates.identityHash, validIdentityHash),
-            prngSeed: seedMatches ? _prngSeed(TEST_UUID) : _differentSeed(candidates.prngSeed, _prngSeed(TEST_UUID)),
+        BuddyNFT.ClaimAttestation memory attestation = BuddyNFT.ClaimAttestation({
+            identityHash: _identityHash(TEST_UUID),
+            prngSeed: _prngSeed(TEST_UUID),
+            provider: CLAUDE_PROVIDER,
+            name: BOND_NAME,
             recipient: recipientMatches ? recipient : _differentAddress(candidates.recipient, recipient),
             expiry: expiryMatches ? _validExpiry() : _expiredExpiry(candidates.expiry)
         });
-        bytes memory signature = _signBondAttestation(freshNft, attestation);
+        bytes memory signature = _signClaimAttestation(freshNft, attestation);
 
-        // All four field checks (tokenId, identityHash, prngSeed, recipient)
-        // precede the expiry check in bond(), so any field mismatch wins.
-        if (!tokenIdMatches || !identityHashMatches || !seedMatches || !recipientMatches) {
+        // recipient is checked before expiry in claim(), so a recipient mismatch wins.
+        if (!recipientMatches) {
             vm.expectRevert(BuddyNFT.InvalidAttestation.selector);
         } else if (!expiryMatches) {
             vm.expectRevert(BuddyNFT.AttestationExpired.selector);
         }
 
         vm.prank(recipient);
-        freshNft.bond(validTokenId, BOND_NAME, attestation, signature);
+        freshNft.claim(attestation, signature);
 
-        if (tokenIdMatches && identityHashMatches && seedMatches && recipientMatches && expiryMatches) {
-            assertEq(freshNft.ownerOf(validTokenId), recipient);
-            assertEq(freshNft.buddyName(validTokenId), BOND_NAME);
+        if (recipientMatches && expiryMatches) {
+            assertEq(freshNft.ownerOf(1), recipient);
+            assertEq(freshNft.buddyName(1), BOND_NAME);
         }
     }
 
@@ -222,16 +218,19 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         vm.stopPrank();
     }
 
-    function _hatchAndPrepare(BuddyNFT target, string memory uuid, address bondRecipient, uint64 expiry)
-        internal
-        returns (uint256 tokenId, bytes32 identityHash, BuddyNFT.BondAttestation memory attestation)
-    {
+    function _hatchAndPrepare(
+        BuddyNFT target,
+        string memory uuid,
+        string memory name,
+        address bondRecipient,
+        uint64 expiry
+    ) internal returns (uint256 tokenId, BuddyNFT.ClaimAttestation memory attestation) {
         tokenId = _hatchUuid(target, uuid);
-        identityHash = _identityHash(uuid);
-        attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
-            identityHash: identityHash,
+        attestation = BuddyNFT.ClaimAttestation({
+            identityHash: _identityHash(uuid),
             prngSeed: _prngSeed(uuid),
+            provider: CLAUDE_PROVIDER,
+            name: name,
             recipient: bondRecipient,
             expiry: expiry
         });
@@ -241,21 +240,21 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
         internal
         returns (uint256 tokenId)
     {
-        BuddyNFT.BondAttestation memory attestation;
-        (tokenId,, attestation) = _hatchAndPrepare(target, uuid, bondRecipient, _validExpiry());
-        bytes memory signature = _signBondAttestation(target, attestation);
+        BuddyNFT.ClaimAttestation memory attestation;
+        (tokenId, attestation) = _hatchAndPrepare(target, uuid, BOND_NAME, bondRecipient, _validExpiry());
+        bytes memory signature = _signClaimAttestation(target, attestation);
 
         vm.prank(bondRecipient);
-        target.bond(tokenId, BOND_NAME, attestation, signature);
+        target.claim(attestation, signature);
     }
 
-    function _signBondAttestation(BuddyNFT target, BuddyNFT.BondAttestation memory attestation)
+    function _signClaimAttestation(BuddyNFT target, BuddyNFT.ClaimAttestation memory attestation)
         internal
         view
         returns (bytes memory)
     {
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(SIGNER_KEY, BondAttestationHelper.digest(address(target), attestation));
+            vm.sign(SIGNER_KEY, ClaimAttestationHelper.digest(address(target), attestation));
         return abi.encodePacked(r, s, v);
     }
 
@@ -265,27 +264,6 @@ contract BuddyNFTFuzzTest is Test, HatchHelper {
 
     function _expiredExpiry(uint256 seed) internal view returns (uint64) {
         return uint64(bound(seed, 0, block.timestamp - 1));
-    }
-
-    function _differentTokenId(uint256 candidate, uint256 validTokenId) internal pure returns (uint256) {
-        if (candidate != validTokenId) {
-            return candidate;
-        }
-        return validTokenId + 1;
-    }
-
-    function _differentHash(bytes32 candidate, bytes32 validHash) internal pure returns (bytes32) {
-        if (candidate != validHash) {
-            return candidate;
-        }
-        return bytes32(uint256(validHash) ^ 1);
-    }
-
-    function _differentSeed(uint32 candidate, uint32 validSeed) internal pure returns (uint32) {
-        if (candidate != validSeed) {
-            return candidate;
-        }
-        return validSeed ^ 1;
     }
 
     function _differentAddress(address candidate, address validAddress) internal pure returns (address) {

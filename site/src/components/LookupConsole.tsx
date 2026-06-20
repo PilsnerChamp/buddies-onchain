@@ -39,7 +39,7 @@ export type LookupConsoleVariant =
 
 const BARE_SEE_ALSO: readonly SeeAlsoRoute[] = [
   { to: ROUTES.hatch, description: 'hatch your buddy' },
-  { to: ROUTES.bond, description: 'stage 2' },
+  { to: ROUTES.claim, description: 'stage 2' },
 ];
 
 // `/hatch` intentionally absent — hatch starts from the plugin handoff, not
@@ -47,7 +47,7 @@ const BARE_SEE_ALSO: readonly SeeAlsoRoute[] = [
 const MISS_SEE_ALSO: readonly SeeAlsoRoute[] = [
   { to: ROUTES.home, description: 'install the plugin' },
   { to: ROUTES.view, description: 'look up any buddy' },
-  { to: ROUTES.bond, description: 'stage 2' },
+  { to: ROUTES.claim, description: 'stage 2' },
 ];
 
 type LookupStatus = {

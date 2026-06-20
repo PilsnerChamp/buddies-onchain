@@ -10,7 +10,7 @@ Buddies Onchain is an on-chain identity-record project. One account, one buddy: 
 
 - `onchain/` — Foundry contracts, renderer libraries, deployment scripts, fixtures, and contract data.
 - `plugin/` — Claude Code `/buddy-onchain` plugin source, bundle, marketplace manifest, command, hooks, tests, and deployment manifests.
-- `site/` — Vite/React static dApp for `/`, `/hatch`, `/view`, `/view/<tokenId>`, and `/bond`.
+- `site/` — Vite/React static dApp for `/`, `/hatch`, `/view`, `/view/<tokenId>`, and `/claim`.
 - `shared/` — TypeScript shared by the plugin and site: network metadata, curated ABI, and deployment loading helpers.
 - `docs/` — Public technical reference for build, config, contract shape, plugin topology, and site topology.
 

@@ -4,7 +4,7 @@
   "license": "MIT",
   "version": "0.0.0",
   "type": "module",
-  "description": "Buddies Onchain static SPA — /, /hatch, /view, /bond.",
+  "description": "Buddies Onchain static SPA — /, /hatch, /view, /claim.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

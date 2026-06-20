@@ -9098,6 +9098,27 @@ var BUDDY_NFT_ABI = [
   },
   {
     type: "function",
+    name: "claim",
+    stateMutability: "nonpayable",
+    inputs: [
+      {
+        name: "attestation",
+        type: "tuple",
+        components: [
+          { name: "identityHash", type: "bytes32" },
+          { name: "prngSeed", type: "uint32" },
+          { name: "provider", type: "bytes16" },
+          { name: "name", type: "string" },
+          { name: "recipient", type: "address" },
+          { name: "expiry", type: "uint64" }
+        ]
+      },
+      { name: "signature", type: "bytes" }
+    ],
+    outputs: [{ name: "tokenId", type: "uint256" }]
+  },
+  {
+    type: "function",
     name: "tokenURI",
     stateMutability: "view",
     inputs: [{ name: "tokenId", type: "uint256" }],
@@ -9143,6 +9164,17 @@ var BUDDY_NFT_ABI = [
     ]
   },
   {
+    type: "event",
+    name: "BuddyClaimed",
+    anonymous: false,
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "identityHash", type: "bytes32", indexed: true },
+      { name: "recipient", type: "address", indexed: true },
+      { name: "name", type: "string", indexed: false }
+    ]
+  },
+  {
     type: "error",
     name: "AlreadyHatched",
     inputs: []
@@ -9156,6 +9188,36 @@ var BUDDY_NFT_ABI = [
     type: "error",
     name: "InvalidProvider",
     inputs: []
+  },
+  {
+    type: "error",
+    name: "BondingNotEnabled",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AttestationExpired",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidAttestation",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "InvalidSignature",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "AlreadyBonded",
+    inputs: []
+  },
+  {
+    type: "error",
+    name: "NameTooLong",
+    inputs: [{ name: "length", type: "uint256" }]
   },
   {
     type: "error",

@@ -61,11 +61,11 @@ vi.mock('../../src/layouts/HatchLayout', async () => {
   return { default: () => <Outlet /> };
 });
 
-// Stub Bond so the routing test doesn't pull in the DotGridBackground
+// Stub Claim so the routing test doesn't pull in the DotGridBackground
 // canvas mount or RouteShell.css. The stub prints a sentinel so router
 // wiring is verifiable without rendering the full terminal frame.
-vi.mock('../../src/routes/Bond', () => ({
-  Bond: (): JSX.Element => <main data-testid="bond-stub">bond-stub</main>,
+vi.mock('../../src/routes/Claim', () => ({
+  Claim: (): JSX.Element => <main data-testid="claim-stub">claim-stub</main>,
 }));
 
 import App from '../../src/App';
@@ -232,9 +232,9 @@ describe('App routing — routing-collapse contract', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('`/bond` renders the Bond stub (placeholder route is registered)', () => {
-    renderAt('/bond');
-    expect(screen.getByTestId('bond-stub')).toBeTruthy();
+  it('`/claim` renders the Claim stub (placeholder route is registered)', () => {
+    renderAt('/claim');
+    expect(screen.getByTestId('claim-stub')).toBeTruthy();
     expect(screen.queryByTestId('home-stub')).toBeNull();
   });
 

@@ -11,7 +11,7 @@
 //
 // `TerminalRouteShell` is mounted without `showCursor` — the `> claude ▊`
 // block IS the page's cursor-of-record. Cold uses ASCII separators (` - `)
-// and arrows (`->`); sibling routes (`/hatch`, `/view`, `/bond`) use `·` and
+// and arrows (`->`); sibling routes (`/hatch`, `/view`, `/claim`) use `·` and
 // `→`.
 
 import { ColdHeroTerminal } from '../components/ColdHeroTerminal';
@@ -24,7 +24,7 @@ import { DESCRIPTION } from '../lib/onchainConstants';
 
 const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
   { to: ROUTES.view, description: 'look up any buddy' },
-  { to: ROUTES.bond, description: 'stage 2' },
+  { to: ROUTES.claim, description: 'stage 2' },
 ];
 
 export function Home(): JSX.Element {

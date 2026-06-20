@@ -19,7 +19,7 @@ import App from './App';
 // `WagmiProvider` + `RainbowKitProvider` + the RainbowKit modal stylesheet
 // mount inside `layouts/HatchLayout.tsx`, which is lazy-loaded only when a
 // user navigates to `/hatch`. Cold-load on `/`, `/view`, `/view/<tokenId>`, and
-// `/bond` does not pay the wagmi + RainbowKit chunk download cost.
+// `/claim` does not pay the wagmi + RainbowKit chunk download cost.
 //
 // `QueryClientProvider` STAYS at root: wallet-free `/view` lookup/token
 // hooks depend on a `QueryClient` in context, and keeping it here means a

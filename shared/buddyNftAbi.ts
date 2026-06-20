@@ -6,23 +6,35 @@
 // One file = no drift.
 //
 // Source of truth: `onchain/out/BuddyNFT.sol/BuddyNFT.json`. The full ABI
-// is large (Stage 2 bond path, ERC721 standard surface, Ownable, EIP-712
-// domain); pulling only what consumers touch keeps viem type-inference fast
-// and surfaces accidental new reads/writes as TS errors when the subset is
-// missing the entry.
+// is large (ERC721 standard surface, Ownable, EIP-712 domain); pulling only
+// what consumers touch keeps viem type-inference fast and surfaces accidental
+// new reads/writes as TS errors when the subset is missing the entry.
+//
+// `claim` is the single Stage-2 write door. It is DORMANT until the owner
+// flips `bondingEnabled` (one-way), so no plugin/site consumer invokes it
+// today; the selector + its decodable reverts + the terminal `BuddyClaimed`
+// event are carried here so the Stage-2 dApp surface can be wired without an
+// ABI scramble. (Reverts `BondingNotEnabled()` while dormant.)
 //
 // Subset used by the public site and plugin:
 //   - hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider)
-//       → uint256 tokenId [write]
+//       → uint256 tokenId [write, Stage 1]
+//   - claim((bytes32,uint32,bytes16,string,address,uint64) attestation,
+//       bytes signature) → uint256 tokenId [write, Stage 2 — dormant]
 //   - tokenURI(uint256 tokenId) → string                  [view]
 //   - isMinted(bytes32 identityHash) → bool               [view]
 //   - getTokenIdByIdentity(bytes32 identityHash) → uint256 [view]
 //   - hatcher(uint256 tokenId) → address                  [view]
 //   - buddyProvider(uint256 tokenId) → bytes16            [view]
 //   - Awakened(uint256, bytes32, address, bytes16) event  [log]
+//   - BuddyClaimed(uint256, bytes32, address, string) event [log, Stage 2]
 //   - AlreadyHatched() error                              [revert]
 //   - InvalidIdentityHash() error                         [revert]
 //   - InvalidProvider() error                             [revert]
+//   - claim() reverts (Stage 2): BondingNotEnabled, AttestationExpired,
+//       InvalidAttestation, InvalidSignature, AlreadyBonded,
+//       NameTooLong(uint256), plus the shared InvalidIdentityHash /
+//       InvalidProvider — decoded to surface a precise claim-failure reason.
 //   - ERC721NonexistentToken(uint256) error (OZ ERC-721)  [revert]
 //       tokenURI(missing id) reverts with it; the dApp decodes the errorName
 //       to render the /view/<tokenId> miss card instead of a generic error.
@@ -33,7 +45,9 @@
 //
 // `as const` is required for viem's type inference — without it, viem
 // cannot narrow `useWriteContract({ functionName: 'hatch' })` arguments to
-// the bytes32/uint32/bytes16 tuple.
+// the bytes32/uint32/bytes16 tuple, nor `claim` to its
+// (ClaimAttestation, bytes) tuple where the struct is the component-typed
+// inner tuple.
 //
 // Public references: `docs/onchain/contract.md`, `docs/network-config.md`.
 
@@ -46,6 +60,27 @@ export const BUDDY_NFT_ABI = [
       { name: 'identityHash', type: 'bytes32' },
       { name: 'prngSeed', type: 'uint32' },
       { name: 'provider', type: 'bytes16' },
+    ],
+    outputs: [{ name: 'tokenId', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'claim',
+    stateMutability: 'nonpayable',
+    inputs: [
+      {
+        name: 'attestation',
+        type: 'tuple',
+        components: [
+          { name: 'identityHash', type: 'bytes32' },
+          { name: 'prngSeed', type: 'uint32' },
+          { name: 'provider', type: 'bytes16' },
+          { name: 'name', type: 'string' },
+          { name: 'recipient', type: 'address' },
+          { name: 'expiry', type: 'uint64' },
+        ],
+      },
+      { name: 'signature', type: 'bytes' },
     ],
     outputs: [{ name: 'tokenId', type: 'uint256' }],
   },
@@ -96,6 +131,17 @@ export const BUDDY_NFT_ABI = [
     ],
   },
   {
+    type: 'event',
+    name: 'BuddyClaimed',
+    anonymous: false,
+    inputs: [
+      { name: 'tokenId', type: 'uint256', indexed: true },
+      { name: 'identityHash', type: 'bytes32', indexed: true },
+      { name: 'recipient', type: 'address', indexed: true },
+      { name: 'name', type: 'string', indexed: false },
+    ],
+  },
+  {
     type: 'error',
     name: 'AlreadyHatched',
     inputs: [],
@@ -109,6 +155,36 @@ export const BUDDY_NFT_ABI = [
     type: 'error',
     name: 'InvalidProvider',
     inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'BondingNotEnabled',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'AttestationExpired',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'InvalidAttestation',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'InvalidSignature',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'AlreadyBonded',
+    inputs: [],
+  },
+  {
+    type: 'error',
+    name: 'NameTooLong',
+    inputs: [{ name: 'length', type: 'uint256' }],
   },
   {
     type: 'error',

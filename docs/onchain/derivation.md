@@ -25,7 +25,7 @@ The seed is computed once, client-side, and stored verbatim. The contract holds 
 
 The chain proves `traits == Mulberry32.deriveTraits(storedSeed)`. Anyone can recompute it — that is consistency. It does not prove the seed came from your identity — that would be authenticity, and the hash-only contract cannot enforce it.
 
-Safe claims: deterministic and reproducible (same account → same buddy on every deployment), deployment-stable preservation, UUID kept off the wire. Authenticity is re-established only at Stage 2 (`bond()`, dormant in v1). Do not claim the buddy is self-verifying or that the contract derives traits from your identity.
+Safe claims: deterministic and reproducible (same account → same buddy on every deployment), deployment-stable preservation, UUID kept off the wire. Authenticity is re-established only at Stage 2 (`claim()`, dormant in v1). Do not claim the buddy is self-verifying or that the contract derives traits from your identity.
 
 ## Seed construction
 
@@ -86,7 +86,7 @@ The `identityHash` domain tag carries a provider slug: `buddies-onchain:identity
 |---|---|---|
 | `claude` | `buddies-onchain:identity:claude:v1` | live (v1) |
 
-The trait seed (`prngSeed`) salt is `friend-2026-401` and does not vary by provider — provider enters neither derivation.
+The trait seed (`prngSeed`) salt is `friend-2026-401` and does not vary by provider — provider does not enter the trait-seed (art) derivation. Provider does scope `identityHash`, via the domain tag above.
 
 ## UUID validation
 

@@ -43,9 +43,9 @@ describe('RouteSeo canonical/robots head management', () => {
   });
 
   it('defaults canonical + og:url to the live pathname when no canonicalPath given', () => {
-    renderSeo('/bond');
-    expect(canonicalHref()).toBe(`${ORIGIN}/bond`);
-    expect(metaContent('meta[property="og:url"]')).toBe(`${ORIGIN}/bond`);
+    renderSeo('/claim');
+    expect(canonicalHref()).toBe(`${ORIGIN}/claim`);
+    expect(metaContent('meta[property="og:url"]')).toBe(`${ORIGIN}/claim`);
     expect(metaContent('meta[name="robots"]')).toBe('index, follow');
   });
 

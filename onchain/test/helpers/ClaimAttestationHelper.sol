@@ -5,14 +5,17 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 
 import {BuddyNFT} from "../../contracts/BuddyNFT.sol";
 
-/// @title BondAttestationHelper
-/// @notice Canonical EIP-712 helpers for BuddyNFT.BondAttestation signing.
+/// @title ClaimAttestationHelper
+/// @notice Canonical EIP-712 helpers for BuddyNFT.ClaimAttestation signing — the
+///         single Stage-2 attestation, superseding the old Bond/Reclaim helpers.
 /// @dev Single source of truth for typehash + domain + struct hash construction
-///      across the bond test suites. Per-suite signing stays inline because it
+///      across the claim test suites. The `name` field is hashed as
+///      `keccak256(bytes(name))` (NOT the raw dynamic string) per EIP-712, matching
+///      the contract preimage byte-exact. Per-suite signing stays inline because it
 ///      needs the `vm.sign` cheatcode bound to a Test contract.
-library BondAttestationHelper {
+library ClaimAttestationHelper {
     bytes32 internal constant TYPEHASH = keccak256(
-        "BondAttestation(uint256 tokenId,bytes32 identityHash,uint32 prngSeed,address recipient,uint64 expiry)"
+        "ClaimAttestation(bytes32 identityHash,uint32 prngSeed,bytes16 provider,string name,address recipient,uint64 expiry)"
     );
 
     /// @dev Domain separator for the canonical (current chain, target contract) pair.
@@ -34,20 +37,21 @@ library BondAttestationHelper {
         );
     }
 
-    function hashStruct(BuddyNFT.BondAttestation memory attestation) internal pure returns (bytes32) {
+    function hashStruct(BuddyNFT.ClaimAttestation memory attestation) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 TYPEHASH,
-                attestation.tokenId,
                 attestation.identityHash,
                 attestation.prngSeed,
+                attestation.provider,
+                keccak256(bytes(attestation.name)),
                 attestation.recipient,
                 attestation.expiry
             )
         );
     }
 
-    function digest(address verifyingContract, BuddyNFT.BondAttestation memory attestation)
+    function digest(address verifyingContract, BuddyNFT.ClaimAttestation memory attestation)
         internal
         view
         returns (bytes32)
@@ -55,7 +59,7 @@ library BondAttestationHelper {
         return MessageHashUtils.toTypedDataHash(domainSeparator(verifyingContract), hashStruct(attestation));
     }
 
-    function digestFor(uint256 chainId, address verifyingContract, BuddyNFT.BondAttestation memory attestation)
+    function digestFor(uint256 chainId, address verifyingContract, BuddyNFT.ClaimAttestation memory attestation)
         internal
         pure
         returns (bytes32)

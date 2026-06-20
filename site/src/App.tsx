@@ -1,7 +1,7 @@
 import { lazy, Suspense, useRef } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './routes/Home';
-import { Bond } from './routes/Bond';
+import { Claim } from './routes/Claim';
 import { View } from './routes/View';
 import { ViewToken } from './routes/ViewToken';
 import { useArrowRowNav } from './lib/useArrowRowNav';
@@ -22,13 +22,13 @@ import {
 //   `/view`          → lookup console (token id or account UUID)
 //   `/view/:tokenId` → token render. Wallet-free — reads tokenURI(tokenId)
 //                      directly via publicClient, so no `<WagmiProvider>`.
-//   `/bond`          → stage 2 placeholder
+//   `/claim`         → stage 2 placeholder
 //   `*`              → `<Navigate to={ROUTES.home} replace />`; absorbs unknown paths.
 //
 // `HatchLayout` is lazy-loaded so Vite emits a separate chunk for the layout
 // + its transitive imports (`wagmiConfig`, `WagmiProvider`, `RainbowKitProvider`,
 // RainbowKit theme + CSS). The chunk loads only when a user navigates to
-// `/hatch`; `/`, `/view`, `/view/<tokenId>`, `/bond` bypass the wagmi chunk
+// `/hatch`; `/`, `/view`, `/view/<tokenId>`, `/claim` bypass the wagmi chunk
 // entirely on cold load.
 const HatchLayout = lazy(() => import('./layouts/HatchLayout'));
 
@@ -176,7 +176,7 @@ export default function App(): JSX.Element {
       </Route>
       <Route path={ROUTES.view} element={<View />} />
       <Route path={ROUTES.viewToken} element={<ViewToken />} />
-      <Route path={ROUTES.bond} element={<Bond />} />
+      <Route path={ROUTES.claim} element={<Claim />} />
       <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
     </Routes>
   );

@@ -11,7 +11,7 @@ import {BuddyRenderer} from "../contracts/BuddyRenderer.sol";
 import {BuddySpriteData} from "../contracts/BuddySpriteData.sol";
 import {BuddySpriteFont} from "../contracts/BuddySpriteFont.sol";
 import {IBuddyNFT} from "../contracts/interfaces/IBuddyNFT.sol";
-import {BondAttestationHelper} from "./helpers/BondAttestationHelper.sol";
+import {ClaimAttestationHelper} from "./helpers/ClaimAttestationHelper.sol";
 import {MockBuddyNFTForRenderer} from "./helpers/MockBuddyNFTForRenderer.sol";
 import {HatchHelper} from "./helpers/HatchHelper.sol";
 
@@ -177,23 +177,24 @@ contract CoverageGapClosersTest is Test, HatchHelper {
 
     function _hatchAndBond(string memory name) internal returns (string memory tokenUri) {
         uint256 tokenId = _hatchUuid(nft, TEST_UUID);
-        BuddyNFT.BondAttestation memory attestation = BuddyNFT.BondAttestation({
-            tokenId: tokenId,
+        BuddyNFT.ClaimAttestation memory attestation = BuddyNFT.ClaimAttestation({
             identityHash: _identityHash(TEST_UUID),
             prngSeed: _prngSeed(TEST_UUID),
+            provider: CLAUDE_PROVIDER,
+            name: name,
             recipient: recipient,
             expiry: uint64(block.timestamp + 1 hours)
         });
-        bytes memory signature = _signBondAttestation(attestation);
+        bytes memory signature = _signClaimAttestation(attestation);
 
         vm.prank(recipient);
-        nft.bond(tokenId, name, attestation, signature);
+        nft.claim(attestation, signature);
 
         tokenUri = nft.tokenURI(tokenId);
     }
 
-    function _signBondAttestation(BuddyNFT.BondAttestation memory attestation) internal view returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, BondAttestationHelper.digest(address(nft), attestation));
+    function _signClaimAttestation(BuddyNFT.ClaimAttestation memory attestation) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, ClaimAttestationHelper.digest(address(nft), attestation));
         return abi.encodePacked(r, s, v);
     }
 

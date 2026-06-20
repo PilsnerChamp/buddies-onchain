@@ -1,13 +1,13 @@
-// site/src/routes/Bond.tsx
+// site/src/routes/Claim.tsx
 //
-// `/bond` route.
+// `/claim` route.
 //
 // Stage 2 dormant explainer. No wallet, no contract reads, no
 // transaction states — same posture as Bare View. The route exists
-// so the SEE ALSO `/bond` row on every other surface resolves to a
+// so the SEE ALSO `/claim` row on every other surface resolves to a
 // real page rather than a 404 or a one-line warning.
 //
-// The route includes a disabled action prompt `> /bond ▊` (muted, no
+// The route includes a disabled action prompt `> /claim ▊` (muted, no
 // autoFocus, no Enter handler, no wiring) for visual parity with the other
 // routes' command surfaces.
 // An inline `stage 2 · not yet implemented` line sits beneath it.
@@ -21,7 +21,7 @@ import { TerminalRouteShell } from '../components/TerminalRouteShell';
 import { ACTIVE_NETWORK } from '../config/network';
 import { ROUTES } from '../config/routes';
 
-import './Bond.css';
+import './Claim.css';
 
 const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
   { to: ROUTES.home, description: 'install the plugin' },
@@ -29,12 +29,12 @@ const SEE_ALSO_ROUTES: readonly SeeAlsoRoute[] = [
   { to: ROUTES.view, description: 'look up any buddy' },
 ];
 
-export function Bond(): JSX.Element {
+export function Claim(): JSX.Element {
   return (
     <TerminalRouteShell>
       <p className="route-command">
         <span className="route-command__sigil">&gt;</span>{' '}
-        <span className="route-command__accent">/bond --help</span>
+        <span className="route-command__accent">/claim --help</span>
       </p>
 
       <ManPageSection heading="STATUS">
@@ -43,16 +43,17 @@ export function Bond(): JSX.Element {
 
       <ManPageSection heading="DESCRIPTION">
         <p className="route-prose">
-          Bonding would let the holder of an account bind their hatched
-          buddy to a wallet they control. The token stays soulbound; only the
-          custody address moves — from the Buddies Onchain contract to the
-          account holder&apos;s wallet.
+          This is where the holder of an account would claim their buddy —
+          one action that moves custody of the hatched buddy from the
+          Buddies Onchain contract to a wallet they control. The token stays
+          soulbound throughout; only the custody address moves, never a sale
+          or a transfer to anyone else.
         </p>
         <p className="route-prose route-prose--spaced">
           This requires proof that the wallet signer also controls the
           account behind the UUID. No coding-tool provider exposes a way to
-          prove that today. Until one does, the bond path in the contract
-          stays switched off.
+          prove that today. Until one does, this path in the contract stays
+          switched off.
         </p>
         <p className="route-prose route-prose--spaced">
           Stage 2 may never activate. Buddies staying at the contract is one
@@ -75,15 +76,15 @@ export function Bond(): JSX.Element {
             signal. Inline `stage 2 · not yet implemented` line sits
             beneath. */}
         <p
-          className="terminal-action-row terminal-action-row--inert bond-action hover-row hover-row--inert"
+          className="terminal-action-row terminal-action-row--inert claim-action hover-row hover-row--inert"
           aria-disabled="true"
         >
-          <span className="bond-action__sigil">&gt;</span>{' '}
-          <span className="bond-action__command">/bond</span>{' '}
-          <span className="bond-action__cursor" aria-hidden="true" />
+          <span className="claim-action__sigil">&gt;</span>{' '}
+          <span className="claim-action__command">/claim</span>{' '}
+          <span className="claim-action__cursor" aria-hidden="true" />
         </p>
-        <p className="bond-action__inline">
-          stage 2 <span className="bond-action__sep">·</span>{' '}
+        <p className="claim-action__inline">
+          stage 2 <span className="claim-action__sep">·</span>{' '}
           <span className="status-text--warning">not yet implemented</span>
         </p>
       </ManPageSection>

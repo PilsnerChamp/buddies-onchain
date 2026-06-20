@@ -13,7 +13,7 @@ export const ROUTES = {
   hatch: '/hatch',
   view: '/view',
   viewToken: '/view/:tokenId',
-  bond: '/bond',
+  claim: '/claim',
 } as const;
 
 export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];
