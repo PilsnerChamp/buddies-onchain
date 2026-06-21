@@ -62,6 +62,12 @@ export interface LookupPayload {
   viewUrl: string;
   hatchUrl: string;
   openseaCollectionUrl: string | null;
+  // Chain facts for the cold hatch disclosure (point-of-action, slash-only).
+  // `null` contract = pre-deploy chain; `null` explorer = no public explorer
+  // (e.g. local). Disclosure degrades gracefully when either is null.
+  contractAddress: string | null;
+  explorerAddressBase: string | null;
+  chainDisplayName: string;
   effectiveMode: ModeLevel;
   persistedMode: ModeLevel;
 }
@@ -345,6 +351,9 @@ export async function resolveLookupPayload(
       viewUrl,
       hatchUrl: concreteHatchUrl,
       openseaCollectionUrl: net.openseaCollectionUrl,
+      contractAddress: net.buddyNft,
+      explorerAddressBase: net.explorerAddressBase,
+      chainDisplayName: net.displayName,
       effectiveMode,
       persistedMode,
     };
@@ -364,6 +373,52 @@ function pushCard(lines: string[], payload: LookupPayload): void {
   lines.push("");
 }
 
+// Point-of-action disclosure for the cold (not-yet-hatched) slash render.
+// Neutral facts the user can verify — never an endorsement. The plugin reads
+// the chain and never signs; the only write is the user-initiated mint on the
+// external dApp. Surfacing the expected transaction (contract, function, zero
+// value, no approvals) lets the user diff it against their wallet preview, the
+// strongest defense against phishing clones. Shown only on the explicit
+// `/buddy-onchain` command — never auto-injected.
+//
+// RELEASE INVARIANT: `function hatch` below must match the dApp's mint entry.
+// If the dApp ever routes the mint through a different function, update this
+// copy in the SAME release — a stale name makes the wallet preview mismatch and
+// the user cancel a legitimate transaction.
+function coldHatchDisclosureLines(payload: LookupPayload): string[] {
+  const lines: string[] = [
+    "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
+  ];
+
+  if (payload.contractAddress !== null) {
+    lines.push(
+      `to hatch you open the link, connect a wallet, and sign one ${payload.chainDisplayName} transaction (gas only - nothing to the plugin):`,
+      `  contract ${payload.contractAddress} · function hatch · value 0 ETH · no token approvals`,
+      "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.",
+    );
+  } else {
+    // No deployed contract for this network → no verifiable tx fingerprint, so
+    // do not coach the user to sign a hatch with no checkable target. The
+    // caller also suppresses the hatch URL + rerun line in this state so the
+    // warning is not contradicted by a signing flow.
+    lines.push(
+      "hatch contract is not configured for this network - hatch unavailable from this build.",
+    );
+  }
+
+  lines.push(
+    "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
+  );
+
+  if (payload.contractAddress !== null && payload.explorerAddressBase !== null) {
+    lines.push(
+      `verify the contract: ${payload.explorerAddressBase}${payload.contractAddress}`,
+    );
+  }
+
+  return lines;
+}
+
 export function formatLookupBlock(payload: LookupPayload): string {
   const lines: string[] = ["BUDDY_RENDER_BEGIN"];
 
@@ -375,9 +430,22 @@ export function formatLookupBlock(payload: LookupPayload): string {
   const url = decision.urlTarget === "view" ? payload.viewUrl : payload.hatchUrl;
 
   lines.push(decision.message);
-  lines.push(url);
+
+  // cold + no deployed contract = no verifiable hatch target. Suppress the
+  // hatch URL and post-hatch rerun line so "hatch unavailable from this build"
+  // is not contradicted by a signing flow.
+  const hatchUnavailable =
+    payload.buddyStatus === "cold" && payload.contractAddress === null;
 
   if (payload.buddyStatus === "cold") {
+    lines.push(...coldHatchDisclosureLines(payload));
+  }
+
+  if (!hatchUnavailable) {
+    lines.push(url);
+  }
+
+  if (payload.buddyStatus === "cold" && !hatchUnavailable) {
     lines.push(
       "after hatching, re-run `/buddy-onchain` or restart the session to see it wake.",
     );

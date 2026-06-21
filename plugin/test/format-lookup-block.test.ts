@@ -6,6 +6,21 @@ import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 const HATCH_URL =
   `https://buddies-onchain.xyz/hatch#identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 
+const TEST_CONTRACT = "0x000000000000000000000000000000000000b0dd";
+const TEST_EXPLORER = "https://basescan.org/address/";
+const TEST_CHAIN = "base";
+
+// Expected cold-hatch disclosure lines for the default (contract + explorer
+// present) payload. Mirrors `coldHatchDisclosureLines` in lookup-payload.ts.
+const COLD_DISCLOSURE = [
+  "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
+  `to hatch you open the link, connect a wallet, and sign one ${TEST_CHAIN} transaction (gas only - nothing to the plugin):`,
+  `  contract ${TEST_CONTRACT} · function hatch · value 0 ETH · no token approvals`,
+  "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.",
+  "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
+  `verify the contract: ${TEST_EXPLORER}${TEST_CONTRACT}`,
+];
+
 function makeLookupPayload(
   payload: Partial<LookupPayload> &
     Pick<LookupPayload, "buddyStatus">,
@@ -15,6 +30,9 @@ function makeLookupPayload(
     viewUrl: "https://buddies-onchain.xyz/view/123",
     hatchUrl: HATCH_URL,
     openseaCollectionUrl: null,
+    contractAddress: TEST_CONTRACT,
+    explorerAddressBase: TEST_EXPLORER,
+    chainDisplayName: TEST_CHAIN,
     effectiveMode: "lite",
     persistedMode: "lite",
     ...payload,
@@ -39,7 +57,7 @@ describe("formatLookupBlock", () => {
     {
       name: "cold uses hatch copy and hatch URL",
       buddyStatus: "cold" as const,
-      message: "your buddy is sleeping - hatch it onchain:",
+      message: "your buddy is sleeping - not yet hatched onchain:",
       url: HATCH_URL,
     },
     {
@@ -59,6 +77,7 @@ describe("formatLookupBlock", () => {
       [
         "BUDDY_RENDER_BEGIN",
         cell.message,
+        ...(cell.buddyStatus === "cold" ? COLD_DISCLOSURE : []),
         cell.url,
         ...(cell.buddyStatus === "cold" ? [COLD_NOTE] : []),
         "",
@@ -101,6 +120,38 @@ describe("formatLookupBlock", () => {
       expect(out).toContain(HATCH_URL);
       expect(out).not.toContain("https://buddies-onchain.xyz/view/123");
     }
+  });
+
+  test("cold disclosure degrades when contract address is unknown (pre-deploy)", () => {
+    const out = formatLookupBlock(
+      makeLookupPayload({
+        buddyStatus: "cold",
+        contractAddress: null,
+        explorerAddressBase: null,
+        chainDisplayName: "base",
+      }),
+    );
+
+    expect(out).toBe(
+      [
+        "BUDDY_RENDER_BEGIN",
+        "your buddy is sleeping - not yet hatched onchain:",
+        "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
+        "hatch contract is not configured for this network - hatch unavailable from this build.",
+        "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
+        "",
+        LITE_LINE,
+        CHANGE_HINT,
+        "BUDDY_RENDER_END",
+      ].join("\n"),
+    );
+    // Pre-deploy: warn, never coach a signature. No fingerprint, no verify
+    // link, no signing invitation, no hatch URL, no post-hatch rerun line.
+    expect(out).not.toContain("function hatch");
+    expect(out).not.toContain("verify the contract:");
+    expect(out).not.toContain("connect a wallet");
+    expect(out).not.toContain(HATCH_URL);
+    expect(out).not.toContain(COLD_NOTE);
   });
 
   test("skips OpenSea row when collection URL is null", () => {
@@ -206,7 +257,8 @@ describe("formatLookupBlock", () => {
       const out = formatLookupBlock(payload);
       const expected = [
         "BUDDY_RENDER_BEGIN",
-        "your buddy is sleeping - hatch it onchain:",
+        "your buddy is sleeping - not yet hatched onchain:",
+        ...COLD_DISCLOSURE,
         HATCH_URL,
         COLD_NOTE,
         "",

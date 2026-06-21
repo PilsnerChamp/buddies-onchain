@@ -24,7 +24,7 @@ import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 const DIST = join(PLUGIN_ROOT, "dist", "index.js");
-const RULESET_PREFIX = "BUDDIES ONCHAIN AMBIENT ACTIVE.";
+const RULESET_PREFIX = "BUDDIES ONCHAIN AMBIENT — ";
 const HATCH_FRAGMENT =
   `identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${HATCH_FRAGMENT}`;
@@ -396,7 +396,7 @@ describe("hook — lookup route", () => {
     expect(context).toMatch(
       /http:\/\/localhost:5173\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude/,
     );
-    expect(context).toContain("your buddy is sleeping - hatch it onchain:");
+    expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
   });
@@ -409,7 +409,7 @@ describe("hook — lookup route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(context).toContain("BUDDY_RENDER_BEGIN");
-    expect(context).toContain("your buddy is sleeping - hatch it onchain:");
+    expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
     expect(context).toContain(LOCAL_HATCH_URL);
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toContain("ZZzzz...");
@@ -498,7 +498,7 @@ describe("hook — lookup route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(state.hatch).toBe("cold");
-    expect(context).toContain("your buddy is sleeping - hatch it onchain:");
+    expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toContain("ZZzzz...");
   });
@@ -516,7 +516,7 @@ describe("hook — lookup route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(context).toContain("BUDDY_RENDER_BEGIN");
-    expect(context).toContain("your buddy is sleeping - hatch it onchain:");
+    expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
     expect(context).toContain("your buddy is silent on prompts (mode: `off`).");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toContain("ZZzzz...");

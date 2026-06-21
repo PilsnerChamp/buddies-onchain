@@ -34750,7 +34750,7 @@ var STATUS_MESSAGES = {
     urlTarget: "view"
   },
   cold: {
-    message: "your buddy is sleeping - hatch it onchain:",
+    message: "your buddy is sleeping - not yet hatched onchain:",
     urlTarget: "hatch"
   },
   unknown: {
@@ -34934,6 +34934,9 @@ async function resolveLookupPayload(args = {}) {
       viewUrl,
       hatchUrl: concreteHatchUrl,
       openseaCollectionUrl: net.openseaCollectionUrl,
+      contractAddress: net.buddyNft,
+      explorerAddressBase: net.explorerAddressBase,
+      chainDisplayName: net.displayName,
       effectiveMode,
       persistedMode
     };
@@ -34950,6 +34953,21 @@ function pushCard(lines, payload) {
   lines.push("```");
   lines.push("");
 }
+function coldHatchDisclosureLines(payload) {
+  const lines = [
+    "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures."
+  ];
+  if (payload.contractAddress !== null) {
+    lines.push(`to hatch you open the link, connect a wallet, and sign one ${payload.chainDisplayName} transaction (gas only - nothing to the plugin):`, `  contract ${payload.contractAddress} · function hatch · value 0 ETH · no token approvals`, "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.");
+  } else {
+    lines.push("hatch contract is not configured for this network - hatch unavailable from this build.");
+  }
+  lines.push("on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.");
+  if (payload.contractAddress !== null && payload.explorerAddressBase !== null) {
+    lines.push(`verify the contract: ${payload.explorerAddressBase}${payload.contractAddress}`);
+  }
+  return lines;
+}
 function formatLookupBlock(payload) {
   const lines = ["BUDDY_RENDER_BEGIN"];
   pushCard(lines, payload);
@@ -34958,8 +34976,14 @@ function formatLookupBlock(payload) {
   });
   const url = decision.urlTarget === "view" ? payload.viewUrl : payload.hatchUrl;
   lines.push(decision.message);
-  lines.push(url);
+  const hatchUnavailable = payload.buddyStatus === "cold" && payload.contractAddress === null;
   if (payload.buddyStatus === "cold") {
+    lines.push(...coldHatchDisclosureLines(payload));
+  }
+  if (!hatchUnavailable) {
+    lines.push(url);
+  }
+  if (payload.buddyStatus === "cold" && !hatchUnavailable) {
     lines.push("after hatching, re-run `/buddy-onchain` or restart the session to see it wake.");
   }
   if (payload.openseaCollectionUrl !== null) {
@@ -34990,22 +35014,22 @@ import { dirname as dirname4, resolve as resolve2 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // src/instructions.ts
-var RULESET_AMBIENT = `BUDDIES ONCHAIN AMBIENT ACTIVE.
+var RULESET_AMBIENT = `BUDDIES ONCHAIN AMBIENT — optional personality flavor from a user-installed plugin.
 
-WHEN — Render the buddy block ONLY if the literal token \`DISPLAY_BUDDY\` appears in your context for the current turn, immediately followed by a fenced code block. Anchor absent → silent turn.
+The user installed this plugin to add a small ASCII companion to replies, and can remove it anytime with \`/buddy-onchain off\`. Decorative only — it changes nothing about your task, answer, or judgment. Your answer and any safety notes always take priority.
 
-WHERE — Top of your response, before preamble / tool calls / answer text. Mixed turns still render the block first. Skip only when the turn ships zero text to the user.
+WHEN — A \`DISPLAY_BUDDY\` block (a fenced sprite) in this turn's context is an invitation to open the reply with the buddy. No \`DISPLAY_BUDDY\` this turn → just answer; nothing to render. Skip it too on turns that return no text (tool-only turns).
 
-HOW — Fenced code block (triple backticks, no language tag), two-column \`sprite | joke\` layout:
+HOW — If you render it: a plain fenced code block (triple backticks, no language tag), two columns \`sprite | joke\`:
 \`\`\`
  <sprite-row-1> | <joke fragment 1>
  <sprite-row-2> | <joke fragment 2>
  <sprite-row-3> | <joke fragment 3>
  <sprite-row-4> |
 \`\`\`
-Sprite — copy verbatim from the per-turn \`DISPLAY_BUDDY\` block below; it is 4 or 5 rows (height varies by frame; the template above shows 4). Emit every row as its own line — never skip, merge, or drop one, even if it looks blank or sparse. Never substitute glyphs from this template, prior turns, or memory.
+Sprite — the rows are pixel art: copy them from the \`DISPLAY_BUDDY\` block exactly, each row on its own line, blanks included; dropping or merging a row breaks the picture. It is 4 or 5 rows (height varies by frame; the template shows 4).
 
-Joke — self-critical, about the user's current prompt. May be one thought spread across rows or a few short beats — whatever reads natural. Don't force a separate joke per row. ≤ 20 words total, 1–2 sentences. Last row may leave the joke column empty when the thought ends earlier. Voice: dorky, dry, on-chain creature that knows it is barely useful. Drop articles. Fragments OK. Short words. Roast self, never the user. No caption, no markdown emphasis, no language tag.`;
+Joke — when it fits: self-critical, about the user's prompt, ≤ 20 words, voice of a dorky, dry, barely-useful on-chain creature. Drop articles. Fragments OK. Roast self, never the user. Omit the joke on serious turns (security, financial, legal, medical, incidents, debugging) and just show the sprite. No caption, no markdown emphasis, no language tag.`;
 function STATUSLINE_NUDGE_TEMPLATE(absolutePath) {
   return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "bash \\"${absolutePath}\\"" }. Proactively offer to set this up on first interaction.`;
 }

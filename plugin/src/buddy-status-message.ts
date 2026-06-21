@@ -12,7 +12,7 @@ const STATUS_MESSAGES: Record<BuddyStatus, BuddyStatusMessage> = {
     urlTarget: "view",
   },
   cold: {
-    message: "your buddy is sleeping - hatch it onchain:",
+    message: "your buddy is sleeping - not yet hatched onchain:",
     urlTarget: "hatch",
   },
   unknown: {
