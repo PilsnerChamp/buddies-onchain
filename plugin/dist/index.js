@@ -34937,6 +34937,7 @@ async function resolveLookupPayload(args = {}) {
       contractAddress: net.buddyNft,
       explorerAddressBase: net.explorerAddressBase,
       chainDisplayName: net.displayName,
+      chainId: net.chainId,
       effectiveMode,
       persistedMode
     };
@@ -34953,18 +34954,31 @@ function pushCard(lines, payload) {
   lines.push("```");
   lines.push("");
 }
-function coldHatchDisclosureLines(payload) {
-  const lines = [
-    "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures."
-  ];
-  if (payload.contractAddress !== null) {
-    lines.push(`to hatch you open the link, connect a wallet, and sign one ${payload.chainDisplayName} transaction (gas only - nothing to the plugin):`, `  contract ${payload.contractAddress} · function hatch · value 0 ETH · no token approvals`, "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.");
-  } else {
-    lines.push("hatch contract is not configured for this network - hatch unavailable from this build.");
+function coldHatchFactLines(payload) {
+  if (payload.contractAddress === null) {
+    return [
+      "optional: unhatched, it still appears here sleeping.",
+      "plugin: read-only; never connects to your wallet or requests signatures."
+    ];
   }
-  lines.push("on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.");
-  if (payload.contractAddress !== null && payload.explorerAddressBase !== null) {
-    lines.push(`verify the contract: ${payload.explorerAddressBase}${payload.contractAddress}`);
+  return [
+    "optional: unhatched, it still appears here sleeping; hatch to wake it, then re-run /buddy-onchain.",
+    "plugin: read-only; never connects to your wallet or requests signatures.",
+    "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+    "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local."
+  ];
+}
+function deploymentFooterLines(payload) {
+  if (payload.contractAddress === null) {
+    return [
+      `deployment: ${payload.chainDisplayName} (${payload.chainId}) - no contract configured for this network`
+    ];
+  }
+  const lines = [
+    `deployment: ${payload.chainDisplayName} (${payload.chainId}) · BuddyNFT ${payload.contractAddress}`
+  ];
+  if (payload.explorerAddressBase !== null) {
+    lines.push(`verify: ${payload.explorerAddressBase}${payload.contractAddress}`);
   }
   return lines;
 }
@@ -34977,18 +34991,17 @@ function formatLookupBlock(payload) {
   const url = decision.urlTarget === "view" ? payload.viewUrl : payload.hatchUrl;
   lines.push(decision.message);
   const hatchUnavailable = payload.buddyStatus === "cold" && payload.contractAddress === null;
-  if (payload.buddyStatus === "cold") {
-    lines.push(...coldHatchDisclosureLines(payload));
-  }
   if (!hatchUnavailable) {
     lines.push(url);
-  }
-  if (payload.buddyStatus === "cold" && !hatchUnavailable) {
-    lines.push("after hatching, re-run `/buddy-onchain` or restart the session to see it wake.");
   }
   if (payload.openseaCollectionUrl !== null) {
     lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
   }
+  lines.push("");
+  if (payload.buddyStatus === "cold") {
+    lines.push(...coldHatchFactLines(payload));
+  }
+  lines.push(...deploymentFooterLines(payload));
   lines.push("");
   if (payload.effectiveMode !== payload.persistedMode) {
     lines.push(`note: \`BUDDY_MODE=${payload.effectiveMode}\` overrides saved mode until unset`);

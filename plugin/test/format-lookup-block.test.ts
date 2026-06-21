@@ -9,16 +9,21 @@ const HATCH_URL =
 const TEST_CONTRACT = "0x000000000000000000000000000000000000b0dd";
 const TEST_EXPLORER = "https://basescan.org/address/";
 const TEST_CHAIN = "base";
+const TEST_CHAIN_ID = 8453;
 
-// Expected cold-hatch disclosure lines for the default (contract + explorer
-// present) payload. Mirrors `coldHatchDisclosureLines` in lookup-payload.ts.
-const COLD_DISCLOSURE = [
-  "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
-  `to hatch you open the link, connect a wallet, and sign one ${TEST_CHAIN} transaction (gas only - nothing to the plugin):`,
-  `  contract ${TEST_CONTRACT} · function hatch · value 0 ETH · no token approvals`,
-  "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.",
-  "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
-  `verify the contract: ${TEST_EXPLORER}${TEST_CONTRACT}`,
+// Cold-only context facts (contract present). Mirrors `coldHatchFactLines`.
+const COLD_FACTS = [
+  "optional: unhatched, it still appears here sleeping; hatch to wake it, then re-run /buddy-onchain.",
+  "plugin: read-only; never connects to your wallet or requests signatures.",
+  "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+  "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local.",
+];
+
+// Always-on deployment footer (contract + explorer present). Mirrors
+// `deploymentFooterLines`.
+const FOOTER = [
+  `deployment: ${TEST_CHAIN} (${TEST_CHAIN_ID}) · BuddyNFT ${TEST_CONTRACT}`,
+  `verify: ${TEST_EXPLORER}${TEST_CONTRACT}`,
 ];
 
 function makeLookupPayload(
@@ -33,6 +38,7 @@ function makeLookupPayload(
     contractAddress: TEST_CONTRACT,
     explorerAddressBase: TEST_EXPLORER,
     chainDisplayName: TEST_CHAIN,
+    chainId: TEST_CHAIN_ID,
     effectiveMode: "lite",
     persistedMode: "lite",
     ...payload,
@@ -44,8 +50,6 @@ describe("formatLookupBlock", () => {
   const LITE_LINE = "your buddy appears every 3rd prompt (mode: `lite`).";
   const OFF_LINE = "your buddy is silent on prompts (mode: `off`).";
   const CHANGE_HINT = "change: `/buddy-onchain lite|full|off`";
-  const COLD_NOTE =
-    "after hatching, re-run `/buddy-onchain` or restart the session to see it wake.";
 
   const decisionCases = [
     {
@@ -77,9 +81,10 @@ describe("formatLookupBlock", () => {
       [
         "BUDDY_RENDER_BEGIN",
         cell.message,
-        ...(cell.buddyStatus === "cold" ? COLD_DISCLOSURE : []),
         cell.url,
-        ...(cell.buddyStatus === "cold" ? [COLD_NOTE] : []),
+        "",
+        ...(cell.buddyStatus === "cold" ? COLD_FACTS : []),
+        ...FOOTER,
         "",
         LITE_LINE,
         CHANGE_HINT,
@@ -106,6 +111,8 @@ describe("formatLookupBlock", () => {
         "go see your buddy onchain:",
         "https://buddies-onchain.xyz/view/123",
         "",
+        ...FOOTER,
+        "",
         LITE_LINE,
         CHANGE_HINT,
         "BUDDY_RENDER_END",
@@ -122,7 +129,7 @@ describe("formatLookupBlock", () => {
     }
   });
 
-  test("cold disclosure degrades when contract address is unknown (pre-deploy)", () => {
+  test("cold degrades when contract address is unknown (pre-deploy)", () => {
     const out = formatLookupBlock(
       makeLookupPayload({
         buddyStatus: "cold",
@@ -136,22 +143,21 @@ describe("formatLookupBlock", () => {
       [
         "BUDDY_RENDER_BEGIN",
         "your buddy is sleeping - not yet hatched onchain:",
-        "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
-        "hatch contract is not configured for this network - hatch unavailable from this build.",
-        "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
+        "",
+        "optional: unhatched, it still appears here sleeping.",
+        "plugin: read-only; never connects to your wallet or requests signatures.",
+        `deployment: base (${TEST_CHAIN_ID}) - no contract configured for this network`,
         "",
         LITE_LINE,
         CHANGE_HINT,
         "BUDDY_RENDER_END",
       ].join("\n"),
     );
-    // Pre-deploy: warn, never coach a signature. No fingerprint, no verify
-    // link, no signing invitation, no hatch URL, no post-hatch rerun line.
-    expect(out).not.toContain("function hatch");
-    expect(out).not.toContain("verify the contract:");
-    expect(out).not.toContain("connect a wallet");
+    // Pre-deploy: no hatch URL, no verify link, no privacy/wake guidance that
+    // implies a reachable mint.
     expect(out).not.toContain(HATCH_URL);
-    expect(out).not.toContain(COLD_NOTE);
+    expect(out).not.toContain("verify:");
+    expect(out).not.toContain("hatch to wake it");
   });
 
   test("skips OpenSea row when collection URL is null", () => {
@@ -258,9 +264,10 @@ describe("formatLookupBlock", () => {
       const expected = [
         "BUDDY_RENDER_BEGIN",
         "your buddy is sleeping - not yet hatched onchain:",
-        ...COLD_DISCLOSURE,
         HATCH_URL,
-        COLD_NOTE,
+        "",
+        ...COLD_FACTS,
+        ...FOOTER,
         "",
         ...cell.expectedLines,
         "BUDDY_RENDER_END",

@@ -62,12 +62,13 @@ export interface LookupPayload {
   viewUrl: string;
   hatchUrl: string;
   openseaCollectionUrl: string | null;
-  // Chain facts for the cold hatch disclosure (point-of-action, slash-only).
+  // Chain facts for the hatch disclosure + the always-on deployment footer.
   // `null` contract = pre-deploy chain; `null` explorer = no public explorer
-  // (e.g. local). Disclosure degrades gracefully when either is null.
+  // (e.g. local). Both degrade gracefully when either is null.
   contractAddress: string | null;
   explorerAddressBase: string | null;
   chainDisplayName: string;
+  chainId: number;
   effectiveMode: ModeLevel;
   persistedMode: ModeLevel;
 }
@@ -354,6 +355,7 @@ export async function resolveLookupPayload(
       contractAddress: net.buddyNft,
       explorerAddressBase: net.explorerAddressBase,
       chainDisplayName: net.displayName,
+      chainId: net.chainId,
       effectiveMode,
       persistedMode,
     };
@@ -373,49 +375,53 @@ function pushCard(lines: string[], payload: LookupPayload): void {
   lines.push("");
 }
 
-// Point-of-action disclosure for the cold (not-yet-hatched) slash render.
-// Neutral facts the user can verify — never an endorsement. The plugin reads
-// the chain and never signs; the only write is the user-initiated mint on the
-// external dApp. Surfacing the expected transaction (contract, function, zero
-// value, no approvals) lets the user diff it against their wallet preview, the
-// strongest defense against phishing clones. Shown only on the explicit
-// `/buddy-onchain` command — never auto-injected.
-//
-// RELEASE INVARIANT: `function hatch` below must match the dApp's mint entry.
-// If the dApp ever routes the mint through a different function, update this
-// copy in the SAME release — a stale name makes the wallet preview mismatch and
-// the user cancel a legitimate transaction.
-function coldHatchDisclosureLines(payload: LookupPayload): string[] {
-  const lines: string[] = [
-    "hatching is optional - your buddy works unhatched. this plugin is read-only and never connects to your wallet or requests signatures.",
+// Cold (not-yet-hatched) context facts, slash-only. Labeled lines, scannable.
+// The plugin states only what IT owns: that the buddy works unhatched (still
+// shown, asleep), that the plugin is read-only and never signs, and the
+// privacy model. It deliberately does NOT narrate the external mint
+// transaction (function / value / approvals) — that is the wallet + dApp's
+// surface, and the plugin cannot guarantee another system's tx shape. The
+// verifiable contract the user diffs against lives in the deployment footer.
+function coldHatchFactLines(payload: LookupPayload): string[] {
+  if (payload.contractAddress === null) {
+    // No deployed contract → hatch unavailable (caller suppresses the URL).
+    return [
+      "optional: unhatched, it still appears here sleeping.",
+      "plugin: read-only; never connects to your wallet or requests signatures.",
+    ];
+  }
+
+  return [
+    "optional: unhatched, it still appears here sleeping; hatch to wake it, then re-run /buddy-onchain.",
+    "plugin: read-only; never connects to your wallet or requests signatures.",
+    // Generic wallet tripwire — no function name, no dApp coupling. The plugin
+    // emits the hatch link, so it still owes the user a point-of-action check.
+    "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+    "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local.",
   ];
+}
 
-  if (payload.contractAddress !== null) {
-    lines.push(
-      `to hatch you open the link, connect a wallet, and sign one ${payload.chainDisplayName} transaction (gas only - nothing to the plugin):`,
-      `  contract ${payload.contractAddress} · function hatch · value 0 ETH · no token approvals`,
-      "  if the transaction preview shows a different contract, nonzero ETH value, token approval, or spending access, cancel.",
-    );
-  } else {
-    // No deployed contract for this network → no verifiable tx fingerprint, so
-    // do not coach the user to sign a hatch with no checkable target. The
-    // caller also suppresses the hatch URL + rerun line in this state so the
-    // warning is not contradicted by a signing flow.
-    lines.push(
-      "hatch contract is not configured for this network - hatch unavailable from this build.",
-    );
+// Always-on deployment footer (every /buddy-onchain, all statuses): the active
+// chain facts the user transacts with — network + chainId + contract — pulled
+// out of the inline disclosure into one place (the exact contract is the
+// strongest verifiable trust signal). Doubles as a standing "which chain am I
+// on" indicator. The caller blank-line-separates it from the body above and the
+// mode line below.
+function deploymentFooterLines(payload: LookupPayload): string[] {
+  if (payload.contractAddress === null) {
+    return [
+      `deployment: ${payload.chainDisplayName} (${payload.chainId}) - no contract configured for this network`,
+    ];
   }
 
-  lines.push(
-    "on-chain it writes a one-way identity hash + seed - a stable pseudonymous marker, not anonymous. your raw account id never leaves your machine.",
-  );
-
-  if (payload.contractAddress !== null && payload.explorerAddressBase !== null) {
+  const lines: string[] = [
+    `deployment: ${payload.chainDisplayName} (${payload.chainId}) · BuddyNFT ${payload.contractAddress}`,
+  ];
+  if (payload.explorerAddressBase !== null) {
     lines.push(
-      `verify the contract: ${payload.explorerAddressBase}${payload.contractAddress}`,
+      `verify: ${payload.explorerAddressBase}${payload.contractAddress}`,
     );
   }
-
   return lines;
 }
 
@@ -431,30 +437,27 @@ export function formatLookupBlock(payload: LookupPayload): string {
 
   lines.push(decision.message);
 
-  // cold + no deployed contract = no verifiable hatch target. Suppress the
-  // hatch URL and post-hatch rerun line so "hatch unavailable from this build"
-  // is not contradicted by a signing flow.
+  // cold + no deployed contract = no hatch target; suppress the hatch URL (the
+  // deployment footer reports "no contract configured").
   const hatchUnavailable =
     payload.buddyStatus === "cold" && payload.contractAddress === null;
 
-  if (payload.buddyStatus === "cold") {
-    lines.push(...coldHatchDisclosureLines(payload));
-  }
-
   if (!hatchUnavailable) {
     lines.push(url);
-  }
-
-  if (payload.buddyStatus === "cold" && !hatchUnavailable) {
-    lines.push(
-      "after hatching, re-run `/buddy-onchain` or restart the session to see it wake.",
-    );
   }
 
   if (payload.openseaCollectionUrl !== null) {
     lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
   }
 
+  // Labeled facts footer, blank-line separated from the body above and the
+  // mode line below: cold-only context (optional / plugin / privacy) followed
+  // by the always-on deployment facts.
+  lines.push("");
+  if (payload.buddyStatus === "cold") {
+    lines.push(...coldHatchFactLines(payload));
+  }
+  lines.push(...deploymentFooterLines(payload));
   lines.push("");
 
   // getEnvMode filters invalid → null, so divergence means env override is active.
