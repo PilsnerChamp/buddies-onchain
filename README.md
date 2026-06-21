@@ -2,74 +2,91 @@
 
 > One account. One buddy. Lives on-chain. No host. No takedown.
 
-A soulbound (non-transferable) identity artifact for developers who use AI coding tools. Hatch the specific companion your account was assigned and pin it to Base L2 as a permanent visual record. Born from the Claude Code terminal buddy.
+<p align="center">
+  <img src="docs/assets/hero.png" alt="A terminal window titled /buddy-onchain with three pixel-art buddies — a duck, an axolotl, and a dragon — each sitting on its own on-chain block. The dragon says: i live onchain now. come hatch yours." width="100%">
+</p>
 
-## What it is
+A soulbound (non-transferable) identity artifact for people who build with AI coding tools. Your account is assigned exactly one buddy — a tiny terminal creature drawn entirely from contract bytecode. Hatch it and it lives on Base L2: no server, no API key, nothing to take down. Born from the Claude Code terminal buddy.
 
-- Fully on-chain SVG. The renderer lives in contract bytecode; nothing is hosted off-chain.
-- Deterministic trait derivation, backed by inspectable math. The plugin computes a seed from your account UUID client-side; the contract stores that seed and derives traits from it via Mulberry32. Same account, same buddy, every deployment.
-- Consistency you can recompute. The traits on-chain provably match the stored seed — anyone can re-run the derivation and confirm `traits == _deriveTraits(seed)`. The raw UUID never crosses the wire; only the seed and an identity hash do. What the chain proves is that the traits follow from the seed, not that the seed came from any particular account — that link is established off-chain, and is what a later bonding stage attests.
-- One account, one buddy. The token is bound to the identity hash; at the `Hatched` stage it is held by the contract, not in a wallet.
-- The identity hash is the same on every deployment. It is derived only from your account, not from any chain, contract, or deployment. Binding it to a deployment would let a redeploy quietly change your buddy; the canonical record means nobody can.
-- Two public stages: `Hatched` (the token sits at the contract address) and `Bonded` (dormant in v1).
+## Meet the buddies
 
-Stage 1 (`Hatched`) is implemented; the contract ships pre-Sepolia at this commit. Mainnet address appears below once it lands on Base.
+Every buddy is a fully on-chain animated SVG. Species, rarity, hat, and stats are derived deterministically from your account UUID — same account, same buddy, every time.
 
-## What it isn't
+| Common | Uncommon | Rare | Epic | Legendary |
+|:---:|:---:|:---:|:---:|:---:|
+| ![Common duck](docs/assets/buddies/common-duck.png) | ![Uncommon mushroom](docs/assets/buddies/uncommon-mushroom.png) | ![Rare axolotl](docs/assets/buddies/rare-axolotl.png) | ![Epic dragon](docs/assets/buddies/epic-dragon.png) | ![Legendary ghost](docs/assets/buddies/legendary-ghost.png) |
 
-- Not an NFT drop. No mint price. No royalties. No secondary market.
-- Not a host. There is no API key, no centralized service, no takedown surface.
-- Not a revival of the terminal companion. Buddies Onchain preserves a visual record.
-
-## Naming
-
-Short reference — full canonical table with usage rules at [`CLAUDE.md`](CLAUDE.md#naming).
-
-| Name | What it is |
-|---|---|
-| `Buddies Onchain` | brand and collection name |
-| `buddies-onchain` | slug — repo, org, domain, package, marketplace id |
-| `BuddyNFT` | Solidity contract name. Technical surface only. |
-| `buddy-onchain` | Claude Code plugin name |
-| `/buddy-onchain` | the slash command you type in Claude Code |
-| `/hatch` | the dApp route that mints the buddy for a UUID |
-| `/view` | lookup console — one input takes a token id or an account UUID; UUIDs resolve to a tokenId client-side; `/view/<tokenId>` is the canonical buddy URL (no UUID in the path) |
+*Real renderer output — the art is bytecode; these are just stills of the live on-chain SVG.*
 
 ## Use it
 
-Plugin (inside Claude Code):
+Install the plugin inside Claude Code:
 
 ```
 /plugin marketplace add PilsnerChamp/buddies-onchain
 /plugin install buddy-onchain@buddies-onchain
 ```
 
-Then in any session:
+Then, in any session:
 
 ```
 /buddy-onchain
 ```
 
-Site: <https://buddies-onchain.xyz/>
+Or open the site: <https://buddies-onchain.xyz/>
 
-Contract on Base mainnet: `<TBD post-deploy>` — this README updates when mainnet ships. Source at [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol). The contract is source-verified on Basescan at deploy time.
+## What it is
 
-Parity check (cross-domain trait derivation): see [`plugin/scripts/`](plugin/scripts/) and [`docs/onchain/derivation.md`](docs/onchain/derivation.md).
+- **Fully on-chain.** The renderer lives in contract bytecode. Nothing is hosted off-chain.
+- **Deterministic.** Your account UUID seeds the art; the contract derives traits from that seed. Same account, same buddy, every deployment.
+- **One account, one buddy.** The token is bound to your identity hash and custodied by the contract.
+- **Recomputable.** Anyone can re-run the derivation and confirm the on-chain traits match the stored seed.
 
-## Build and reference
+## What it isn't
 
-Three modules. Per-module architecture and build steps live under `docs/`:
+- Not an NFT drop. No mint price, no royalties, no secondary market.
+- Not a host. No API key, no centralized service, no takedown surface.
+- Not a revival of the terminal companion — it preserves a visual record.
 
-- Contract — [`docs/onchain/contract.md`](docs/onchain/contract.md), [`docs/onchain/build.md`](docs/onchain/build.md), [`docs/onchain/derivation.md`](docs/onchain/derivation.md)
+## How it works
+
+The plugin computes a seed and an identity hash from your UUID **client-side** — the raw UUID never crosses the wire — then hatches the token on Base. The contract stores the seed and derives traits via Mulberry32, provably, so anyone can recompute them. Two stages: `Hatched` (live) and `Bonded` (dormant in v1).
+
+Full detail:
+
+- Trait derivation + cross-domain PRNG parity — [`docs/onchain/derivation.md`](docs/onchain/derivation.md)
+- Contract shape, stages, invariants — [`docs/onchain/contract.md`](docs/onchain/contract.md)
+- On-chain SVG renderer — [`docs/onchain/renderer.md`](docs/onchain/renderer.md)
+
+Status: Stage 1 (`Hatched`) is implemented and ships pre-Sepolia at this commit. Contract on Base mainnet: `<TBD post-deploy>` — source-verified on Basescan at deploy; source at [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol). This section updates when mainnet lands.
+
+## Build
+
+Three modules, each with its own docs:
+
+- Contract — [`docs/onchain/build.md`](docs/onchain/build.md)
 - Plugin — [`docs/plugin/architecture.md`](docs/plugin/architecture.md)
 - Site — [`docs/site/architecture.md`](docs/site/architecture.md)
-- Network config (shared) — [`docs/network-config.md`](docs/network-config.md)
+- Network config — [`docs/network-config.md`](docs/network-config.md)
 
-Issues and PRs welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md). Soulbound posture, maintainer-power scope, and disclosure: [`SECURITY.md`](SECURITY.md).
+Issues and PRs welcome — [`CONTRIBUTING.md`](CONTRIBUTING.md). Security posture and disclosure — [`SECURITY.md`](SECURITY.md).
+
+## Naming
+
+| Name | What it is |
+|---|---|
+| `Buddies Onchain` | brand and collection name |
+| `buddies-onchain` | slug — repo, org, domain, package, marketplace id |
+| `BuddyNFT` | Solidity contract name (technical surface only) |
+| `buddy-onchain` | Claude Code plugin name |
+| `/buddy-onchain` | the slash command you type in Claude Code |
+| `/hatch`, `/view` | dApp routes — hatch a buddy, look one up |
+
+Full canonical table with usage rules: [`CLAUDE.md`](CLAUDE.md#naming).
 
 ## License and contact
 
-MIT. See [`LICENSE`](LICENSE). Embedded font attributions: [`NOTICE`](NOTICE).
+MIT — [`LICENSE`](LICENSE). Embedded font attributions — [`NOTICE`](NOTICE).
 
 Author: [@PilsnerChamp](https://x.com/PilsnerChamp). Repo: <https://github.com/PilsnerChamp/buddies-onchain>.
 
