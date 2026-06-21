@@ -19,9 +19,9 @@ Ambient turns read only persisted state and art cache. Cache missing, stale, mal
 
 | Hook | Entry | Timeout |
 |---|---|---|
-| `SessionStart` | `bun "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --session-start` | 5s |
-| `UserPromptSubmit` | `bun "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --hook` | 10s |
-| `Stop` | `bun "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --stop` | 5s |
+| `SessionStart` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --session-start` | 5s |
+| `UserPromptSubmit` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --hook` | 10s |
+| `Stop` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --stop` | 5s |
 
 `SessionStart` emits either `OK` or the active ambient ruleset. `UserPromptSubmit` and `Stop` emit hook JSON and fail closed to `{}`; hook stderr/exit codes must not pollute the user's prompt path.
 

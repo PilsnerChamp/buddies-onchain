@@ -108,12 +108,120 @@ export function rollRarity(rng: RNG): Rarity {
 
 // ---------- identity hash --------------------------------------------------
 
+const WYHASH_S0 = 0xa0761d6478bd642fn;
+const WYHASH_S1 = 0xe7037ed1a0b428dbn;
+const WYHASH_S2 = 0x8ebc6af09c88c6e3n;
+const WYHASH_S3 = 0x589965cc75374cc3n;
+const WYHASH_MASK64 = 0xffffffffffffffffn;
+const WYHASH_MASK32 = 0xffffffffn;
+const textEncoder = new TextEncoder();
+
+function u64(value: bigint): bigint {
+  return BigInt.asUintN(64, value);
+}
+
+function inputBytes(input: string | Uint8Array): Uint8Array {
+  return typeof input === "string" ? textEncoder.encode(input) : input;
+}
+
+function mum(a: bigint, b: bigint): [lo: bigint, hi: bigint] {
+  const product = u64(a) * u64(b);
+  const lo = u64(product & WYHASH_MASK64);
+  const hi = u64(product >> 64n);
+  return [lo, hi];
+}
+
+function mix(a: bigint, b: bigint): bigint {
+  const [lo, hi] = mum(a, b);
+  return u64(lo ^ hi);
+}
+
+function read4(bytes: Uint8Array, offset: number): bigint {
+  return (
+    BigInt(bytes[offset])
+    | (BigInt(bytes[offset + 1]) << 8n)
+    | (BigInt(bytes[offset + 2]) << 16n)
+    | (BigInt(bytes[offset + 3]) << 24n)
+  );
+}
+
+function read8(bytes: Uint8Array, offset: number): bigint {
+  return (
+    BigInt(bytes[offset])
+    | (BigInt(bytes[offset + 1]) << 8n)
+    | (BigInt(bytes[offset + 2]) << 16n)
+    | (BigInt(bytes[offset + 3]) << 24n)
+    | (BigInt(bytes[offset + 4]) << 32n)
+    | (BigInt(bytes[offset + 5]) << 40n)
+    | (BigInt(bytes[offset + 6]) << 48n)
+    | (BigInt(bytes[offset + 7]) << 56n)
+  );
+}
+
 /**
- * wyhash — used by compiled Bun binary installs of Claude Code.
- * Delegates to Bun.hash over the byte-exact input, truncated to 32 bits.
+ * Zig std.hash.Wyhash-compatible hash, seed 0, over byte-exact input.
  */
+export function wyhash64(input: string | Uint8Array): bigint {
+  const bytes = inputBytes(input);
+  const len = bytes.length;
+  const len64 = u64(BigInt(len));
+
+  let a = 0n;
+  let b = 0n;
+  let state0 = mix(WYHASH_S0, WYHASH_S1);
+
+  if (len <= 16) {
+    if (len >= 4) {
+      const end = len - 4;
+      const quarter = Math.floor(len / 8) * 4;
+
+      a = u64((read4(bytes, 0) << 32n) | read4(bytes, quarter));
+      b = u64((read4(bytes, end) << 32n) | read4(bytes, end - quarter));
+    } else if (len > 0) {
+      a = u64(
+        (BigInt(bytes[0]) << 16n)
+        | (BigInt(bytes[len >> 1]) << 8n)
+        | BigInt(bytes[len - 1]),
+      );
+      b = 0n;
+    } else {
+      a = 0n;
+      b = 0n;
+    }
+  } else {
+    let state1 = state0;
+    let state2 = state0;
+    let i = 0;
+
+    if (len >= 48) {
+      while (i + 48 < len) {
+        state0 = mix(read8(bytes, i) ^ WYHASH_S1, read8(bytes, i + 8) ^ state0);
+        state1 = mix(read8(bytes, i + 16) ^ WYHASH_S2, read8(bytes, i + 24) ^ state1);
+        state2 = mix(read8(bytes, i + 32) ^ WYHASH_S3, read8(bytes, i + 40) ^ state2);
+        i += 48;
+      }
+
+      state0 = u64(state0 ^ state1 ^ state2);
+    }
+
+    while (i + 16 < len) {
+      state0 = mix(read8(bytes, i) ^ WYHASH_S1, read8(bytes, i + 8) ^ state0);
+      i += 16;
+    }
+
+    a = read8(bytes, len - 16);
+    b = read8(bytes, len - 8);
+  }
+
+  a = u64(a ^ WYHASH_S1);
+  b = u64(b ^ state0);
+  [a, b] = mum(a, b);
+  return mix(u64(a ^ WYHASH_S0 ^ len64), u64(b ^ WYHASH_S1));
+}
+
 export function wyhash(input: string | Uint8Array): number {
-  return Number(BigInt.asUintN(64, BigInt(Bun.hash(input))) & 0xffffffffn);
+  const h = wyhash64(input);
+  return Number(BigInt.asUintN(64, h) & WYHASH_MASK32);
 }
 
 /**

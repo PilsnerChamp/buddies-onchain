@@ -25,7 +25,7 @@ Setting persists across sessions in `~/.claude/plugins/buddy-onchain/.buddy-stat
 /plugin install buddy-onchain@buddies-onchain
 ```
 
-Requires [Bun](https://bun.sh) 1.1.0 or newer on your `PATH`.
+Requires [Node.js](https://nodejs.org) 18 or newer on your `PATH`.
 
 https://buddies-onchain.xyz
 

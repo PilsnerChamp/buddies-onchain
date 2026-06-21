@@ -95,6 +95,15 @@ async function configPaths(): Promise<string[]> {
   return paths;
 }
 
+function isNotFoundError(err: unknown): boolean {
+  return (
+    typeof err === "object"
+    && err !== null
+    && "code" in err
+    && (err as { code?: unknown }).code === "ENOENT"
+  );
+}
+
 /**
  * Read and parse .claude.json from the first path that exists.
  * Throws if no config is found at any candidate path.
@@ -107,12 +116,27 @@ export async function readClaudeConfig(): Promise<{
   const errors: string[] = [];
 
   for (const p of paths) {
+    let raw: string;
     try {
-      const raw = await readFile(p, "utf-8");
+      raw = await readFile(p, "utf-8");
+    } catch (err) {
+      errors.push(`${p}: ${(err as Error).message}`);
+      if (isNotFoundError(err)) {
+        continue;
+      }
+      throw new Error(
+        `Could not read .claude.json from first existing candidate:\n${errors.join("\n")}`
+      );
+    }
+
+    try {
       const config = JSON.parse(raw) as ClaudeConfig;
       return { config, path: p };
     } catch (err) {
       errors.push(`${p}: ${(err as Error).message}`);
+      throw new Error(
+        `Could not parse .claude.json from first existing candidate:\n${errors.join("\n")}`
+      );
     }
   }
 

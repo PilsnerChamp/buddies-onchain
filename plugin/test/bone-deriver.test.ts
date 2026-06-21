@@ -3,6 +3,8 @@
  */
 
 import { describe, test, expect } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   makeMulberry32,
   pick,
@@ -11,6 +13,7 @@ import {
   deriveTraitSeed,
   deriveBuddyFromAccount,
   wyhash,
+  wyhash64,
   SALT,
   SPECIES,
   EYES,
@@ -41,14 +44,83 @@ const WYHASH_BONES: BuddyBones = {
   },
 };
 
+interface WyHashVector {
+  input: string;
+  inputHex: `0x${string}`;
+  inputLength: number;
+  hash64: `0x${string}`;
+  seed32: number;
+}
+
+interface WyHashFixture {
+  vectorCount: number;
+  vectors: WyHashVector[];
+}
+
+const WYHASH_VECTOR_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "onchain",
+  "test",
+  "vectors",
+  "wyhash-vectors.json",
+);
+const WYHASH_VECTORS = JSON.parse(
+  readFileSync(WYHASH_VECTOR_PATH, "utf8"),
+) as WyHashFixture;
+const textEncoder = new TextEncoder();
+
+function bytesFromHex(hex: `0x${string}`): Uint8Array {
+  const raw = hex.slice(2);
+  if (raw.length % 2 !== 0) {
+    throw new Error(`invalid hex length: ${hex}`);
+  }
+
+  const bytes = new Uint8Array(raw.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = Number.parseInt(raw.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+function formatHash64(value: bigint): `0x${string}` {
+  return `0x${BigInt.asUintN(64, value).toString(16).padStart(16, "0")}`;
+}
+
 // ===========================================================================
 // Hash function
 // ===========================================================================
 
-describe("wyhash (Bun.hash)", () => {
+describe("wyhash (Zig std.hash.Wyhash seed 0)", () => {
   test("produces correct 32-bit hash for test vector", () => {
     const hash = wyhash(TEST_SEED);
     expect(hash).toBe(WYHASH_HASH);
+  });
+
+  test("string input uses UTF-8 bytes", () => {
+    const abcBytes = new Uint8Array([97, 98, 99]);
+    expect(wyhash("abc")).toBe(wyhash(abcBytes));
+    expect(formatHash64(wyhash64("abc"))).toBe(formatHash64(wyhash64(abcBytes)));
+  });
+
+  test("matches all Bun.hash parity vectors for string and byte input", () => {
+    expect(WYHASH_VECTORS.vectorCount).toBe(115);
+    expect(WYHASH_VECTORS.vectors.length).toBe(WYHASH_VECTORS.vectorCount);
+
+    for (const [index, vector] of WYHASH_VECTORS.vectors.entries()) {
+      const inputBytes = bytesFromHex(vector.inputHex);
+      expect(inputBytes.length, `inputHex length at vector ${index}`).toBe(vector.inputLength);
+      expect(inputBytes, `UTF-8 bytes at vector ${index}`).toEqual(textEncoder.encode(vector.input));
+
+      expect(formatHash64(wyhash64(vector.input)), `string hash64 at vector ${index}`)
+        .toBe(vector.hash64);
+      expect(wyhash(vector.input), `string seed32 at vector ${index}`).toBe(vector.seed32);
+
+      expect(formatHash64(wyhash64(inputBytes)), `byte hash64 at vector ${index}`)
+        .toBe(vector.hash64);
+      expect(wyhash(inputBytes), `byte seed32 at vector ${index}`).toBe(vector.seed32);
+    }
   });
 
   test("result is always a positive 32-bit integer", () => {

@@ -52,10 +52,10 @@ Vector fixtures: `onchain/test/vectors/{wyhash,mulberry32}-vectors.json`. Genera
 ## CLI surface
 
 ```bash
-bun run plugin/src/index.ts --session-start
-bun run plugin/src/index.ts --hook         # reads UserPromptSubmit JSON on stdin
-bun run plugin/src/index.ts --stop
-bun run plugin/src/index.ts --hook --uuid <uuid>   # dev-only ambient override
+node plugin/dist/index.js --session-start
+node plugin/dist/index.js --hook         # reads UserPromptSubmit JSON on stdin
+node plugin/dist/index.js --stop
+node plugin/dist/index.js --hook --uuid <uuid>   # dev-only ambient override
 ```
 
 `--uuid` is a developer override for hook ambient rendering and is not exposed by the marketplace plugin.
@@ -72,6 +72,6 @@ Install commands and end-user behavior live in [`plugin/README.md`](../../plugin
 bun run --cwd plugin build
 ```
 
-The `build` script syncs `onchain/deployments/*.json` into `plugin/deployments/` first, then runs `bun build src/index.ts --target=bun --outfile=dist/index.js`. CI verifies the rebuild produces an unchanged bundle.
+The `build` script syncs `onchain/deployments/*.json` into `plugin/deployments/` first, then runs `bun build src/index.ts --target=node --outfile=dist/index.js`. CI verifies the rebuild produces an unchanged bundle.
 
 See `docs/network-config.md` for the env-var and deployment-manifest contract.

@@ -11,10 +11,10 @@
  * (default: `mainnet`). See `plugin/src/network.ts`.
  *
  * Usage:
- *   bun run plugin/src/index.ts --session-start
- *   bun run plugin/src/index.ts --hook
- *   bun run plugin/src/index.ts --stop
- *   bun run plugin/src/index.ts --hook --uuid <id>      # dev-only ambient override
+ *   node plugin/dist/index.js --session-start
+ *   node plugin/dist/index.js --hook
+ *   node plugin/dist/index.js --stop
+ *   node plugin/dist/index.js --hook --uuid <id>        # dev-only ambient override
  *
  * Reference: docs/network-config.md;
  * CLAUDE.md (plugin component description).
@@ -95,7 +95,7 @@ function parseArgs(argv: string[]): CliArgs {
         args.missingValueFor = "--uuid";
       }
     } else if (arg === "--help" || arg === "-h") {
-      console.log(`Usage: bun run plugin/src/index.ts [options]
+      console.log(`Usage: node plugin/dist/index.js [options]
 
 Options:
   --hook                UserPromptSubmit hook mode: routes /buddy-onchain

@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --session-start",
+            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --session-start; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Buddies Onchain requires Node.js on PATH: https://nodejs.org\"}}'; fi # POSIX sh/Git Bash guard; PowerShell is not covered",
             "timeout": 5,
             "statusMessage": "Resolving buddy on-chain..."
           }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --hook",
+            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --hook; else printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Buddies Onchain requires Node.js on PATH: https://nodejs.org\"}}'; fi # POSIX sh/Git Bash guard; PowerShell is not covered",
             "timeout": 10,
             "statusMessage": "Tracking buddy mode..."
           }
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --stop",
+            "command": "if command -v node >/dev/null 2>&1; then node \"${CLAUDE_PLUGIN_ROOT}/dist/index.js\" --stop; else :; fi # POSIX sh/Git Bash guard; PowerShell is not covered",
             "timeout": 5
           }
         ]
