@@ -146,7 +146,7 @@ contract BuddyNFT is ERC721, Ownable, EIP712, IBuddyNFT, IERC4906, IERC5192 {
         return string.concat(
             "data:application/json;utf8,",
             '{"name":"Buddies Onchain","description":"',
-            "One account. One buddy. Lives on-chain. A soulbound identity artifact for developers who use AI coding tools, born in the terminal and bound to your account.",
+            "One account. One buddy. Born in the terminal, lives on-chain. A non-transferable identity for developers who use AI coding tools.",
             '","image":"',
             BuddyDomain.SITE_ORIGIN,
             "/og-home.svg",
