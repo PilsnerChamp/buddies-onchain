@@ -8,15 +8,21 @@
 
 A soulbound (non-transferable) identity artifact for people who build with AI coding tools. Your account is assigned exactly one buddy — a tiny terminal creature drawn entirely from contract bytecode. Hatch it and it lives on Base L2: no server, no API key, nothing to take down. Born from the Claude Code terminal buddy.
 
-## Meet the buddies
+## Meet your buddy
 
-Every buddy is a fully on-chain animated SVG. Species, rarity, hat, and stats are derived deterministically from your account UUID — same account, same buddy, every time.
+One account, one buddy — species, hat, eyes, shiny, rarity, and stats all derived deterministically from your account UUID. The same buddy turns up in both surfaces it lives in.
 
-| Common | Uncommon | Rare | Epic | Legendary |
-|:---:|:---:|:---:|:---:|:---:|
-| ![Common duck](docs/assets/buddies/common-duck.png) | ![Uncommon mushroom](docs/assets/buddies/uncommon-mushroom.png) | ![Rare axolotl](docs/assets/buddies/rare-axolotl.png) | ![Epic dragon](docs/assets/buddies/epic-dragon.png) | ![Legendary ghost](docs/assets/buddies/legendary-ghost.png) |
+**In Claude Code** — your buddy rides along as the `/buddy-onchain` ambient companion:
 
-*Real renderer output — the art is bytecode; these are just stills of the live on-chain SVG.*
+<img src="docs/assets/buddy-in-terminal.png" width="100%" alt="The /buddy-onchain ambient companion rendered in a Claude Code terminal session">
+
+**On-chain** — the same buddy as the `/view` card, a fully on-chain SVG rendered from contract bytecode:
+
+<p align="center">
+  <img src="docs/assets/buddy-svg-card.png" width="420" alt="The same buddy rendered as the on-chain SVG card shown on the dApp /view page">
+</p>
+
+Traits vary by account; the full set plus a reference gallery live in [`docs/onchain/renderer.md`](docs/onchain/renderer.md) and [`docs/onchain/derivation.md`](docs/onchain/derivation.md).
 
 ## Use it
 

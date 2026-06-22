@@ -253,6 +253,20 @@ Different viewers take different paths. The mitigations above are picked against
 
 Mobile wallet rendering is structurally unreliable for this NFT shape. Target surfaces are OpenSea and direct browser loads; mobile wallet display is not a target.
 
+### Reference cards
+
+Five renderer outputs spanning the rarity bands, rasterized from the on-chain SVG (sources in `onchain/contract-data/reference-cards/`; regenerate the PNGs with `onchain/tools/renderer/render-reference-cards-png.sh`):
+
+<p align="center">
+  <img src="../assets/buddies/common-duck.png" width="150" alt="Common duck">
+  <img src="../assets/buddies/uncommon-mushroom.png" width="150" alt="Uncommon mushroom">
+  <img src="../assets/buddies/rare-axolotl.png" width="150" alt="Rare axolotl">
+  <img src="../assets/buddies/epic-dragon.png" width="150" alt="Epic dragon">
+  <img src="../assets/buddies/legendary-ghost.png" width="150" alt="Legendary ghost">
+</p>
+
+<p align="center"><sub>Common · Uncommon · Rare · Epic · Legendary</sub></p>
+
 ## tokenURI metadata
 
 The decoded `data:application/json` payload carries `name`, `description`, `image`, `attributes`, and `external_url`.
