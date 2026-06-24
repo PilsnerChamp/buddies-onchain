@@ -82,7 +82,7 @@ contract ClaimForkRehearsalTest is Test, HatchHelper {
         assertEq(json.readString(".attributes[5].value"), "Bonded", "post-claim Stage must be Bonded");
         assertEq(
             json.readString(".name"),
-            string.concat(CLAIM_NAME, unicode" · Buddy Onchain #", Strings.toString(tokenId)),
+            string.concat(CLAIM_NAME, " | Buddy Onchain #", Strings.toString(tokenId)),
             "post-claim name must be the bonded display name"
         );
 

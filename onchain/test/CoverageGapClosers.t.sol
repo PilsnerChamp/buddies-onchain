@@ -172,7 +172,7 @@ contract CoverageGapClosersTest is Test, HatchHelper {
 
     function _bondedJsonNameContains(string memory name, string memory escapedName) internal returns (bool) {
         string memory json = _decodeJson(_hatchAndBond(name));
-        return _contains(json, string.concat('"name":"', escapedName, unicode" · Buddy Onchain #1"));
+        return _contains(json, string.concat('"name":"', escapedName, " | Buddy Onchain #1"));
     }
 
     function _hatchAndBond(string memory name) internal returns (string memory tokenUri) {

@@ -71,7 +71,7 @@ contract BuddyClaimRenderFlip is Test, HatchHelper {
         string memory json = SvgDecode.decodeJson(nft.tokenURI(tokenId));
         assertEq(
             json.readString(".name"),
-            string.concat(CLAIM_NAME, unicode" · Buddy Onchain #1"),
+            string.concat(CLAIM_NAME, " | Buddy Onchain #1"),
             "post-claim (Bonded) name must be the bonded display name"
         );
         assertEq(json.readString(".attributes[5].value"), "Bonded", "post-claim Stage attribute must be Bonded");

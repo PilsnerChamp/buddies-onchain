@@ -572,7 +572,7 @@ contract BuddyRenderer is IBuddyRenderer {
             return tokenLabel;
         }
 
-        return string.concat(buddyName, unicode" · ", tokenLabel);
+        return string.concat(buddyName, " | ", tokenLabel);
     }
 
     function _svgMetadataTitle(

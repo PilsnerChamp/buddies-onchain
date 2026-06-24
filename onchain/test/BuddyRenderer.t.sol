@@ -202,14 +202,14 @@ contract BuddyRendererTest is Test {
     function test_tokenURI_escapesAdversarialNamesInJsonAndSvg() public {
         IBuddyNFT.BuddyTraits memory traits = _defaultTraits();
         string memory name = unicode"<>&\"'\\友";
-        string memory expectedDisplayName = string.concat(name, unicode" · Buddy Onchain #1");
+        string memory expectedDisplayName = string.concat(name, unicode" | Buddy Onchain #1");
         _setMockToken(1, traits, name, uint32(0xBEEF), IBuddyNFT.OwnershipStage.Bonded);
 
         string memory tokenUri = renderer.tokenURI(address(mockBuddy), 1);
         string memory json = _decodeJson(tokenUri);
 
         assertEq(json.readString(".name"), expectedDisplayName);
-        assertTrue(_contains(json, unicode"<>&\\\"'\\\\友 · Buddy Onchain #1"));
+        assertTrue(_contains(json, unicode"<>&\\\"'\\\\友 | Buddy Onchain #1"));
         assertTrue(_contains(_decodeSvg(json.readString(".image")), "<title>Buddy #1 - Duck, Uncommon, Bonded</title>"));
     }
 
@@ -220,7 +220,7 @@ contract BuddyRendererTest is Test {
 
         string memory json = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
 
-        assertEq(json.readString(".name"), string.concat(name, unicode" · Buddy Onchain #1"));
+        assertEq(json.readString(".name"), string.concat(name, unicode" | Buddy Onchain #1"));
     }
 
     function test_tokenURI_stageHandlingForHatchedAndBonded() public {
@@ -233,7 +233,7 @@ contract BuddyRendererTest is Test {
 
         _setMockToken(1, traits, "Pilsner", uint32(0xA2), IBuddyNFT.OwnershipStage.Bonded);
         string memory bondedJson = _decodeJson(renderer.tokenURI(address(mockBuddy), 1));
-        assertEq(bondedJson.readString(".name"), unicode"Pilsner · Buddy Onchain #1");
+        assertEq(bondedJson.readString(".name"), unicode"Pilsner | Buddy Onchain #1");
         assertEq(bondedJson.readString(".attributes[5].value"), "Bonded");
     }
 
@@ -333,7 +333,7 @@ contract BuddyRendererTest is Test {
         string memory bondedJson = _decodeJson(bondedTokenUri);
         string memory bondedSvg = _decodeSvg(bondedJson.readString(".image"));
 
-        assertEq(bondedJson.readString(".name"), string.concat(bondedName, unicode" · Buddy Onchain #2"));
+        assertEq(bondedJson.readString(".name"), string.concat(bondedName, unicode" | Buddy Onchain #2"));
         assertTrue(_contains(bondedSvg, "<title>Buddy #2 - Duck, Uncommon, Bonded</title>"));
     }
 
