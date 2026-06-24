@@ -82,7 +82,10 @@ async function wslWindowsHome(): Promise<string | null> {
  */
 async function configPaths(): Promise<string[]> {
   const paths: string[] = [];
-  const home = homedir();
+  // Prefer the HOME/USERPROFILE env over os.homedir(): Bun's homedir() ignores
+  // a runtime-mutated HOME, so tests that redirect config reads via process.env
+  // (and any caller overriding HOME) only work if we read the env directly.
+  const home = process.env.HOME || process.env.USERPROFILE || homedir();
   paths.push(join(home, ".claude.json"));
 
   if (await isWsl()) {
