@@ -77,7 +77,7 @@ Three modules plus shared network config — docs for each:
 - Site — [`docs/site/architecture.md`](docs/site/architecture.md)
 - Network config — [`docs/network-config.md`](docs/network-config.md)
 
-Issues and PRs welcome — [`CONTRIBUTING.md`](CONTRIBUTING.md). Security model and how to report bugs — [`SECURITY.md`](SECURITY.md).
+I've only run the plugin on WSL2, and only tested the wallet flows with MetaMask. Hit an issue on another platform or wallet? Feel free to file a PR — [`CONTRIBUTING.md`](CONTRIBUTING.md). Security model and how to report bugs — [`SECURITY.md`](SECURITY.md).
 
 ## License and contact
 
