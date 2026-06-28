@@ -1,5 +1,5 @@
 ---
-description: Find or tune your on-chain buddy.
+description: Find or tune your onchain buddy.
 argument-hint: "[off|lite|full]"
 ---
 
@@ -17,7 +17,7 @@ calls.
 If no `BUDDY_RENDER_BEGIN` block was injected, print:
 
 ```
-buddy lookup unavailable — try again
+buddy lookup unavailable - try again
 ```
 
 Then stop.

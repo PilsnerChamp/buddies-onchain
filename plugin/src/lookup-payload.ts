@@ -396,7 +396,7 @@ function coldHatchFactLines(payload: LookupPayload): string[] {
     "plugin: read-only; never connects to your wallet or requests signatures.",
     // Generic wallet tripwire — no function name, no dApp coupling. The plugin
     // emits the hatch link, so it still owes the user a point-of-action check.
-    "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+    "wallet: the tx should target the deployment below - decline token approvals, spending access, or unexpected ETH value.",
     "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local.",
   ];
 }

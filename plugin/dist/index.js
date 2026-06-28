@@ -34754,7 +34754,7 @@ var STATUS_MESSAGES = {
     urlTarget: "hatch"
   },
   unknown: {
-    message: "unable to verify onchain status - try online:",
+    message: "couldn't verify onchain status - check on the site:",
     urlTarget: "hatch"
   }
 };
@@ -34964,7 +34964,7 @@ function coldHatchFactLines(payload) {
   return [
     "optional: unhatched, it still appears here sleeping; hatch to wake it, then re-run /buddy-onchain.",
     "plugin: read-only; never connects to your wallet or requests signatures.",
-    "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+    "wallet: the tx should target the deployment below - decline token approvals, spending access, or unexpected ETH value.",
     "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local."
   ];
 }

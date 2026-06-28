@@ -8,7 +8,7 @@
     {
       "name": "buddy-onchain",
       "source": "./plugin",
-      "description": "One account. One buddy. Lives on-chain. Run /buddy-onchain to find your buddy; /buddy-onchain off|lite|full to tune ambient mode."
+      "description": "An AI buddy in your terminal, bound to your account — living fully onchain on Base. No host. No takedown. Go hatch yours."
     }
   ]
 }
