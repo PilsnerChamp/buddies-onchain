@@ -10,7 +10,7 @@ import {BuddyRenderer} from "../../contracts/BuddyRenderer.sol";
 
 /// @title RendererDriftParity
 /// @notice Literal byte-match of the LIVE on-chain render against the CURRENT renderer
-///         source, for the real token #1 on Base Sepolia. The tracker's "byte-match live
+///         source, for the real token #1 on a live deploy. The tracker's "byte-match live
 ///         SVG vs local renderer fixture" item: the hermetic suite proves the renderer is
 ///         deterministic from the uuid hash, but it cannot prove the DEPLOYED bytecode
 ///         equals today's source. This forks the live deploy, reads tokenURI(1) from the
@@ -23,34 +23,48 @@ import {BuddyRenderer} from "../../contracts/BuddyRenderer.sol";
 ///         the hermetic suite's job. No uuid needed: token #1's traits already live in
 ///         the deployed BuddyNFT.
 /// @dev    Runnable with ONLY a fork URL — no private keys, no pasted address. Addresses
-///         load from the `deployments/84532.json` manifest (repo source of truth). The
-///         renderer swap is an owner prank on the fork and is discarded. Skips cleanly
-///         (vm.skip) when the RPC env or manifest is absent, or when nothing has hatched
-///         yet (totalSupply == 0), so `forge test` stays green pre-deploy and in CI.
+///         load from the per-chain `deployments/<chainId>.json` manifest (repo source of
+///         truth). The renderer swap is an owner prank on the fork and is discarded. Skips
+///         cleanly (vm.skip) when the RPC env or manifest is absent, or when nothing has
+///         hatched yet (totalSupply == 0), so `forge test` stays green pre-deploy and in CI.
 ///
-///         Env:
-///           SEPOLIA_RPC_URL  — Base Sepolia RPC (e.g. https://sepolia.base.org)
+///         Two chains, same body — parametrized by `_runDriftParity`:
+///           Base Sepolia (84532)  ← env SEPOLIA_RPC_URL,  deployments/84532.json
+///           Base mainnet (8453)   ← env MAINNET_RPC_URL,  deployments/8453.json
 ///
 ///         Run: forge test --match-contract RendererDriftParity -vv
 contract RendererDriftParityTest is Test {
     using stdJson for string;
 
-    uint256 internal constant BASE_SEPOLIA_CHAIN_ID = 84532;
-    string internal constant MANIFEST_PATH = "deployments/84532.json";
     uint256 internal constant TOKEN_ID = 1; // first hatch; exists iff totalSupply >= 1
 
-    function test_rendererDrift_liveAccessControlAndSvgMatchesHeadSource() public {
-        string memory rpc = vm.envOr("SEPOLIA_RPC_URL", string(""));
-        if (bytes(rpc).length == 0 || !vm.exists(MANIFEST_PATH)) {
-            emit log("skip: set SEPOLIA_RPC_URL and deploy (deployments/84532.json) to byte-match the live render");
+    function test_rendererDrift_sepolia_liveAccessControlAndSvgMatchesHeadSource() public {
+        _runDriftParity("SEPOLIA_RPC_URL", 84532, "deployments/84532.json");
+    }
+
+    function test_rendererDrift_mainnet_liveAccessControlAndSvgMatchesHeadSource() public {
+        _runDriftParity("MAINNET_RPC_URL", 8453, "deployments/8453.json");
+    }
+
+    /// @param rpcEnvVar       Env var holding the fork RPC URL for this chain.
+    /// @param expectedChainId Chain id the fork MUST report (manifest/RPC sanity).
+    /// @param manifestPath    Per-chain deployment JSON (repo source of truth).
+    function _runDriftParity(string memory rpcEnvVar, uint256 expectedChainId, string memory manifestPath) internal {
+        string memory rpc = vm.envOr(rpcEnvVar, string(""));
+        if (bytes(rpc).length == 0 || !vm.exists(manifestPath)) {
+            emit log(
+                string.concat(
+                    "skip: set ", rpcEnvVar, " and deploy (", manifestPath, ") to byte-match the live render"
+                )
+            );
             vm.skip(true);
             return;
         }
 
         vm.createSelectFork(rpc);
-        assertEq(block.chainid, BASE_SEPOLIA_CHAIN_ID, "fork is not Base Sepolia (84532)");
+        assertEq(block.chainid, expectedChainId, "fork chainid does not match expected chain");
 
-        string memory manifest = vm.readFile(MANIFEST_PATH);
+        string memory manifest = vm.readFile(manifestPath);
         address nftAddr = manifest.readAddress(".addresses.BuddyNFT");
         require(nftAddr != address(0), "manifest missing .addresses.BuddyNFT");
         BuddyNFT nft = BuddyNFT(nftAddr);
