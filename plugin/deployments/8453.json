@@ -1,0 +1,12 @@
+{
+  "chainId": 8453,
+  "deployer": "0x425Edf1C53611Af122db40101e8Ca42fC0A45EBD",
+  "buddyNftBlock": 47941053,
+  "addresses": {
+    "BuddySpriteData": "0x07a915bfaF5AEc45D4EC7831cc5bB46C6f830104",
+    "BuddyFont": "0x262817A378A1974F3668a947757722f3C02D2E10",
+    "BuddySpriteFont": "0x374ED495B6B9299C3dBfbacBB230F1D969A58D9B",
+    "BuddyRenderer": "0x1F81D8fDe67EAFfcCCFbDa9109502fB4741F3ed8",
+    "BuddyNFT": "0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9"
+  }
+}

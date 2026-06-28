@@ -32163,7 +32163,7 @@ async function wslWindowsHome() {
 }
 async function configPaths() {
   const paths = [];
-  const home = homedir();
+  const home = process.env.HOME || process.env.USERPROFILE || homedir();
   paths.push(join(home, ".claude.json"));
   if (await isWsl()) {
     const winHome = await wslWindowsHome();
