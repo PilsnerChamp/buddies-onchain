@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Buddies Onchain
 
-Buddies Onchain is an on-chain identity-record project. One account, one buddy: a contract-custodied token bound to the account UUID. Born from the Claude Code terminal buddy; provider-agnostic by design. The art is a fully on-chain SVG rendered from contract bytecode, with deterministic traits derived from the UUID. The public surfaces target Base L2: contract, plugin, and static dApp.
+Buddies Onchain is an onchain identity-record project. One account, one buddy: a contract-custodied token bound to the account UUID. Born from the Claude Code terminal buddy; provider-agnostic by design. The art is a fully onchain SVG rendered from contract bytecode, with deterministic traits derived from the UUID. The public surfaces target Base L2: contract, plugin, and static dApp.
 
 ## Repo layout
 
@@ -27,7 +27,7 @@ Confusion-prone. One line each.
 - `/hatch` — two referents: (1) landing-page conceit in `NEXT STEPS` (never runnable); (2) dApp route receiving the hatch handoff via fragment `#identityHash=<hash>&prngSeed=<seed>&provider=<provider>`. Plugin derives the two args client-side and emits the fragment with the `provider` label (raw UUID never enters the URL); dApp parses and synchronously scrubs the fragment on arrival. Missing/malformed → redirect to `/`.
 - `/view` — bare `/view` is the dApp lookup console; accepts a token id or an account UUID (shape-detected), resolves client-side, then navigates to `/view/<tokenId>`. The `/view/<tokenId>` miss state renders the same console.
 - `/view/<tokenId>` — canonical buddy URL on the dApp; returning-user destination and public lookup result. Plugin resolves identityHash → tokenId and emits this warm link. (`/view/<uuid>` removed — route deleted, no public uuid links exist. UUID survives only in dApp component state — never in the fragment, a path, or a query string.)
-- `> /buddy-onchain` — SVG chrome imprint on-chain; bytecode-permanent, matches the plugin command. Site's `/` prompt renders the same `>` sigil.
+- `> /buddy-onchain` — SVG chrome imprint onchain; bytecode-permanent, matches the plugin command. Site's `/` prompt renders the same `>` sigil.
 - `provider` — self-declared `bytes16` label for the originating AI coding tool, set at `hatch` and stored verbatim (`claude` for v1). One contract, one collection, shared across providers; the chain attests the label stays consistent, not that it is true. Domain tag carries the slug: `buddies-onchain:identity:<provider>:v1`.
 - Unknown paths → `/` via catch-all redirect.
 
@@ -54,7 +54,7 @@ Env files (incl. `site/`): `.env` = non-secrets, committed; `.env.local`/`.env.*
 | Surface | Start here |
 |---|---|
 | Network config | `docs/network-config.md` — env vars, network selection, deployment manifests |
-| Contract | `docs/onchain/{build,contract,derivation,renderer}.md` — Foundry build, BuddyNFT shape, trait derivation, on-chain SVG renderer |
+| Contract | `docs/onchain/{build,contract,derivation,renderer}.md` — Foundry build, BuddyNFT shape, trait derivation, onchain SVG renderer |
 | Plugin | `docs/plugin/{architecture,ambient}.md` — plugin module topology, ambient buddy presence + cache discipline |
 | Site | `docs/site/{architecture,terminal-ui}.md` — dApp routes/topology, terminal UI contract |
 
