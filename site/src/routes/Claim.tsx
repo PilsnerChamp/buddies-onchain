@@ -46,7 +46,7 @@ export function Claim(): JSX.Element {
           This is where the holder of an account would claim their buddy —
           one action that moves custody of the hatched buddy from the
           Buddies Onchain contract to a wallet they control. The token stays
-          soulbound throughout; only the custody address moves, never a sale
+          non-transferable throughout; only the custody address moves, never a sale
           or a transfer to anyone else.
         </p>
         <p className="route-prose route-prose--spaced">

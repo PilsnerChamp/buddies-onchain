@@ -181,9 +181,11 @@ describe('/hatch — terminal frame + structure', () => {
 
   it('DESCRIPTION matches the canonical Warm Landing text', () => {
     renderHatchAt('/hatch');
-    expect(screen.getByText(/Stage 1 of buddy evolution/)).toBeTruthy();
     expect(
-      screen.getByText(/One account, one buddy, one mint\. Soulbound\./),
+      screen.getByText(/a non-transferable identity, derived from your account/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/never be sold or transferred to anyone else/),
     ).toBeTruthy();
   });
 

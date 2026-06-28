@@ -45,7 +45,7 @@ Or open the site: <https://buddies-onchain.xyz/>
 
 - **Fully on-chain.** The renderer lives in the contract bytecode. Nothing's hosted anywhere.
 - **Deterministic.** Your account UUID seeds the art, and the contract rolls the traits from that seed. Same account, same buddy, every deploy.
-- **One account, one buddy.** It's soulbound — bound to your identity hash, and the contract holds it.
+- **One account, one buddy.** It's non-transferable — bound to your identity hash, and the contract holds it.
 - **Recomputable.** Anyone can rerun the math and check the on-chain traits match the seed.
 
 ## What it isn't

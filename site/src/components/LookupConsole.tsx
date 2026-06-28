@@ -210,7 +210,7 @@ function lookupConsoleConfig(
             UUID it hatched from. The best path is to{' '}
             <PluginFirstSentence
               lead="run"
-              body="it tells you where your buddy is and gives you the right link."
+              body="it tells you where your buddy is and links you straight there: /view if hatched, /hatch if not."
             />{' '}
             Or enter either id below.
           </p>
@@ -231,7 +231,7 @@ function lookupConsoleConfig(
         commandEcho: `/view ${variant.tokenId.toString()}`,
         description: (
           <p className="route-prose">
-            The token id is well-formed — no buddy is minted under
+            The token id is well-formed — no buddy is hatched under
             #{variant.tokenId.toString()} on this network.
           </p>
         ),
@@ -239,7 +239,7 @@ function lookupConsoleConfig(
           <p className="route-prose">
             <PluginFirstSentence
               lead="Run"
-              body="it shows your current buddy status and gives you the right link."
+              body="it shows your current buddy status and links you straight there: /view if hatched, /hatch if not."
             />{' '}
             Or try another token id or account UUID below.
           </p>
