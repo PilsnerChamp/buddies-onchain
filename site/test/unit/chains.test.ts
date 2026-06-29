@@ -58,7 +58,7 @@ describe('getNetwork — deployed', () => {
       chainId: 31337,
       rpcUrl: 'http://127.0.0.1:8545',
       explorerAddressBase: null,
-      openseaCollectionUrl: null,
+      openseaItemBase: null,
       displayName: 'local',
       buddyNft: ANVIL_BUDDY_NFT,
       status: 'deployed',
@@ -93,7 +93,7 @@ describe('getNetwork — deployed', () => {
     expect(net?.explorerAddressBase).toBe(
       'https://sepolia.basescan.org/address/',
     );
-    expect(net?.openseaCollectionUrl).toBeNull();
+    expect(net?.openseaItemBase).toBeNull();
   });
 });
 
@@ -106,7 +106,7 @@ describe('getNetwork — pre-deploy', () => {
       chainId: 8453,
       rpcUrl: 'https://mainnet.base.org',
       explorerAddressBase: 'https://basescan.org/address/',
-      openseaCollectionUrl: null,
+      openseaItemBase: 'https://opensea.io/item/base/',
       displayName: 'base',
       buddyNft: null,
       status: 'not-yet-deployed',

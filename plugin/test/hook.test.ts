@@ -420,7 +420,7 @@ describe("hook — lookup route", () => {
     const result = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "throw");
     const context = additionalContext(result.stdout);
 
-    expect(context).toContain("unable to verify onchain status - try online:");
+    expect(context).toContain("couldn't verify onchain status - check on the site:");
     expect(context).toContain(LOCAL_HATCH_URL);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
@@ -433,7 +433,7 @@ describe("hook — lookup route", () => {
     const bodyRows = fencedBodyRows(context);
 
     expect(result.exitCode).toBe(0);
-    expect(context).toContain("unable to verify onchain status - try online:");
+    expect(context).toContain("couldn't verify onchain status - check on the site:");
     expect(context).not.toContain("ZZzzz...");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toBe("");

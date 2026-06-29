@@ -61,7 +61,9 @@ export interface LookupPayload {
   cardLines: string[];
   viewUrl: string;
   hatchUrl: string;
-  openseaCollectionUrl: string | null;
+  // Per-item OpenSea link for this token (warm only). `null` = pre-deploy,
+  // no tokenId, or a network with no OpenSea surface (e.g. local).
+  openseaItemUrl: string | null;
   // Chain facts for the hatch disclosure + the always-on deployment footer.
   // `null` contract = pre-deploy chain; `null` explorer = no public explorer
   // (e.g. local). Both degrade gracefully when either is null.
@@ -110,6 +112,25 @@ function warmViewUrlFromState(origin: string, tokenIdHex: string | null): string
     return warmUrl(origin, BigInt(tokenIdHex));
   } catch {
     return `${origin}/view`;
+  }
+}
+
+// Per-item OpenSea link: `<openseaItemBase><contract>/<tokenId>`. Returns null
+// unless the network exposes OpenSea, the contract is deployed, and we hold a
+// tokenId (warm only). Contract is lowercased (OpenSea path convention); the
+// explorer link keeps the checksum form.
+function openseaItemUrlFromState(
+  net: PluginNetworkInfo,
+  tokenIdHex: string | null,
+): string | null {
+  if (net.openseaItemBase === null || net.buddyNft === null || tokenIdHex === null) {
+    return null;
+  }
+  try {
+    const tokenId = BigInt(tokenIdHex).toString();
+    return `${net.openseaItemBase}${net.buddyNft.toLowerCase()}/${tokenId}`;
+  } catch {
+    return null;
   }
 }
 
@@ -351,7 +372,7 @@ export async function resolveLookupPayload(
       cardLines,
       viewUrl,
       hatchUrl: concreteHatchUrl,
-      openseaCollectionUrl: net.openseaCollectionUrl,
+      openseaItemUrl: openseaItemUrlFromState(net, result.state.tokenId),
       contractAddress: net.buddyNft,
       explorerAddressBase: net.explorerAddressBase,
       chainDisplayName: net.displayName,
@@ -401,28 +422,25 @@ function coldHatchFactLines(payload: LookupPayload): string[] {
   ];
 }
 
-// Always-on deployment footer (every /buddy-onchain, all statuses): the active
-// chain facts the user transacts with — network + chainId + contract — pulled
-// out of the inline disclosure into one place (the exact contract is the
-// strongest verifiable trust signal). Doubles as a standing "which chain am I
-// on" indicator. The caller blank-line-separates it from the body above and the
-// mode line below.
+// Always-on contract footer (every /buddy-onchain, all statuses): one line
+// pointing at the exact deployed contract — the strongest verifiable trust
+// signal and a standing "which contract am I transacting with" anchor. Prefers
+// the explorer link; degrades to the raw address when the network has no public
+// explorer (e.g. local). The caller blank-line-separates it from the body above
+// and the mode line below.
 function deploymentFooterLines(payload: LookupPayload): string[] {
   if (payload.contractAddress === null) {
     return [
       `deployment: ${payload.chainDisplayName} (${payload.chainId}) - no contract configured for this network`,
     ];
   }
-
-  const lines: string[] = [
-    `deployment: ${payload.chainDisplayName} (${payload.chainId}) · BuddyNFT ${payload.contractAddress}`,
-  ];
-  if (payload.explorerAddressBase !== null) {
-    lines.push(
-      `verify: ${payload.explorerAddressBase}${payload.contractAddress}`,
-    );
-  }
-  return lines;
+  // Label-on-its-own-line, mirroring the view + opensea blocks. URL degrades to
+  // the raw address when the network has no public explorer (e.g. local).
+  const target =
+    payload.explorerAddressBase !== null
+      ? `${payload.explorerAddressBase}${payload.contractAddress}`
+      : payload.contractAddress;
+  return ["contract:", target];
 }
 
 export function formatLookupBlock(payload: LookupPayload): string {
@@ -446,15 +464,20 @@ export function formatLookupBlock(payload: LookupPayload): string {
     lines.push(url);
   }
 
-  if (payload.openseaCollectionUrl !== null) {
-    lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
+  // Per-item OpenSea link, label-on-its-own-line to mirror the view block.
+  // Warm-only (needs a tokenId); absent on cold/unknown and pre-deploy.
+  if (payload.openseaItemUrl !== null) {
+    lines.push("opensea:");
+    lines.push(payload.openseaItemUrl);
   }
 
-  // Labeled facts footer, blank-line separated from the body above and the
-  // mode line below: cold-only context (optional / plugin / privacy) followed
-  // by the always-on deployment facts.
-  lines.push("");
+  // Footer. Cold gets a labeled context paragraph (optional / plugin / wallet /
+  // privacy), blank-separated from the body above, with the contract line below
+  // it (the wallet line references "the deployment below"). Warm/unknown have no
+  // such paragraph, so the contract line joins the link list directly — one
+  // contiguous block, no interior blank.
   if (payload.buddyStatus === "cold") {
+    lines.push("");
     lines.push(...coldHatchFactLines(payload));
   }
   lines.push(...deploymentFooterLines(payload));

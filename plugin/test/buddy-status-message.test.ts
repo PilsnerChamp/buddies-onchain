@@ -30,7 +30,7 @@ describe("resolveBuddyStatusMessage", () => {
         buddyStatus: "unknown",
       }),
     ).toEqual({
-      message: "unable to verify onchain status - try online:",
+      message: "couldn't verify onchain status - check on the site:",
       urlTarget: "hatch",
     });
   });

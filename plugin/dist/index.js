@@ -32223,7 +32223,7 @@ var NETWORKS = {
     chainId: 31337,
     rpcUrl: "http://127.0.0.1:8545",
     explorerAddressBase: null,
-    openseaCollectionUrl: null,
+    openseaItemBase: null,
     displayName: "local"
   },
   sepolia: {
@@ -32231,7 +32231,7 @@ var NETWORKS = {
     chainId: 84532,
     rpcUrl: "https://sepolia.base.org",
     explorerAddressBase: "https://sepolia.basescan.org/address/",
-    openseaCollectionUrl: null,
+    openseaItemBase: null,
     displayName: "base sepolia"
   },
   mainnet: {
@@ -32239,7 +32239,7 @@ var NETWORKS = {
     chainId: 8453,
     rpcUrl: "https://mainnet.base.org",
     explorerAddressBase: "https://basescan.org/address/",
-    openseaCollectionUrl: null,
+    openseaItemBase: "https://opensea.io/item/base/",
     displayName: "base"
   }
 };
@@ -34794,6 +34794,17 @@ function warmViewUrlFromState(origin, tokenIdHex) {
     return `${origin}/view`;
   }
 }
+function openseaItemUrlFromState(net, tokenIdHex) {
+  if (net.openseaItemBase === null || net.buddyNft === null || tokenIdHex === null) {
+    return null;
+  }
+  try {
+    const tokenId = BigInt(tokenIdHex).toString();
+    return `${net.openseaItemBase}${net.buddyNft.toLowerCase()}/${tokenId}`;
+  } catch {
+    return null;
+  }
+}
 function identityCanCacheArt(identity) {
   return identity.accountUuidHash !== null && identity.chainId !== null && identity.contractAddress !== null;
 }
@@ -34933,7 +34944,7 @@ async function resolveLookupPayload(args = {}) {
       cardLines,
       viewUrl,
       hatchUrl: concreteHatchUrl,
-      openseaCollectionUrl: net.openseaCollectionUrl,
+      openseaItemUrl: openseaItemUrlFromState(net, result.state.tokenId),
       contractAddress: net.buddyNft,
       explorerAddressBase: net.explorerAddressBase,
       chainDisplayName: net.displayName,
@@ -34974,13 +34985,8 @@ function deploymentFooterLines(payload) {
       `deployment: ${payload.chainDisplayName} (${payload.chainId}) - no contract configured for this network`
     ];
   }
-  const lines = [
-    `deployment: ${payload.chainDisplayName} (${payload.chainId}) · BuddyNFT ${payload.contractAddress}`
-  ];
-  if (payload.explorerAddressBase !== null) {
-    lines.push(`verify: ${payload.explorerAddressBase}${payload.contractAddress}`);
-  }
-  return lines;
+  const target = payload.explorerAddressBase !== null ? `${payload.explorerAddressBase}${payload.contractAddress}` : payload.contractAddress;
+  return ["contract:", target];
 }
 function formatLookupBlock(payload) {
   const lines = ["BUDDY_RENDER_BEGIN"];
@@ -34994,11 +35000,12 @@ function formatLookupBlock(payload) {
   if (!hatchUnavailable) {
     lines.push(url);
   }
-  if (payload.openseaCollectionUrl !== null) {
-    lines.push(`see all hatched buddies: ${payload.openseaCollectionUrl}`);
+  if (payload.openseaItemUrl !== null) {
+    lines.push("opensea:");
+    lines.push(payload.openseaItemUrl);
   }
-  lines.push("");
   if (payload.buddyStatus === "cold") {
+    lines.push("");
     lines.push(...coldHatchFactLines(payload));
   }
   lines.push(...deploymentFooterLines(payload));

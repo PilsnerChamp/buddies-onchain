@@ -15,16 +15,13 @@ const TEST_CHAIN_ID = 8453;
 const COLD_FACTS = [
   "optional: unhatched, it still appears here sleeping; hatch to wake it, then re-run /buddy-onchain.",
   "plugin: read-only; never connects to your wallet or requests signatures.",
-  "wallet: the tx should target the deployment below — decline token approvals, spending access, or unexpected ETH value.",
+  "wallet: the tx should target the deployment below - decline token approvals, spending access, or unexpected ETH value.",
   "privacy: one-way identity hash + art seed onchain (pseudonymous, not anonymous); your raw account id stays local.",
 ];
 
-// Always-on deployment footer (contract + explorer present). Mirrors
-// `deploymentFooterLines`.
-const FOOTER = [
-  `deployment: ${TEST_CHAIN} (${TEST_CHAIN_ID}) · BuddyNFT ${TEST_CONTRACT}`,
-  `verify: ${TEST_EXPLORER}${TEST_CONTRACT}`,
-];
+// Always-on contract footer (contract + explorer present). Mirrors
+// `deploymentFooterLines` — label on its own line, URL below.
+const FOOTER = ["contract:", `${TEST_EXPLORER}${TEST_CONTRACT}`];
 
 function makeLookupPayload(
   payload: Partial<LookupPayload> &
@@ -34,7 +31,7 @@ function makeLookupPayload(
     cardLines: [],
     viewUrl: "https://buddies-onchain.xyz/view/123",
     hatchUrl: HATCH_URL,
-    openseaCollectionUrl: null,
+    openseaItemUrl: null,
     contractAddress: TEST_CONTRACT,
     explorerAddressBase: TEST_EXPLORER,
     chainDisplayName: TEST_CHAIN,
@@ -67,7 +64,7 @@ describe("formatLookupBlock", () => {
     {
       name: "unknown uses retry copy and hatch URL",
       buddyStatus: "unknown" as const,
-      message: "unable to verify onchain status - try online:",
+      message: "couldn't verify onchain status - check on the site:",
       url: HATCH_URL,
     },
   ];
@@ -82,8 +79,9 @@ describe("formatLookupBlock", () => {
         "BUDDY_RENDER_BEGIN",
         cell.message,
         cell.url,
-        "",
-        ...(cell.buddyStatus === "cold" ? COLD_FACTS : []),
+        // Cold gets a blank-separated facts paragraph; warm/unknown run the
+        // contract line straight on from the body — no interior blank.
+        ...(cell.buddyStatus === "cold" ? ["", ...COLD_FACTS] : []),
         ...FOOTER,
         "",
         LITE_LINE,
@@ -110,7 +108,6 @@ describe("formatLookupBlock", () => {
         "",
         "go see your buddy onchain:",
         "https://buddies-onchain.xyz/view/123",
-        "",
         ...FOOTER,
         "",
         LITE_LINE,
@@ -160,15 +157,38 @@ describe("formatLookupBlock", () => {
     expect(out).not.toContain("hatch to wake it");
   });
 
-  test("skips OpenSea row when collection URL is null", () => {
+  test("skips the OpenSea row when the item URL is null", () => {
     const out = formatLookupBlock(
       makeLookupPayload({
         buddyStatus: "warm",
-        openseaCollectionUrl: null,
+        openseaItemUrl: null,
       }),
     );
 
-    expect(out).not.toContain("see all hatched buddies:");
+    expect(out).not.toContain("opensea:");
+  });
+
+  test("warm renders the per-item OpenSea link on its own line below the view URL", () => {
+    const ITEM_URL =
+      "https://opensea.io/item/base/0x000000000000000000000000000000000000b0dd/1";
+    const out = formatLookupBlock(
+      makeLookupPayload({
+        buddyStatus: "warm",
+        openseaItemUrl: ITEM_URL,
+      }),
+    );
+
+    // Warm renders one contiguous block — view, opensea, contract — no blank
+    // lines between the labelled links.
+    expect(out).toContain(
+      [
+        "go see your buddy onchain:",
+        "https://buddies-onchain.xyz/view/123",
+        "opensea:",
+        ITEM_URL,
+        ...FOOTER,
+      ].join("\n"),
+    );
   });
 
   test("preserves alignment-sensitive cardLines verbatim", () => {

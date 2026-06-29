@@ -17,7 +17,7 @@ export interface NetworkConfig {
   chainId: number;
   rpcUrl: string;                          // public, no API key
   explorerAddressBase: string | null;      // null for chains with no public explorer
-  openseaCollectionUrl: string | null;      // null until collection URL is assigned
+  openseaItemBase: string | null;          // per-item base (append `<contract>/<tokenId>`); null = no OpenSea surface
   displayName: string;                     // lowercase; UI applies casing
 }
 
@@ -27,7 +27,7 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     chainId: 31337,
     rpcUrl: 'http://127.0.0.1:8545',
     explorerAddressBase: null,
-    openseaCollectionUrl: null,
+    openseaItemBase: null,
     displayName: 'local',
   },
   sepolia: {
@@ -35,7 +35,7 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     chainId: 84532,
     rpcUrl: 'https://sepolia.base.org',
     explorerAddressBase: 'https://sepolia.basescan.org/address/',
-    openseaCollectionUrl: null,
+    openseaItemBase: null,                   // OpenSea sunset testnet support (2025-07-23) — no item URL
     displayName: 'base sepolia',
   },
   mainnet: {
@@ -43,7 +43,7 @@ export const NETWORKS: Record<NetworkKey, NetworkConfig> = {
     chainId: 8453,
     rpcUrl: 'https://mainnet.base.org',
     explorerAddressBase: 'https://basescan.org/address/',
-    openseaCollectionUrl: null,
+    openseaItemBase: 'https://opensea.io/item/base/',
     displayName: 'base',
   },
 };
