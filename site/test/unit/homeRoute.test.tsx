@@ -166,6 +166,10 @@ describe('Home (cold landing) — canonical man-page shape', () => {
     // Repo row left column is the literal label `github` (clickable);
     // the `user/repo` shorthand lives in the right (value) column.
     expect(labels[2]).toBe('github');
+    // The `opensea` collection row is mainnet-only — omitted in the local
+    // test env — so it does not appear between github and contract here.
+    // Mainnet ordering (github → opensea → contract) is covered by
+    // routeMetadataOpensea.test.tsx.
   });
 
   it('SEE ALSO uses ASCII hyphen separators (no `·`) and renders canonical row contents per docs/site/terminal-ui.md', () => {

@@ -106,8 +106,11 @@ AUTHOR
 SEE ALSO
     <self-omitted route list>
     github                                      PilsnerChamp/buddies-onchain
+    opensea                                     opensea.io/collection/buddies-onchain
     0x<contract-address>                        contract - <chain>
 ```
+
+The `opensea` row links the OpenSea collection page; it appears only when the active chain has a live collection (mainnet) and is omitted on local/sepolia/pre-deploy. The `/view/<tokenId>` card is the exception — it has no SEE ALSO footer, so its OpenSea (per-item) and contract links ride the titlebar's right column as icons instead (see `TitlebarTrustIcons`).
 
 `/hatch` uses `STATUS, DESCRIPTION, REQUIREMENTS, NEXT STEP, AUTHOR, SEE ALSO` (no NAME — state-first per warm-action intent).
 
@@ -130,15 +133,19 @@ Each row is one `<Link>` / `<a>` styled as a CSS subgrid that aligns inner `__k`
 
 | Route | SEE ALSO order |
 |---|---|
-| `/` | `/hatch` (when relevant) → `/view` → `/claim` → repo → contract |
-| `/hatch` | `/view` → `/claim` → repo → contract |
-| `/view` | `/hatch` → `/claim` → repo → contract |
-| `/view/<tokenId>` miss | `/` → `/view` → `/claim` → repo → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
-| `/claim` | `/` → `/hatch` → `/view` → repo → contract |
+| `/` | `/hatch` (when relevant) → `/view` → `/claim` → repo → opensea → contract |
+| `/hatch` | `/view` → `/claim` → repo → opensea → contract |
+| `/view` | `/hatch` → `/claim` → repo → opensea → contract |
+| `/view/<tokenId>` miss | `/` → `/view` → `/claim` → repo → opensea → contract — `/hatch` intentionally absent (hatch starts from plugin handoff, not a miss-card CTA) |
+| `/claim` | `/` → `/hatch` → `/view` → repo → opensea → contract |
 
 ### Contract row linkability
 
 The contract row's `href` is `null` whenever the active chain has no deployment (pre-deploy) or the chain has no explorer base. Pre-deploy renders the row inert; once deployed, the row links to the explorer's address page on the active chain. A refactor that silently changes either the address formatting (`0x` + 4 hex + ellipsis + 4 — compact form matching tx-hash truncation, not the longer wallet form) or the linkability gate would be a regression.
+
+### OpenSea row linkability
+
+Unlike the contract row, the `opensea` collection row has no inert state: when there is no live collection (local/sepolia/pre-deploy/unknown chain), `openseaCollectionRow` returns `null` and the row is dropped entirely — never rendered as a dead `--inert` placeholder. It always links out (`target="_blank"`) when present. Label is the literal `opensea`; descriptor is the protocol-stripped collection URL.
 
 ## Action prompt rules
 

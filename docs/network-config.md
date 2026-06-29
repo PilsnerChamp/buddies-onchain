@@ -12,6 +12,8 @@ Static metadata: `shared/networks.ts`.
 | `sepolia` | 84532 | `https://sepolia.base.org` | `https://sepolia.basescan.org/address/` |
 | `mainnet` | 8453 | `https://mainnet.base.org` | `https://basescan.org/address/` |
 
+OpenSea surfaces (`openseaItemBase` for per-item deep links, `openseaCollectionUrl` for the collection page) are mainnet-only; both are `null` on `local` and `sepolia` (no marketplace). Selectors return `null` for those chains so the dependent UI (the `/view/<tokenId>` titlebar OpenSea icon, the SEE ALSO `opensea` row) is omitted rather than rendered dead.
+
 `shared/networks.ts` is imported by both site and plugin via the `~shared/*` tsconfig path alias.
 
 ## Selectors

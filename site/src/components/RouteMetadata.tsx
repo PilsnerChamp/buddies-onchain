@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 
 import type { NavigableRoute } from '../config/routes';
 import { AUTHOR_HANDLE, AUTHOR_X_URL } from '../lib/authorLinks';
+import { openseaCollectionRow } from '../lib/openseaCollectionRow';
 import { REPO_URL } from '../lib/repoLinks';
 import {
   NOT_DEPLOYED_STATUS_CHUNK,
@@ -103,6 +104,7 @@ export function RouteMetadata({
   seo,
 }: RouteMetadataProps): JSX.Element {
   const contractRow = seeAlsoContractRow(chainId);
+  const collectionRow = openseaCollectionRow(chainId);
 
   return (
     <>
@@ -145,6 +147,21 @@ export function RouteMetadata({
             <span className="see-also__label">github</span>
             <span className="see-also__value">{REPO_DISPLAY_SHORT}</span>
           </a>
+          {/* OpenSea collection row sits between github and contract so the
+              contract stays the last (trust-anchor) row. Omitted entirely when
+              there is no live collection — local/sepolia/pre-deploy/unknown. */}
+          {collectionRow !== null && (
+            <a
+              href={collectionRow.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="see-also__row hover-row"
+              aria-label={`opensea — ${collectionRow.display}`}
+            >
+              <span className="see-also__label">opensea</span>
+              <span className="see-also__value">{collectionRow.display}</span>
+            </a>
+          )}
           {contractRow.isClickable && contractRow.href !== null ? (
             <a
               href={contractRow.href}

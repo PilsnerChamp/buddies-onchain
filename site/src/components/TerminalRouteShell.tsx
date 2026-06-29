@@ -20,19 +20,26 @@ type TerminalRouteShellProps = {
   title?: string;
   children: ReactNode;
   showCursor?: boolean;
+  /** Header right-column content, forwarded to `TerminalFrame`. */
+  titlebarActions?: ReactNode;
 };
 
 export function TerminalRouteShell({
   title = DEFAULT_TITLE,
   children,
   showCursor = false,
+  titlebarActions = null,
 }: TerminalRouteShellProps): JSX.Element {
   return (
     <>
       <DotGridBackground />
       <div className="terminal-route-shell">
         <div className="terminal-route-shell__orbs" aria-hidden="true" />
-        <TerminalFrame title={title} showCursor={showCursor}>
+        <TerminalFrame
+          title={title}
+          showCursor={showCursor}
+          titlebarActions={titlebarActions}
+        >
           {children}
         </TerminalFrame>
       </div>

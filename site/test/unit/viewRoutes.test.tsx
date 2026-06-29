@@ -549,4 +549,24 @@ describe('/view/<tokenId> token page', () => {
       'https://buddies-onchain.xyz/view/42',
     );
   });
+
+  it('renders no titlebar trust icons on the card in local env (both URLs null → spacer kept)', () => {
+    useBuddyTokenMock.mockReturnValue({
+      status: 'success',
+      data: {
+        state: 'hit',
+        svg: '<svg><text>buddy #7</text></svg>',
+      },
+    });
+    renderViewAt('/view/7');
+
+    // The card has no SEE ALSO footer — trust links ride the titlebar's right
+    // column instead. Test env resolves to `local` (chainId 31337): no OpenSea
+    // surface AND no explorer base, so both icons resolve null and the header
+    // keeps its centering spacer. Mainnet rendering is covered by
+    // titlebarTrustIcons.test.tsx against 8453.json.
+    expect(document.querySelector('.terminal-frame__actions')).toBeNull();
+    expect(document.querySelector('.terminal-frame__spacer')).toBeTruthy();
+    expect(screen.queryByLabelText('View this buddy on OpenSea')).toBeNull();
+  });
 });

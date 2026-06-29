@@ -62,6 +62,8 @@ vi.mock('../../src/config/chains', () => ({
       chainId,
       rpcUrl: '',
       explorerAddressBase,
+      openseaItemBase: null,
+      openseaCollectionUrl: null,
       displayName,
       buddyNft,
       status: buddyNft === null ? 'not-yet-deployed' : 'deployed',

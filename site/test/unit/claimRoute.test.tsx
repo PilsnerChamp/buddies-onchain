@@ -122,6 +122,9 @@ describe('/claim — route shape', () => {
     expect(labels[3]).toBe('github');
     // /claim self-omits its own row.
     expect(labels).not.toContain('/claim');
+    // The `opensea` collection row is mainnet-only — omitted in the local
+    // test env — so it does not appear between github and contract here.
+    // Mainnet ordering is covered by routeMetadataOpensea.test.tsx.
   });
 
   it('SEE ALSO uses cold-shape parity (`PilsnerChamp/buddies-onchain`, ASCII `-` separators, no `· not yet implemented`)', () => {

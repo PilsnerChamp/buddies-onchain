@@ -24,12 +24,21 @@ type TerminalFrameProps = {
   children: ReactNode;
   /** When true, append the `>▊` blinking prompt at the tail of the body. */
   showCursor?: boolean;
+  /**
+   * Optional interactive content for the header's right column. When present
+   * it fills the slot the centering spacer otherwise occupies (e.g. the
+   * `/view/<tokenId>` card's OpenSea + contract trust icons — that page has no
+   * SEE ALSO footer to carry them). `null`/omitted keeps the inert spacer so
+   * the `1fr auto 1fr` grid stays balanced and the title stays centered.
+   */
+  titlebarActions?: ReactNode;
 };
 
 export function TerminalFrame({
   title,
   children,
   showCursor = false,
+  titlebarActions = null,
 }: TerminalFrameProps): JSX.Element {
   return (
     <div
@@ -48,10 +57,14 @@ export function TerminalFrame({
             {title}
           </Link>
         </h1>
-        {/* Right-column spacer balances the 1fr auto 1fr grid so the title
-            sits perfectly centered. Inherits `aria-hidden` from the surrounding
-            non-role container; no content to announce. */}
-        <div className="terminal-frame__spacer" aria-hidden="true" />
+        {/* Right column. With actions present it holds them (real interactive
+            content — not aria-hidden); otherwise an inert spacer balances the
+            1fr auto 1fr grid so the title sits perfectly centered. */}
+        {titlebarActions !== null ? (
+          <div className="terminal-frame__actions">{titlebarActions}</div>
+        ) : (
+          <div className="terminal-frame__spacer" aria-hidden="true" />
+        )}
       </header>
       <div className="terminal-frame__body">
         {children}

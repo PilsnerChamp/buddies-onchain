@@ -32224,6 +32224,7 @@ var NETWORKS = {
     rpcUrl: "http://127.0.0.1:8545",
     explorerAddressBase: null,
     openseaItemBase: null,
+    openseaCollectionUrl: null,
     displayName: "local"
   },
   sepolia: {
@@ -32232,6 +32233,7 @@ var NETWORKS = {
     rpcUrl: "https://sepolia.base.org",
     explorerAddressBase: "https://sepolia.basescan.org/address/",
     openseaItemBase: null,
+    openseaCollectionUrl: null,
     displayName: "base sepolia"
   },
   mainnet: {
@@ -32240,6 +32242,7 @@ var NETWORKS = {
     rpcUrl: "https://mainnet.base.org",
     explorerAddressBase: "https://basescan.org/address/",
     openseaItemBase: "https://opensea.io/item/base/",
+    openseaCollectionUrl: "https://opensea.io/collection/buddies-onchain",
     displayName: "base"
   }
 };

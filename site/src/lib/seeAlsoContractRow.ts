@@ -1,7 +1,10 @@
-// Single selector powering the SEE ALSO contract row on `/`, and the footer
-// contract strip on `/hatch` and `/view/<tokenId>`. Cross-surface drift is
-// structurally impossible when every surface reads from this one function.
-// This selector only drives the display string for the contract row.
+// Single selector powering the contract link everywhere it appears: the SEE
+// ALSO contract row wherever `RouteMetadata` renders (`/`, `/hatch`, `/claim`,
+// bare `/view`, view-miss), and the Base/contract trust icon in the
+// `/view/<tokenId>` card titlebar (`TitlebarTrustIcons`, which reads `.href`).
+// Cross-surface drift is structurally impossible when every surface reads from
+// this one function. This selector only drives the display string + href for
+// the contract row.
 //
 // Returns `{ address, statusChunks, href, isClickable }`. Pre-deploy display
 // literal uses the Unicode horizontal ellipsis U+2026 (`…`), NOT three ASCII

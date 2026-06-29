@@ -104,6 +104,49 @@
   outline-offset: 2px;
 }
 
+/*
+ * Header right column when it carries trust actions (the `/view/<tokenId>`
+ * card's OpenSea + contract icons). Lives in the same `1fr` grid track as the
+ * spacer, so the centered title is unaffected; icons align to the right edge,
+ * mirroring the traffic dots on the left. Slate chrome tints (literal
+ * BuddyRenderer fills #cbd5e1 dim / #e2e8f0 bright) match the card's own
+ * vocabulary rather than the page's lilac man-page tokens — these icons read
+ * as the card's chrome, not site UI.
+ */
+.terminal-frame__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Padded hit target around the 25px glyph (the link, not the glyph, is the
+ * focus/hover target — keeps the tap area comfortable). */
+.titlebar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: var(--radius-row);
+  color: #cbd5e1;
+  transition: color 120ms ease;
+}
+.titlebar-action__glyph {
+  display: block;
+  width: 25px;
+  height: 25px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .titlebar-action:hover {
+    color: #e2e8f0;
+  }
+}
+.titlebar-action:focus-visible {
+  outline: 1px dotted #e2e8f0;
+  outline-offset: 2px;
+  color: #e2e8f0;
+}
+
 /* ── Body ───────────────────────────────────────────────────────────────── */
 .terminal-frame__body {
   padding: var(--space-6) var(--space-7) var(--space-6);
@@ -150,6 +193,11 @@
   .terminal-frame__title {
     font-size: var(--font-size-sm);
     letter-spacing: var(--letter-spacing-heading);
+  }
+  /* Glyph stays static 25×25; only trim the link padding so dots + title +
+     two marks clear a narrow header. */
+  .titlebar-action {
+    padding: 4px;
   }
 }
 

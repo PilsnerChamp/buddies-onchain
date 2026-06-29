@@ -10,6 +10,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LookupConsole } from '../components/LookupConsole';
 import { RouteSeo } from '../components/RouteMetadata';
 import { TerminalRouteShell } from '../components/TerminalRouteShell';
+import { titlebarTrustIcons } from '../components/TitlebarTrustIcons';
 import { ACTIVE_NETWORK } from '../config/network';
 import { ROUTES, viewTokenPath } from '../config/routes';
 import { parseTokenId } from '../lib/parseTokenId';
@@ -113,7 +114,12 @@ function HappyPath({
   return (
     <BuddyRenderErrorBoundary tokenId={tokenId}>
       <RouteSeo canonicalPath={viewTokenPath(tokenId)} />
-      <TerminalRouteShell>
+      {/* The card has no SEE ALSO footer (the immutable SVG IS the body, flush
+          to the frame edges). The OpenSea + contract trust links other routes
+          carry in their footer ride the titlebar's right column here instead. */}
+      <TerminalRouteShell
+        titlebarActions={titlebarTrustIcons(tokenId, ACTIVE_NETWORK.chainId)}
+      >
         <div
           className="view-uuid__buddy"
           role="img"
