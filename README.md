@@ -66,7 +66,7 @@ Full detail:
 - Contract shape, stages, invariants — [`docs/onchain/contract.md`](docs/onchain/contract.md)
 - On-chain SVG renderer — [`docs/onchain/renderer.md`](docs/onchain/renderer.md)
 
-Status: `Hatched` is implemented but not yet deployed — the mainnet address (Base) lands here on launch. Source: [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol), Basescan-verified at deploy.
+Status: live on Base mainnet (chain id 8453). `Hatched` is implemented and deployed — `BuddyNFT` is at `0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9` ([Basescan](https://basescan.org/address/0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9)), source-verified on Basescan and Sourcify (`exact_match`, solc 0.8.24). The genesis buddy #1 is hatched — [view it on the dApp](https://buddies-onchain.xyz/view/1). Source: [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol).
 
 ## Build
 
