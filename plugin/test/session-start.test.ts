@@ -81,12 +81,20 @@ function expectedRenderFlagPath(root: string): string {
   return join(root, "plugins", "buddy-onchain", "expected-render.flag");
 }
 
+function sessionFreshFlagPath(root: string): string {
+  return join(root, "plugins", "buddy-onchain", "session-fresh.flag");
+}
+
 function seedDriftFlag(root: string): void {
   writeFileSync(driftFlagPath(root), "");
 }
 
 function seedExpectedRenderFlag(root: string): void {
   writeFileSync(expectedRenderFlagPath(root), "");
+}
+
+function seedSessionFreshFlag(root: string): void {
+  writeFileSync(sessionFreshFlagPath(root), "");
 }
 
 function readArtCacheFile(root: string): unknown | null {
@@ -345,6 +353,40 @@ describe("SessionStart environment override", () => {
   });
 });
 
+describe("SessionStart session-fresh flag", () => {
+  test("sets session-fresh when emitting ambient ruleset", async () => {
+    const root = freshClaudeRoot();
+
+    const result = await runSourceSessionStart(root, "warm");
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(RULESET_AMBIENT);
+    expect(existsSync(sessionFreshFlagPath(root))).toBe(true);
+  });
+
+  test("does not set session-fresh when resolved mode is off", async () => {
+    const root = freshClaudeRoot();
+    seedState(root, LOCAL_IDENTITY, "warm", "off");
+
+    const result = await runSourceSessionStart(root, "warm");
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("OK\n");
+    expect(existsSync(sessionFreshFlagPath(root))).toBe(false);
+  });
+
+  test("clears stale session-fresh on env-off boot", async () => {
+    const root = freshClaudeRoot();
+    seedSessionFreshFlag(root);
+
+    const result = await runSessionStart(root, { BUDDY_MODE: "off" });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("OK\n");
+    expect(existsSync(sessionFreshFlagPath(root))).toBe(false);
+  });
+});
+
 describe("SessionStart chain writer behavior", () => {
   test("warm SessionStart writes warm state without refreshing art cache", async () => {
     const root = freshClaudeRoot();
@@ -460,7 +502,7 @@ describe("SessionStart drift recovery flag cleanup", () => {
     expect(existsSync(expectedRenderFlagPath(root))).toBe(false);
   });
 
-  test("boot with neither flag set does not create flags", async () => {
+  test("boot with neither recovery flag set does not create recovery flags", async () => {
     const root = freshClaudeRoot();
 
     const result = await runSourceSessionStart(root, "warm");

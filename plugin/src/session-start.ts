@@ -18,7 +18,12 @@ import { deriveEffective } from "./effective-state";
 import { RULESET_AMBIENT, STATUSLINE_NUDGE_TEMPLATE } from "./instructions";
 import { resolveAndWriteBuddyChainState } from "./lookup-payload";
 import { safeReadJson } from "./safe-json-store";
-import { clearDriftFlag, consumeExpectedRender } from "./drift-flag";
+import {
+  clearDriftFlag,
+  consumeExpectedRender,
+  consumeSessionFresh,
+  setSessionFresh,
+} from "./drift-flag";
 import { settingsPath } from "./plugin-paths";
 import { isPlainObject } from "./plain-object";
 
@@ -87,6 +92,18 @@ function emit(text: string): void {
   process.stdout.write(`${text}\n`);
 }
 
+function emitRulesetForMode(mode: ModeLevel): void {
+  const text = withStatuslineNudge(rulesetForMode(mode));
+  if (mode === "lite" || mode === "full") {
+    try {
+      setSessionFresh();
+    } catch {
+      // Session-fresh marking is best-effort; session boot must still emit.
+    }
+  }
+  emit(text);
+}
+
 async function readSessionAccountUuid(): Promise<string | null> {
   try {
     const { config } = await readClaudeConfig();
@@ -112,6 +129,11 @@ export async function runSessionStart(): Promise<void> {
     } catch {
       // Stale recovery flags must never break session boot.
     }
+    try {
+      consumeSessionFresh();
+    } catch {
+      // Stale recovery flags must never break session boot.
+    }
 
     if (getEnvMode() === "off") {
       emit("OK");
@@ -133,7 +155,7 @@ export async function runSessionStart(): Promise<void> {
     } catch {
       const persistedMode = readState()?.mode ?? defaultState().mode;
       const mode = getEnvMode() ?? persistedMode;
-      emit(withStatuslineNudge(rulesetForMode(mode)));
+      emitRulesetForMode(mode);
       return;
     }
 
@@ -143,7 +165,7 @@ export async function runSessionStart(): Promise<void> {
       getEnvMode(),
     );
 
-    emit(withStatuslineNudge(rulesetForMode(effective.effectiveMode)));
+    emitRulesetForMode(effective.effectiveMode);
   } catch {
     emit("OK");
   }

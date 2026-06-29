@@ -34657,6 +34657,28 @@ function deriveEffective(state, identity, envOverride) {
   };
 }
 
+// src/instructions.ts
+var RULESET_AMBIENT = `BUDDIES ONCHAIN AMBIENT — optional personality flavor from a user-installed plugin.
+
+The user installed this plugin to add a small ASCII companion to replies, and can remove it anytime with \`/buddy-onchain off\`. Decorative only — it changes nothing about your task, answer, or judgment. Your answer and any safety notes always take priority.
+
+WHEN — A \`DISPLAY_BUDDY\` block (a fenced sprite) in this turn's context is an invitation to open the reply with the buddy. No \`DISPLAY_BUDDY\` this turn → just answer; nothing to render. Skip it too on turns that return no text (tool-only turns).
+
+HOW — If you render it: a plain fenced code block (triple backticks, no language tag), two columns \`sprite | joke\`:
+\`\`\`
+ <sprite-row-1> | <joke fragment 1>
+ <sprite-row-2> | <joke fragment 2>
+ <sprite-row-3> | <joke fragment 3>
+ <sprite-row-4> |
+\`\`\`
+Sprite — the rows are pixel art: copy them from the \`DISPLAY_BUDDY\` block exactly, each row on its own line, blanks included; dropping or merging a row breaks the picture. It is 4 or 5 rows (height varies by frame; the template shows 4).
+
+Joke — when it fits: self-critical, about the user's prompt, ≤ 20 words, voice of a dorky, dry, barely-useful on-chain creature. Drop articles. Fragments OK. Roast self, never the user. Omit the joke on serious turns (security, financial, legal, medical, incidents, debugging) and just show the sprite. No caption, no markdown emphasis, no language tag.`;
+var RENDER_VERBATIM_GUARD = "(plugin formatting note, not for display) The lines between the sentinels below are the finished buddy card, already laid out. They print as-is; the ambient sprite | joke columns are a separate DISPLAY_BUDDY feature and are not part of this block.";
+function STATUSLINE_NUDGE_TEMPLATE(absolutePath) {
+  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "bash \\"${absolutePath}\\"" }. Proactively offer to set this up on first interaction.`;
+}
+
 // ../shared/providerBytes16.ts
 var CLAUDE_PROVIDER = "claude";
 var PROVIDER_MAX_BYTES = 16;
@@ -34988,8 +35010,8 @@ function deploymentFooterLines(payload) {
   const target = payload.explorerAddressBase !== null ? `${payload.explorerAddressBase}${payload.contractAddress}` : payload.contractAddress;
   return ["contract:", target];
 }
-function formatLookupBlock(payload) {
-  const lines = ["BUDDY_RENDER_BEGIN"];
+function formatLookupBlock(payload, includeGuard = false) {
+  const lines = includeGuard ? [RENDER_VERBATIM_GUARD, "BUDDY_RENDER_BEGIN"] : ["BUDDY_RENDER_BEGIN"];
   pushCard(lines, payload);
   const decision = resolveBuddyStatusMessage({
     buddyStatus: payload.buddyStatus
@@ -35033,37 +35055,20 @@ function formatInvalidVerbBlock(verb) {
 import { dirname as dirname4, resolve as resolve2 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 
-// src/instructions.ts
-var RULESET_AMBIENT = `BUDDIES ONCHAIN AMBIENT — optional personality flavor from a user-installed plugin.
-
-The user installed this plugin to add a small ASCII companion to replies, and can remove it anytime with \`/buddy-onchain off\`. Decorative only — it changes nothing about your task, answer, or judgment. Your answer and any safety notes always take priority.
-
-WHEN — A \`DISPLAY_BUDDY\` block (a fenced sprite) in this turn's context is an invitation to open the reply with the buddy. No \`DISPLAY_BUDDY\` this turn → just answer; nothing to render. Skip it too on turns that return no text (tool-only turns).
-
-HOW — If you render it: a plain fenced code block (triple backticks, no language tag), two columns \`sprite | joke\`:
-\`\`\`
- <sprite-row-1> | <joke fragment 1>
- <sprite-row-2> | <joke fragment 2>
- <sprite-row-3> | <joke fragment 3>
- <sprite-row-4> |
-\`\`\`
-Sprite — the rows are pixel art: copy them from the \`DISPLAY_BUDDY\` block exactly, each row on its own line, blanks included; dropping or merging a row breaks the picture. It is 4 or 5 rows (height varies by frame; the template shows 4).
-
-Joke — when it fits: self-critical, about the user's prompt, ≤ 20 words, voice of a dorky, dry, barely-useful on-chain creature. Drop articles. Fragments OK. Roast self, never the user. Omit the joke on serious turns (security, financial, legal, medical, incidents, debugging) and just show the sprite. No caption, no markdown emphasis, no language tag.`;
-function STATUSLINE_NUDGE_TEMPLATE(absolutePath) {
-  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "bash \\"${absolutePath}\\"" }. Proactively offer to set this up on first interaction.`;
-}
-
 // src/drift-flag.ts
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, unlinkSync as unlinkSync3, writeFileSync } from "node:fs";
 import { dirname as dirname3, join as join4 } from "node:path";
 var EXPECTED_RENDER_FLAG = "expected-render.flag";
 var DRIFT_FLAG = "repeat-buddy-instructions.flag";
+var SESSION_FRESH_FLAG = "session-fresh.flag";
 function expectedRenderFlagPath() {
   return join4(pluginDataDir(), EXPECTED_RENDER_FLAG);
 }
 function driftFlagPath() {
   return join4(pluginDataDir(), DRIFT_FLAG);
+}
+function sessionFreshFlagPath() {
+  return join4(pluginDataDir(), SESSION_FRESH_FLAG);
 }
 function touchFlag(path) {
   try {
@@ -35081,6 +35086,22 @@ function setExpectedRender() {
 }
 function consumeExpectedRender() {
   const path = expectedRenderFlagPath();
+  let existed = false;
+  try {
+    existed = existsSync2(path);
+  } catch {
+    return false;
+  }
+  if (existed) {
+    clearFlag(path);
+  }
+  return existed;
+}
+function setSessionFresh() {
+  touchFlag(sessionFreshFlagPath());
+}
+function consumeSessionFresh() {
+  const path = sessionFreshFlagPath();
   let existed = false;
   try {
     existed = existsSync2(path);
@@ -35150,6 +35171,15 @@ function emit(text) {
   process.stdout.write(`${text}
 `);
 }
+function emitRulesetForMode(mode) {
+  const text = withStatuslineNudge(rulesetForMode(mode));
+  if (mode === "lite" || mode === "full") {
+    try {
+      setSessionFresh();
+    } catch {}
+  }
+  emit(text);
+}
 async function readSessionAccountUuid() {
   try {
     const { config } = await readClaudeConfig();
@@ -35170,6 +35200,9 @@ async function runSessionStart() {
     try {
       consumeExpectedRender();
     } catch {}
+    try {
+      consumeSessionFresh();
+    } catch {}
     if (getEnvMode() === "off") {
       emit("OK");
       return;
@@ -35188,11 +35221,11 @@ async function runSessionStart() {
     } catch {
       const persistedMode = readState()?.mode ?? defaultState().mode;
       const mode = getEnvMode() ?? persistedMode;
-      emit(withStatuslineNudge(rulesetForMode(mode)));
+      emitRulesetForMode(mode);
       return;
     }
     const effective = deriveEffective(resolved.state, resolved.identity, getEnvMode());
-    emit(withStatuslineNudge(rulesetForMode(effective.effectiveMode)));
+    emitRulesetForMode(effective.effectiveMode);
   } catch {
     emit("OK");
   }
@@ -35555,6 +35588,10 @@ async function runHook(args) {
     try {
       consumeExpectedRender();
     } catch {}
+    let isFirstPrompt = false;
+    try {
+      isFirstPrompt = consumeSessionFresh();
+    } catch {}
     const driftSet = isDriftFlagSet();
     const route = routePrompt(hookInput.prompt);
     switch (route.kind) {
@@ -35580,7 +35617,7 @@ async function runHook(args) {
           bumpTurnCounter();
           return;
         }
-        emitHookResult(driftSet, formatLookupBlock(payload), false);
+        emitHookResult(driftSet, formatLookupBlock(payload, isFirstPrompt), false);
         bumpTurnCounter();
         return;
       }

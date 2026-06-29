@@ -5,11 +5,14 @@ import { join } from "node:path";
 import {
   clearDriftFlag,
   consumeExpectedRender,
+  consumeSessionFresh,
   driftFlagPath,
   expectedRenderFlagPath,
   isDriftFlagSet,
+  sessionFreshFlagPath,
   setDriftFlag,
   setExpectedRender,
+  setSessionFresh,
 } from "../src/drift-flag";
 
 const tmpDirs: string[] = [];
@@ -94,5 +97,33 @@ describe("expected-render flag", () => {
 
     expect(consumeExpectedRender()).toBe(true);
     expect(consumeExpectedRender()).toBe(false);
+  });
+});
+
+describe("session-fresh flag", () => {
+  test("setSessionFresh creates session-fresh file", () => {
+    setSessionFresh();
+
+    expect(existsSync(sessionFreshFlagPath())).toBe(true);
+  });
+
+  test("consumeSessionFresh returns true and removes file when set", () => {
+    setSessionFresh();
+
+    expect(consumeSessionFresh()).toBe(true);
+    expect(existsSync(sessionFreshFlagPath())).toBe(false);
+  });
+
+  test("consumeSessionFresh returns false on missing file", () => {
+    expect(() => {
+      expect(consumeSessionFresh()).toBe(false);
+    }).not.toThrow();
+  });
+
+  test("repeat consumeSessionFresh after first consume returns false", () => {
+    setSessionFresh();
+
+    expect(consumeSessionFresh()).toBe(true);
+    expect(consumeSessionFresh()).toBe(false);
   });
 });

@@ -11,6 +11,7 @@
 
 import { isValidUuid } from "~shared/isValidUuid";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
+import { RENDER_VERBATIM_GUARD } from "./instructions";
 import {
   hatchUrl as buildHatchUrl,
   resolveDeepLink,
@@ -443,8 +444,17 @@ function deploymentFooterLines(payload: LookupPayload): string[] {
   return ["contract:", target];
 }
 
-export function formatLookupBlock(payload: LookupPayload): string {
-  const lines: string[] = ["BUDDY_RENDER_BEGIN"];
+export function formatLookupBlock(
+  payload: LookupPayload,
+  includeGuard = false,
+): string {
+  // RENDER_VERBATIM_GUARD precedes the sentinel — context-only, never printed
+  // (the renderer reproduces only what is BETWEEN the sentinels). It stops the
+  // first-prompt collision where a freshly-injected RULESET_AMBIENT leads the
+  // host to decorate this card with the ambient sprite | joke columns.
+  const lines: string[] = includeGuard
+    ? [RENDER_VERBATIM_GUARD, "BUDDY_RENDER_BEGIN"]
+    : ["BUDDY_RENDER_BEGIN"];
 
   pushCard(lines, payload);
 

@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { RULESET_AMBIENT } from "../src/instructions";
+import { RENDER_VERBATIM_GUARD, RULESET_AMBIENT } from "../src/instructions";
 import { mutateState } from "../src/buddy-state";
 import {
   COLD_NUDGE_LINE_1,
@@ -89,12 +89,20 @@ function expectedRenderFlagPath(claudeDir: string): string {
   return join(claudeDir, "plugins", "buddy-onchain", "expected-render.flag");
 }
 
+function sessionFreshFlagPath(claudeDir: string): string {
+  return join(claudeDir, "plugins", "buddy-onchain", "session-fresh.flag");
+}
+
 function seedDriftFlag(claudeDir: string): void {
   writeFileSync(driftFlagPath(claudeDir), "");
 }
 
 function seedExpectedRenderFlag(claudeDir: string): void {
   writeFileSync(expectedRenderFlagPath(claudeDir), "");
+}
+
+function seedSessionFreshFlag(claudeDir: string): void {
+  writeFileSync(sessionFreshFlagPath(claudeDir), "");
 }
 
 function identityLocal() {
@@ -379,11 +387,48 @@ describe("hook — lookup route", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(context).toContain("BUDDY_RENDER_BEGIN");
+    expect(context).not.toContain(RENDER_VERBATIM_GUARD);
     expect(context).toContain("go see your buddy onchain:");
     expect(context).toContain(`http://localhost:5173/view/42`);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
     expect(JSON.parse(readFileSync(statePath(claudeDir), "utf8")).turnCounter).toBe(1);
+  });
+
+  test("session-fresh lookup prepends the context-only guard once", async () => {
+    const claudeDir = freshClaudeDir();
+    seedSessionFreshFlag(claudeDir);
+
+    const result = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "warm");
+    const context = additionalContext(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(context.split("\n").slice(0, 2)).toEqual([
+      RENDER_VERBATIM_GUARD,
+      "BUDDY_RENDER_BEGIN",
+    ]);
+    expect(existsSync(sessionFreshFlagPath(claudeDir))).toBe(false);
+
+    const repeat = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "warm");
+    const repeatContext = additionalContext(repeat.stdout);
+
+    expect(repeat.exitCode).toBe(0);
+    expect(repeatContext).not.toContain(RENDER_VERBATIM_GUARD);
+    expect(repeatContext.split("\n")[0]).toBe("BUDDY_RENDER_BEGIN");
+  });
+
+  test("session-fresh non-lookup prompt consumes the guard opportunity", async () => {
+    const claudeDir = freshClaudeDir();
+    seedSessionFreshFlag(claudeDir);
+
+    const mutate = await runHook({ prompt: "/buddy-onchain lite" }, claudeDir);
+    const lookup = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "warm");
+    const context = additionalContext(lookup.stdout);
+
+    expect(mutate.exitCode).toBe(0);
+    expect(existsSync(sessionFreshFlagPath(claudeDir))).toBe(false);
+    expect(context).not.toContain(RENDER_VERBATIM_GUARD);
+    expect(context.split("\n")[0]).toBe("BUDDY_RENDER_BEGIN");
   });
 
   test("bare cold lookup emits hatch guidance", async () => {

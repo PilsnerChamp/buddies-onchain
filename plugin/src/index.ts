@@ -51,6 +51,7 @@ import { RULESET_AMBIENT } from "./instructions";
 import {
   clearDriftFlag,
   consumeExpectedRender,
+  consumeSessionFresh,
   isDriftFlagSet,
   setExpectedRender,
 } from "./drift-flag";
@@ -304,6 +305,12 @@ async function runHook(args: CliArgs): Promise<void> {
     } catch {
       // Best-effort stale flag wipe.
     }
+    let isFirstPrompt = false;
+    try {
+      isFirstPrompt = consumeSessionFresh();
+    } catch {
+      // Best-effort session-fresh wipe.
+    }
 
     const driftSet = isDriftFlagSet();
     // Do NOT clear drift flag here; the chokepoint clears it only after
@@ -333,7 +340,7 @@ async function runHook(args: CliArgs): Promise<void> {
           bumpTurnCounter();
           return;
         }
-        emitHookResult(driftSet, formatLookupBlock(payload), false);
+        emitHookResult(driftSet, formatLookupBlock(payload, isFirstPrompt), false);
         bumpTurnCounter();
         return;
       }

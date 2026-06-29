@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { formatLookupBlock, type LookupPayload } from "../src/lookup-payload";
 import type { ModeLevel } from "../src/buddy-state";
+import { RENDER_VERBATIM_GUARD } from "../src/instructions";
 import { CLAUDE_PROVIDER } from "~shared/providerBytes16";
 
 const HATCH_URL =
@@ -68,6 +69,23 @@ describe("formatLookupBlock", () => {
       url: HATCH_URL,
     },
   ];
+
+  test("renders the context-only guard only when requested", () => {
+    const payload = makeLookupPayload({ buddyStatus: "warm" });
+
+    const defaultOut = formatLookupBlock(payload);
+    const explicitFalseOut = formatLookupBlock(payload, false);
+    const guardedOut = formatLookupBlock(payload, true);
+
+    expect(defaultOut).not.toContain(RENDER_VERBATIM_GUARD);
+    expect(explicitFalseOut).not.toContain(RENDER_VERBATIM_GUARD);
+    expect(defaultOut.split("\n")[0]).toBe("BUDDY_RENDER_BEGIN");
+    expect(explicitFalseOut.split("\n")[0]).toBe("BUDDY_RENDER_BEGIN");
+    expect(guardedOut.split("\n").slice(0, 2)).toEqual([
+      RENDER_VERBATIM_GUARD,
+      "BUDDY_RENDER_BEGIN",
+    ]);
+  });
 
   test.each(decisionCases)("$name", (cell) => {
     const payload = makeLookupPayload({
