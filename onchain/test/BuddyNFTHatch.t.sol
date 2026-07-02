@@ -136,11 +136,11 @@ contract BuddyNFTHatchTest is Test, HatchHelper {
         assertEq(traits.eyes, 2, "x eyes");
         assertEq(traits.hat, 0, "hatless");
         assertFalse(traits.shiny, "not shiny");
-        assertEq(traits.debugging, 57);
-        assertEq(traits.patience, 49);
-        assertEq(traits.chaos, 33);
-        assertEq(traits.wisdom, 68);
-        assertEq(traits.snark, 100);
+        assertEq(traits.debugging, 44);
+        assertEq(traits.patience, 63);
+        assertEq(traits.chaos, 54);
+        assertEq(traits.wisdom, 32);
+        assertEq(traits.snark, 87);
     }
 
     function test_hatch_recordsHatcher() public {

@@ -103,7 +103,7 @@ Pinned fixtures:
 
 Rendered visual references (human-eyeball showroom): `onchain/contract-data/reference-cards/`.
 
-Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → identityHash `0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb` → seed32 `2990586173` → epic robot, eye `×`, no hat, not shiny, stats `DEBUGGING=57 PATIENCE=49 CHAOS=33 WISDOM=68 SNARK=100`.
+Sample canonical vector — UUID `47492784-eec5-4983-8072-9e2aa832c24b` → identityHash `0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb` → seed32 `2990586173` → epic robot, eye `×`, no hat, not shiny, stats `DEBUGGING=44 PATIENCE=63 CHAOS=54 WISDOM=32 SNARK=87`.
 
 ## Verifying parity
 

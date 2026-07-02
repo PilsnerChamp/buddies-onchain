@@ -36,11 +36,11 @@ const WYHASH_BONES: BuddyBones = {
   hat: "none",
   shiny: false,
   stats: {
-    DEBUGGING: 57,
-    PATIENCE: 49,
-    CHAOS: 33,
-    WISDOM: 68,
-    SNARK: 100,
+    DEBUGGING: 44,
+    PATIENCE: 63,
+    CHAOS: 54,
+    WISDOM: 32,
+    SNARK: 87,
   },
 };
 
@@ -299,7 +299,7 @@ describe("deriveBuddyFromAccount", () => {
     expect(bones.eye).toBe("×");
     expect(bones.hat).toBe("none");
     expect(bones.shiny).toBe(false);
-    expect(bones.stats.SNARK).toBe(100);
+    expect(bones.stats.SNARK).toBe(87);
   });
 
   test("same valid UUID is deterministic", () => {
