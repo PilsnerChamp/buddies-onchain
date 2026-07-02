@@ -6,7 +6,7 @@
   X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
-# Report-Only preview candidates for S5 (not enforced now):
+# Report-Only preview candidates for a future CSP tightening pass (not enforced now):
 # - frame-src https://verify.walletconnect.org
 # - connect-src candidates: https://rpc.walletconnect.org, https://rpc.wallet.coinbase.com, https://pulse.walletconnect.org, https://echo.walletconnect.com, https://secure.walletconnect.org
 # - note: https://keys.coinbase.com is a window.open popup — needs no CSP directive.

@@ -94,6 +94,8 @@ export default defineConfig(({ command, mode }) => {
     },
     build: {
       target: 'es2022',
+      // Deliberate: production source maps stay on so anyone can verify the
+      // served bundle against the open-source tree.
       sourcemap: true,
     },
   };
