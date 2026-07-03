@@ -56,6 +56,8 @@ import {
   identityIsUnset,
   sameIdentity,
 } from "./identity";
+import { isBadgeHeartbeatFresh } from "./badge-heartbeat";
+import { statuslineScriptPath } from "./plugin-paths";
 
 export interface LookupPayload {
   buddyStatus: BuddyStatus;
@@ -74,6 +76,11 @@ export interface LookupPayload {
   chainId: number;
   effectiveMode: ModeLevel;
   persistedMode: ModeLevel;
+  // Absolute path to `buddy-statusline.sh` when the badge heartbeat is stale
+  // (badge not rendering in the live status bar — no statusline, or a
+  // foreign/project statusline shadows it); `null` = badge detected, or
+  // undeterminable (never nag on uncertainty).
+  statuslineWireHint: string | null;
 }
 
 export interface ResolveLookupArgs {
@@ -368,6 +375,16 @@ export async function resolveLookupPayload(
     const buddyStatus: BuddyStatus = result.state.hatch satisfies BuddyStatus;
     const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
 
+    let statuslineWireHint: string | null = null;
+    try {
+      if (!isBadgeHeartbeatFresh()) {
+        statuslineWireHint = statuslineScriptPath();
+      }
+    } catch {
+      // Undeterminable badge status stays silent; the card never nags on
+      // uncertainty and never fails the lookup over a decorative hint.
+    }
+
     return {
       buddyStatus,
       cardLines,
@@ -380,6 +397,7 @@ export async function resolveLookupPayload(
       chainId: net.chainId,
       effectiveMode,
       persistedMode,
+      statuslineWireHint,
     };
   } catch {
     return null;
@@ -492,6 +510,16 @@ export function formatLookupBlock(
   }
   lines.push(...deploymentFooterLines(payload));
   lines.push("");
+
+  // Stale badge heartbeat → the badge is not rendering in the live status
+  // bar. Composition stays explicit and user-driven (see hooks/README.md
+  // "Why we don't auto-merge"), so the card offers the wiring, never does it.
+  if (payload.statuslineWireHint !== null) {
+    lines.push("statusline: buddy badge not detected in your status bar");
+    lines.push(
+      `wire: ask claude to call \`${payload.statuslineWireHint}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
+    );
+  }
 
   // getEnvMode filters invalid → null, so divergence means env override is active.
   if (payload.effectiveMode !== payload.persistedMode) {

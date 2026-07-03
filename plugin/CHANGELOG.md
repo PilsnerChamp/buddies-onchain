@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.4 — Statusline badge heartbeat (2026-07-03)
+
+### Added
+
+- Badge heartbeat: `buddy-statusline.{sh,ps1}` touch `<CLAUDE_CONFIG_DIR>/plugins/buddy-onchain/.badge-heartbeat` on every render (best-effort, symlink-guarded). Fresh mtime = the badge participates in the live status bar.
+- `/buddy-onchain` lookup now detects a badge that silently stopped rendering — no statusline, foreign statusline, or a project-level `.claude/settings.json` shadowing the user-level entry — and appends a `statusline:` warning with the wiring hint. Certain misses only (missing/stale/symlinked heartbeat, lstat-checked); fs uncertainty stays silent.
+- `hooks/README.md` inline-embed snippet (Option 2) gained the heartbeat touch line — inline composers keep it to stay detected.
+
+### Changed
+
+- `statuslineScriptPath()` moved from `session-start.ts` to `plugin-paths.ts` (shared by the SessionStart nudge and the lookup wire hint).
+- `LookupPayload` gained `statuslineWireHint: string | null`.
+
 ## v0.4.3 — Cadence-only mode axis (2026-05-02)
 
 ### Breaking

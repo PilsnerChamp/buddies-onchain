@@ -8,7 +8,7 @@ If you installed the plugin standalone (cloned the repo, loaded via `claude --pl
 
 | File | Role |
 |---|---|
-| `buddy-statusline.sh` | POSIX statusline badge — reads `.buddy-state`, emits `[<eyes>:<mode>]` (e.g. `[@,@:full]`, `[-,-:lite]`) |
+| `buddy-statusline.sh` | POSIX statusline badge — reads `.buddy-state`, emits `[<eyes>:<mode>]` (e.g. `[@,@:full]`, `[-,-:lite]`), touches the badge heartbeat |
 | `buddy-statusline.ps1` | Windows / PowerShell parity |
 | `install.sh` / `install.ps1` | Idempotent statusline installer for `~/.claude/settings.json` |
 | `uninstall.sh` / `uninstall.ps1` | Removes only buddy-managed entries |
@@ -34,6 +34,14 @@ Two axes: eyes encode hatch state (`@,@` warm, `-,-` cold/unknown), suffix encod
 If you already have a custom statusline, the plugin leaves it alone. Add the buddy badge to your script using one of the snippets below.
 
 **Standalone users:** `install.sh` / `install.ps1` wires the statusline automatically when no `statusLine` exists. If a foreign statusline is already wired, the installer skips with a stderr warning — your config stays untouched. Pass `--force` to overwrite (creates a `.bak`).
+
+## Badge heartbeat (how `/buddy-onchain` detects a missing badge)
+
+The rendered status bar is TUI chrome — no hook or script can read it back. So the badge script proves its own presence: every render it touches `<CLAUDE_CONFIG_DIR>/plugins/buddy-onchain/.badge-heartbeat` (mtime only, content empty, best-effort, symlinks never followed). Claude Code re-runs the statusline command continuously, so a wired badge keeps the heartbeat fresh.
+
+`/buddy-onchain` checks that mtime. Stale or missing for ~10 minutes → the lookup card appends a `statusline:` warning with the script path and points here for the composition snippets. This catches every silent-miss case the installer can't see: no statusline at all, a foreign statusline, or a project-level `.claude/settings.json` that shadows your user-level one.
+
+Composing your own statusline? Option 1 below fires the heartbeat automatically (you call the script). Option 2 inlines the badge logic, so its snippet includes the heartbeat touch — keep that line, or `/buddy-onchain` will think the badge is gone and nag you.
 
 ## Manual setup (replace whatever's there)
 
@@ -87,6 +95,13 @@ Embed buddy's parsing directly so you have zero external dependency. Mirrors `bu
 ```bash
 buddy_text=""
 buddy_state="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/buddy-onchain/.buddy-state"
+# Badge heartbeat — lets `/buddy-onchain` detect the badge is wired. Keep these
+# lines: without them the lookup card warns the badge is missing.
+buddy_heartbeat="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/buddy-onchain/.badge-heartbeat"
+if [ ! -h "$buddy_heartbeat" ]; then
+  mkdir -p "${buddy_heartbeat%/*}" 2>/dev/null || :
+  touch "$buddy_heartbeat" 2>/dev/null || :
+fi
 if [ ! -h "$buddy_state" ] && [ -r "$buddy_state" ]; then
   buddy_raw=$(head -c 8192 "$buddy_state" 2>/dev/null | tr -d '\000-\037')
   case "$buddy_raw" in
@@ -128,4 +143,4 @@ sh plugin/hooks/uninstall.sh        # POSIX
 powershell -ExecutionPolicy Bypass -File plugin/hooks/uninstall.ps1   # Windows
 ```
 
-Removes the buddy-managed `statusLine` only. Foreign statuslines are left alone. State files at `~/.claude/plugins/buddy-onchain/` (`.buddy-state`, `.buddy-art-cache.json`, `projects/`) are NOT touched — delete them by hand if you want a fully clean reset.
+Removes the buddy-managed `statusLine` only. Foreign statuslines are left alone. State files at `~/.claude/plugins/buddy-onchain/` (`.buddy-state`, `.buddy-art-cache.json`, `.badge-heartbeat`, `projects/`) are NOT touched — delete them by hand if you want a fully clean reset.

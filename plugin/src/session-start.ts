@@ -8,9 +8,6 @@
 //
 // Hard contract: never log, exit, or throw past `runSessionStart`.
 
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { isValidUuid } from "~shared/isValidUuid";
 import { defaultState, getEnvMode, readState, type ModeLevel } from "./buddy-state";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
@@ -24,7 +21,7 @@ import {
   consumeSessionFresh,
   setSessionFresh,
 } from "./drift-flag";
-import { settingsPath } from "./plugin-paths";
+import { settingsPath, statuslineScriptPath } from "./plugin-paths";
 import { isPlainObject } from "./plain-object";
 
 interface StatusLineProbe {
@@ -32,18 +29,6 @@ interface StatusLineProbe {
 }
 
 const MAX_SETTINGS_BYTES = 64 * 1024;
-
-// `import.meta.url` resolves to runtime location of the running module —
-// `plugin/dist/index.js` when bundled and `plugin/src/session-start.ts` when
-// run from source. Both ascend to `plugin/`, descending to `hooks/` lands at
-// `plugin/hooks/buddy-statusline.sh`. Avoid `__dirname`: bun build inlines
-// it as the absolute build-machine source path, leaking dev environment
-// AND breaking runtime resolution on installed plugins.
-const HERE = dirname(fileURLToPath(import.meta.url));
-
-function statuslineScriptPath(): string {
-  return resolve(HERE, "..", "hooks", "buddy-statusline.sh");
-}
 
 function validateSettings(raw: unknown): StatusLineProbe | null {
   if (!isPlainObject(raw)) {

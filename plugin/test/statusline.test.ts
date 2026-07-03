@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
+  statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,6 +27,10 @@ function freshRoot(): string {
 
 function statePath(root: string): string {
   return join(root, "plugins", "buddy-onchain", ".buddy-state");
+}
+
+function heartbeatPath(root: string): string {
+  return join(root, "plugins", "buddy-onchain", ".badge-heartbeat");
 }
 
 function writeState(root: string, mode: string, hatch: string): void {
@@ -202,5 +210,64 @@ describe("buddy-statusline.sh — badge derivation", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe(BADGE("@,@", "full"));
     expect(result.stderr).toBe("");
+  });
+});
+
+describe("buddy-statusline.sh — badge heartbeat", () => {
+  test("touches the heartbeat on a normal render", async () => {
+    const root = freshRoot();
+    writeState(root, "full", "warm");
+
+    const result = await runStatusline(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(heartbeatPath(root))).toBe(true);
+  });
+
+  test("touches the heartbeat even on the silent missing-state path", async () => {
+    // Heartbeat means "script runs in the statusline loop", not "badge
+    // visible" — wiring detection must survive an empty badge.
+    const root = freshRoot();
+
+    const result = await runStatusline(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(existsSync(heartbeatPath(root))).toBe(true);
+  });
+
+  test("bumps a stale heartbeat mtime forward", async () => {
+    const root = freshRoot();
+    writeState(root, "lite", "cold");
+    mkdirSync(dirname(heartbeatPath(root)), { recursive: true });
+    writeFileSync(heartbeatPath(root), "");
+    const past = new Date(Date.now() - 60 * 60 * 1000);
+    utimesSync(heartbeatPath(root), past, past);
+
+    await runStatusline(root);
+
+    const ageMs = Date.now() - statSync(heartbeatPath(root)).mtimeMs;
+    expect(ageMs).toBeLessThan(60 * 1000);
+  });
+
+  test("never follows a symlinked heartbeat", async () => {
+    if (process.platform === "win32") {
+      return;
+    }
+
+    const root = freshRoot();
+    writeState(root, "full", "warm");
+    const target = join(root, "heartbeat-target");
+    writeFileSync(target, "");
+    const past = new Date(Date.now() - 60 * 60 * 1000);
+    utimesSync(target, past, past);
+    symlinkSync(target, heartbeatPath(root));
+
+    const result = await runStatusline(root);
+
+    // Badge still renders; the symlink target's mtime stays untouched.
+    expect(result.stdout).toBe(BADGE("@,@", "full"));
+    expect(statSync(target).mtimeMs).toBe(past.getTime());
+    expect(lstatSync(heartbeatPath(root)).isSymbolicLink()).toBe(true);
   });
 });

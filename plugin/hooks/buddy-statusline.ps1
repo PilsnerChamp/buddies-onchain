@@ -3,6 +3,12 @@
 # Reads only the cached buddy state. It never calls the chain or plugin SDK.
 # Missing, malformed, oversized, or reparse-point state silently renders
 # nothing.
+#
+# One write: it touches the badge heartbeat so `/buddy-onchain` can tell the
+# badge participates in the live status bar (the rendered bar itself is TUI
+# chrome nothing can read back). Touched before any state validation —
+# heartbeat means "this script runs in the statusline loop", not "badge
+# visible". Best-effort; reparse-point heartbeat is never followed.
 
 # Config dir resolution: CLAUDE_CONFIG_DIR -> USERPROFILE\.claude -> $HOME\.claude.
 $ClaudeDir = if ($env:CLAUDE_CONFIG_DIR) {
@@ -14,6 +20,31 @@ $ClaudeDir = if ($env:CLAUDE_CONFIG_DIR) {
 }
 
 $State = Join-Path $ClaudeDir "plugins\buddy-onchain\.buddy-state"
+$Heartbeat = Join-Path $ClaudeDir "plugins\buddy-onchain\.badge-heartbeat"
+
+# Every cmdlet in this block needs -ErrorAction Stop: try/catch only swallows
+# TERMINATING errors, and a non-terminating failure (e.g. unwritable config
+# dir) would print to stderr from the statusline — contract violation.
+try {
+    $HeartbeatDir = Split-Path -Parent $Heartbeat
+    if (-not (Test-Path -LiteralPath $HeartbeatDir -ErrorAction Stop)) {
+        New-Item -ItemType Directory -Path $HeartbeatDir -Force -ErrorAction Stop | Out-Null
+    }
+    $HeartbeatIsReparse = $false
+    if (Test-Path -LiteralPath $Heartbeat -ErrorAction Stop) {
+        $HeartbeatItem = Get-Item -LiteralPath $Heartbeat -Force -ErrorAction Stop
+        $HeartbeatIsReparse = [bool]($HeartbeatItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)
+    }
+    if (-not $HeartbeatIsReparse) {
+        if (Test-Path -LiteralPath $Heartbeat -ErrorAction Stop) {
+            (Get-Item -LiteralPath $Heartbeat -Force -ErrorAction Stop).LastWriteTimeUtc = [DateTime]::UtcNow
+        } else {
+            New-Item -ItemType File -Path $Heartbeat -Force -ErrorAction Stop | Out-Null
+        }
+    }
+} catch {
+    # Heartbeat is best-effort; badge rendering must not depend on it.
+}
 
 try {
     if (-not (Test-Path -LiteralPath $State -PathType Leaf)) { exit 0 }

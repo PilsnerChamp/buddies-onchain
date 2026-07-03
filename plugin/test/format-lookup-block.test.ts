@@ -39,6 +39,7 @@ function makeLookupPayload(
     chainId: TEST_CHAIN_ID,
     effectiveMode: "lite",
     persistedMode: "lite",
+    statuslineWireHint: null,
     ...payload,
   };
 }
@@ -226,6 +227,61 @@ describe("formatLookupBlock", () => {
     expect(out).toContain("\n    .[||].   \n");
     expect(out).toContain("\nDBG 1 │ PAT 2\n");
     expect(out).toContain("\n     `-vvvv-´   \n");
+  });
+
+  describe("statusline wire hint", () => {
+    const HINT_PATH = "/abs/path/to/plugin/hooks/buddy-statusline.sh";
+    const WIRE_LINES = [
+      "statusline: buddy badge not detected in your status bar",
+      `wire: ask claude to call \`${HINT_PATH}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
+    ];
+
+    test("null hint renders no statusline lines", () => {
+      const out = formatLookupBlock(makeLookupPayload({ buddyStatus: "warm" }));
+
+      expect(out).not.toContain("statusline:");
+      expect(out).not.toContain("wire:");
+    });
+
+    test("stale-heartbeat hint renders between the footer and mode copy", () => {
+      const out = formatLookupBlock(
+        makeLookupPayload({
+          buddyStatus: "warm",
+          statuslineWireHint: HINT_PATH,
+        }),
+      );
+
+      expect(out).toBe(
+        [
+          "BUDDY_RENDER_BEGIN",
+          "go see your buddy onchain:",
+          "https://buddies-onchain.xyz/view/123",
+          ...FOOTER,
+          "",
+          ...WIRE_LINES,
+          LITE_LINE,
+          CHANGE_HINT,
+          "BUDDY_RENDER_END",
+        ].join("\n"),
+      );
+    });
+
+    test("wire hint precedes the env-override note", () => {
+      const out = formatLookupBlock(
+        makeLookupPayload({
+          buddyStatus: "warm",
+          statuslineWireHint: HINT_PATH,
+          effectiveMode: "full",
+          persistedMode: "lite",
+        }),
+      );
+
+      const lines = out.split("\n");
+      const wireIdx = lines.indexOf(WIRE_LINES[0]!);
+      const noteIdx = lines.findIndex((l) => l.startsWith("note:"));
+      expect(wireIdx).toBeGreaterThan(-1);
+      expect(noteIdx).toBeGreaterThan(wireIdx);
+    });
   });
 
   // `effectiveMode` renders; `persistedMode` only triggers the

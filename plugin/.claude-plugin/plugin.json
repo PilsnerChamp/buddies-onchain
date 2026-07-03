@@ -1,7 +1,7 @@
 {
   "name": "buddy-onchain",
   "description": "An AI buddy in your terminal, bound to your account — living fully onchain on Base. No host. No takedown. Go hatch yours.",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "author": {
     "name": "Buddies Onchain",
     "url": "https://buddies-onchain.xyz"

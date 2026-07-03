@@ -33669,7 +33669,8 @@ function safeWriteJson(path, data, validate) {
 // src/plugin-paths.ts
 import { createHash } from "node:crypto";
 import { homedir as homedir2 } from "node:os";
-import { join as join3 } from "node:path";
+import { dirname as dirname3, join as join3, resolve as resolve2 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 function claudeDir() {
   return process.env.CLAUDE_CONFIG_DIR || join3(homedir2(), ".claude");
 }
@@ -33678,6 +33679,13 @@ function pluginDataDir() {
 }
 function buddyStatePath() {
   return join3(pluginDataDir(), ".buddy-state");
+}
+function badgeHeartbeatPath() {
+  return join3(pluginDataDir(), ".badge-heartbeat");
+}
+var HERE2 = dirname3(fileURLToPath2(import.meta.url));
+function statuslineScriptPath() {
+  return resolve2(HERE2, "..", "hooks", "buddy-statusline.sh");
 }
 function buddyArtCachePath() {
   return join3(pluginDataDir(), ".buddy-art-cache.json");
@@ -34787,6 +34795,22 @@ function resolveBuddyStatusMessage(args) {
   return { ...STATUS_MESSAGES[args.buddyStatus] };
 }
 
+// src/badge-heartbeat.ts
+import { lstatSync as lstatSync2 } from "node:fs";
+var HEARTBEAT_MAX_AGE_MS = 10 * 60 * 1000;
+function isBadgeHeartbeatFresh(nowMs = Date.now(), maxAgeMs = HEARTBEAT_MAX_AGE_MS) {
+  try {
+    const stats = lstatSync2(badgeHeartbeatPath());
+    if (!stats.isFile()) {
+      return false;
+    }
+    return nowMs - stats.mtimeMs <= maxAgeMs;
+  } catch (error) {
+    const code = error.code;
+    return code !== "ENOENT";
+  }
+}
+
 // src/lookup-payload.ts
 class BuddyChainStateError extends Error {
   constructor(message) {
@@ -34964,6 +34988,12 @@ async function resolveLookupPayload(args = {}) {
     }
     const buddyStatus = result.state.hatch;
     const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
+    let statuslineWireHint = null;
+    try {
+      if (!isBadgeHeartbeatFresh()) {
+        statuslineWireHint = statuslineScriptPath();
+      }
+    } catch {}
     return {
       buddyStatus,
       cardLines,
@@ -34975,7 +35005,8 @@ async function resolveLookupPayload(args = {}) {
       chainDisplayName: net.displayName,
       chainId: net.chainId,
       effectiveMode,
-      persistedMode
+      persistedMode,
+      statuslineWireHint
     };
   } catch {
     return null;
@@ -35035,6 +35066,10 @@ function formatLookupBlock(payload, includeGuard = false) {
   }
   lines.push(...deploymentFooterLines(payload));
   lines.push("");
+  if (payload.statuslineWireHint !== null) {
+    lines.push("statusline: buddy badge not detected in your status bar");
+    lines.push(`wire: ask claude to call \`${payload.statuslineWireHint}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`);
+  }
   if (payload.effectiveMode !== payload.persistedMode) {
     lines.push(`note: \`BUDDY_MODE=${payload.effectiveMode}\` overrides saved mode until unset`);
   }
@@ -35054,13 +35089,9 @@ function formatInvalidVerbBlock(verb) {
 `);
 }
 
-// src/session-start.ts
-import { dirname as dirname4, resolve as resolve2 } from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-
 // src/drift-flag.ts
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, unlinkSync as unlinkSync3, writeFileSync } from "node:fs";
-import { dirname as dirname3, join as join4 } from "node:path";
+import { dirname as dirname4, join as join4 } from "node:path";
 var EXPECTED_RENDER_FLAG = "expected-render.flag";
 var DRIFT_FLAG = "repeat-buddy-instructions.flag";
 var SESSION_FRESH_FLAG = "session-fresh.flag";
@@ -35075,7 +35106,7 @@ function sessionFreshFlagPath() {
 }
 function touchFlag(path) {
   try {
-    mkdirSync2(dirname3(path), { recursive: true });
+    mkdirSync2(dirname4(path), { recursive: true });
     writeFileSync(path, "");
   } catch {}
 }
@@ -35132,10 +35163,6 @@ function isDriftFlagSet() {
 
 // src/session-start.ts
 var MAX_SETTINGS_BYTES = 64 * 1024;
-var HERE2 = dirname4(fileURLToPath2(import.meta.url));
-function statuslineScriptPath() {
-  return resolve2(HERE2, "..", "hooks", "buddy-statusline.sh");
-}
 function validateSettings(raw) {
   if (!isPlainObject(raw)) {
     return { hasStatusLine: false };

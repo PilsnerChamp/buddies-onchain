@@ -49,6 +49,10 @@ Block shape: triple-backtick fenced code (no language tag), two-column `sprite |
 
 The statusline badge itself reads `[<eyes>:<mode>]` — `@,@` for warm, `-,-` for cold/unknown; mode is `off`, `lite`, or `full` after `BUDDY_MODE` override.
 
+### Badge heartbeat
+
+The SessionStart nudge only covers the no-`statusLine` case; it cannot see a foreign statusline or a project-level `.claude/settings.json` that shadows the user-level one. Runtime truth comes from the badge heartbeat: `buddy-statusline.{sh,ps1}` (and the documented inline embed — `plugin/hooks/README.md` § Custom statusline) touch `<CLAUDE_CONFIG_DIR>/plugins/buddy-onchain/.badge-heartbeat` on every render, and the slash lookup (`plugin/src/badge-heartbeat.ts::isBadgeHeartbeatFresh`) checks the mtime. Stale/missing beyond `HEARTBEAT_MAX_AGE_MS` (10 min) → `LookupPayload.statuslineWireHint` carries the absolute script path and `formatLookupBlock` appends a `statusline:` + `wire:` line pair to the card. Certain misses only: ENOENT, a symlinked/non-regular heartbeat (never followed — writer scripts refuse those too), and stale mtime warn; any other fs error stays silent (never nag on uncertainty).
+
 ## Art cache
 
 The art cache is the bridge between warm slash RPC and ambient turns. SessionStart updates `.buddy-state` only; it does not populate this cache.

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function claudeDir(): string {
   return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
@@ -12,6 +13,26 @@ export function pluginDataDir(): string {
 
 export function buddyStatePath(): string {
   return join(pluginDataDir(), ".buddy-state");
+}
+
+// Touched by buddy-statusline.{sh,ps1} on every render (and by documented
+// inline embeds — see hooks/README.md § Custom statusline). Fresh mtime is
+// the plugin's only evidence the badge participates in the live status bar;
+// the rendered bar itself is TUI chrome no hook can read back.
+export function badgeHeartbeatPath(): string {
+  return join(pluginDataDir(), ".badge-heartbeat");
+}
+
+// `import.meta.url` resolves to runtime location of the running module —
+// `plugin/dist/index.js` when bundled and `plugin/src/plugin-paths.ts` when
+// run from source. Both ascend to `plugin/`, descending to `hooks/` lands at
+// `plugin/hooks/buddy-statusline.sh`. Avoid `__dirname`: bun build inlines
+// it as the absolute build-machine source path, leaking dev environment
+// AND breaking runtime resolution on installed plugins.
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+export function statuslineScriptPath(): string {
+  return resolve(HERE, "..", "hooks", "buddy-statusline.sh");
 }
 
 export function buddyArtCachePath(): string {
