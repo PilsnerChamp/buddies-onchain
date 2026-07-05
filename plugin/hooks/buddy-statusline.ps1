@@ -8,7 +8,8 @@
 # badge participates in the live status bar (the rendered bar itself is TUI
 # chrome nothing can read back). Touched before any state validation —
 # heartbeat means "this script runs in the statusline loop", not "badge
-# visible". Best-effort; reparse-point heartbeat is never followed.
+# visible". Best-effort; a reparse-point or non-file heartbeat is never
+# touched.
 
 # Config dir resolution: CLAUDE_CONFIG_DIR -> USERPROFILE\.claude -> $HOME\.claude.
 $ClaudeDir = if ($env:CLAUDE_CONFIG_DIR) {
@@ -30,12 +31,15 @@ try {
     if (-not (Test-Path -LiteralPath $HeartbeatDir -ErrorAction Stop)) {
         New-Item -ItemType Directory -Path $HeartbeatDir -Force -ErrorAction Stop | Out-Null
     }
-    $HeartbeatIsReparse = $false
+    # Refuse reparse points AND existing non-files (a directory would take
+    # the mtime write but never satisfy the reader).
+    $HeartbeatRefused = $false
     if (Test-Path -LiteralPath $Heartbeat -ErrorAction Stop) {
         $HeartbeatItem = Get-Item -LiteralPath $Heartbeat -Force -ErrorAction Stop
-        $HeartbeatIsReparse = [bool]($HeartbeatItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint)
+        $HeartbeatRefused = [bool]($HeartbeatItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -or
+            $HeartbeatItem.PSIsContainer
     }
-    if (-not $HeartbeatIsReparse) {
+    if (-not $HeartbeatRefused) {
         if (Test-Path -LiteralPath $Heartbeat -ErrorAction Stop) {
             (Get-Item -LiteralPath $Heartbeat -Force -ErrorAction Stop).LastWriteTimeUtc = [DateTime]::UtcNow
         } else {

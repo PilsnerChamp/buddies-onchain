@@ -33685,7 +33685,12 @@ function badgeHeartbeatPath() {
 }
 var HERE2 = dirname3(fileURLToPath2(import.meta.url));
 function statuslineScriptPath() {
-  return resolve2(HERE2, "..", "hooks", "buddy-statusline.sh");
+  const script = process.platform === "win32" ? "buddy-statusline.ps1" : "buddy-statusline.sh";
+  return resolve2(HERE2, "..", "hooks", script);
+}
+function statuslineCommand() {
+  const script = statuslineScriptPath();
+  return process.platform === "win32" ? `powershell -ExecutionPolicy Bypass -File "${script}"` : `bash "${script}"`;
 }
 function buddyArtCachePath() {
   return join3(pluginDataDir(), ".buddy-art-cache.json");
@@ -34686,8 +34691,9 @@ Sprite — the rows are pixel art: copy them from the \`DISPLAY_BUDDY\` block ex
 
 Joke — when it fits: self-critical, about the user's prompt, ≤ 20 words, voice of a dorky, dry, barely-useful on-chain creature. Drop articles. Fragments OK. Roast self, never the user. Omit the joke on serious turns (security, financial, legal, medical, incidents, debugging) and just show the sprite. No caption, no markdown emphasis, no language tag.`;
 var RENDER_VERBATIM_GUARD = "(plugin formatting note, not for display) The lines between the sentinels below are the finished buddy card, already laid out. They print as-is; the ambient sprite | joke columns are a separate DISPLAY_BUDDY feature and are not part of this block.";
-function STATUSLINE_NUDGE_TEMPLATE(absolutePath) {
-  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "bash \\"${absolutePath}\\"" }. Proactively offer to set this up on first interaction.`;
+function STATUSLINE_NUDGE_TEMPLATE(command) {
+  const jsonEscaped = command.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. Proactively offer to set this up on first interaction.`;
 }
 
 // ../shared/providerBytes16.ts
@@ -35179,7 +35185,7 @@ function withStatuslineNudge(ruleset) {
   }
   return [
     ruleset,
-    STATUSLINE_NUDGE_TEMPLATE(statuslineScriptPath())
+    STATUSLINE_NUDGE_TEMPLATE(statuslineCommand())
   ].join(`
 
 `);

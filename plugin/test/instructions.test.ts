@@ -42,13 +42,23 @@ describe("instructions rulesets — contract text", () => {
 });
 
 describe("STATUSLINE_NUDGE_TEMPLATE", () => {
-  test("injects the resolved statusline script path inline", () => {
-    const nudge = STATUSLINE_NUDGE_TEMPLATE("/abs/path/buddy-statusline.sh");
+  test("injects the resolved statusline command with JSON-escaped quotes", () => {
+    const nudge = STATUSLINE_NUDGE_TEMPLATE('bash "/abs/path/buddy-statusline.sh"');
     const pluginRootPlaceholder = "${CLAUDE_" + "PLUGIN_ROOT}";
 
     expect(nudge).toContain("/abs/path/buddy-statusline.sh");
     expect(nudge).toContain("statusLine");
     expect(nudge).toContain(String.raw`bash \"/abs/path/buddy-statusline.sh\"`);
     expect(nudge).not.toContain(pluginRootPlaceholder);
+  });
+
+  test("windows-shaped command passes through JSON-escaped (quotes and backslashes)", () => {
+    const nudge = STATUSLINE_NUDGE_TEMPLATE(
+      'powershell -ExecutionPolicy Bypass -File "C:\\p\\buddy-statusline.ps1"',
+    );
+
+    expect(nudge).toContain(
+      String.raw`powershell -ExecutionPolicy Bypass -File \"C:\\p\\buddy-statusline.ps1\"`,
+    );
   });
 });

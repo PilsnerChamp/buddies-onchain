@@ -9,16 +9,20 @@
 # badge participates in the live status bar (the rendered bar itself is TUI
 # chrome nothing can read back). Touched before any state validation —
 # heartbeat means "this script runs in the statusline loop", not "badge
-# visible". Best-effort; symlinked heartbeat is never followed.
+# visible". Best-effort; a symlinked or non-regular heartbeat is never
+# touched.
 
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 STATE="$CLAUDE_DIR/plugins/buddy-onchain/.buddy-state"
 HEARTBEAT="$CLAUDE_DIR/plugins/buddy-onchain/.badge-heartbeat"
 
-# `[ ! -h ]` then touch has an inherent TOCTOU window; accepted — anyone who
-# can swap files inside $CLAUDE_DIR already controls settings.json and the
-# state file this script trusts. Same accepted pattern as the state read.
-if [ ! -h "$HEARTBEAT" ]; then
+# Refuse symlinks AND existing non-regular files: touching a directory would
+# succeed but never satisfy the reader, and opening a FIFO for write could
+# block the statusline render. Check-then-touch has an inherent TOCTOU
+# window; accepted — anyone who can swap files inside $CLAUDE_DIR already
+# controls settings.json and the state file this script trusts. Same
+# accepted pattern as the state read.
+if [ ! -h "$HEARTBEAT" ] && { [ ! -e "$HEARTBEAT" ] || [ -f "$HEARTBEAT" ]; }; then
   mkdir -p "$CLAUDE_DIR/plugins/buddy-onchain" 2>/dev/null || :
   touch "$HEARTBEAT" 2>/dev/null || :
 fi

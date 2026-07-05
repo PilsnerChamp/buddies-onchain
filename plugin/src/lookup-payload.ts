@@ -375,6 +375,8 @@ export async function resolveLookupPayload(
     const buddyStatus: BuddyStatus = result.state.hatch satisfies BuddyStatus;
     const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
 
+    // Checked only on this warm-lookup path by design: before a buddy
+    // exists there is nothing for the badge to show, so no wiring nag.
     let statuslineWireHint: string | null = null;
     try {
       if (!isBadgeHeartbeatFresh()) {

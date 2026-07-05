@@ -98,7 +98,7 @@ buddy_state="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/buddy-onchain/.buddy-st
 # Badge heartbeat — lets `/buddy-onchain` detect the badge is wired. Keep these
 # lines: without them the lookup card warns the badge is missing.
 buddy_heartbeat="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/buddy-onchain/.badge-heartbeat"
-if [ ! -h "$buddy_heartbeat" ]; then
+if [ ! -h "$buddy_heartbeat" ] && { [ ! -e "$buddy_heartbeat" ] || [ -f "$buddy_heartbeat" ]; }; then
   mkdir -p "${buddy_heartbeat%/*}" 2>/dev/null || :
   touch "$buddy_heartbeat" 2>/dev/null || :
 fi

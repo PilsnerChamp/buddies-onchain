@@ -26,13 +26,29 @@ export function badgeHeartbeatPath(): string {
 // `import.meta.url` resolves to runtime location of the running module —
 // `plugin/dist/index.js` when bundled and `plugin/src/plugin-paths.ts` when
 // run from source. Both ascend to `plugin/`, descending to `hooks/` lands at
-// `plugin/hooks/buddy-statusline.sh`. Avoid `__dirname`: bun build inlines
+// the platform's statusline script. Avoid `__dirname`: bun build inlines
 // it as the absolute build-machine source path, leaking dev environment
 // AND breaking runtime resolution on installed plugins.
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 export function statuslineScriptPath(): string {
-  return resolve(HERE, "..", "hooks", "buddy-statusline.sh");
+  // Platform-matched: a Windows user told to wire the `.sh` script gets a
+  // hint they cannot follow.
+  const script =
+    process.platform === "win32"
+      ? "buddy-statusline.ps1"
+      : "buddy-statusline.sh";
+  return resolve(HERE, "..", "hooks", script);
+}
+
+// Full settings.json `statusLine.command` value for the platform script —
+// the interpreter must match statuslineScriptPath(): `.ps1` under bash (or
+// `.sh` under powershell) wires a command that never renders.
+export function statuslineCommand(): string {
+  const script = statuslineScriptPath();
+  return process.platform === "win32"
+    ? `powershell -ExecutionPolicy Bypass -File "${script}"`
+    : `bash "${script}"`;
 }
 
 export function buddyArtCachePath(): string {

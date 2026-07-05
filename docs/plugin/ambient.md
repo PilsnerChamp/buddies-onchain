@@ -45,7 +45,7 @@ Block shape: triple-backtick fenced code (no language tag), two-column `sprite |
 
 ### Statusline nudge
 
-`plugin/src/instructions.ts::STATUSLINE_NUDGE_TEMPLATE(absolutePath)` appends to `SessionStart` output only when `settings.json.statusLine` is missing. The template carries an absolute path resolved at injection time (no `${CLAUDE_PLUGIN_ROOT}` literal — that does not interpolate at statusline runtime). The user is prompted to add a `statusLine` entry pointing at the bundled `buddy-statusline.sh`.
+`plugin/src/instructions.ts::STATUSLINE_NUDGE_TEMPLATE(command)` appends to `SessionStart` output only when `settings.json.statusLine` is missing. The template carries the full platform-matched command from `plugin-paths.ts::statuslineCommand()` — `bash` + `buddy-statusline.sh`, or `powershell` + `buddy-statusline.ps1` on Windows — with the absolute path resolved at injection time (no `${CLAUDE_PLUGIN_ROOT}` literal — that does not interpolate at statusline runtime).
 
 The statusline badge itself reads `[<eyes>:<mode>]` — `@,@` for warm, `-,-` for cold/unknown; mode is `off`, `lite`, or `full` after `BUDDY_MODE` override.
 

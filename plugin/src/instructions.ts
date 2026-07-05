@@ -41,6 +41,10 @@ export const RENDER_VERBATIM_GUARD =
   "(plugin formatting note, not for display) The lines between the sentinels below are the finished buddy card, already laid out. They print as-is; the ambient sprite | joke columns are a separate DISPLAY_BUDDY feature and are not part of this block.";
 
 // Statusline nudge. See `docs/plugin/ambient.md` § Statusline nudge.
-export function STATUSLINE_NUDGE_TEMPLATE(absolutePath: string): string {
-  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "bash \\"${absolutePath}\\"" }. Proactively offer to set this up on first interaction.`;
+// `command` is the full platform-matched interpreter+path string
+// (plugin-paths.ts::statuslineCommand()); inner quotes are escaped here so
+// the snippet reads as valid settings.json.
+export function STATUSLINE_NUDGE_TEMPLATE(command: string): string {
+  const jsonEscaped = command.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. Proactively offer to set this up on first interaction.`;
 }

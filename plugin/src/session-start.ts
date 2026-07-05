@@ -21,7 +21,7 @@ import {
   consumeSessionFresh,
   setSessionFresh,
 } from "./drift-flag";
-import { settingsPath, statuslineScriptPath } from "./plugin-paths";
+import { settingsPath, statuslineCommand } from "./plugin-paths";
 import { isPlainObject } from "./plain-object";
 
 interface StatusLineProbe {
@@ -55,7 +55,7 @@ function withStatuslineNudge(ruleset: string): string {
 
   return [
     ruleset,
-    STATUSLINE_NUDGE_TEMPLATE(statuslineScriptPath()),
+    STATUSLINE_NUDGE_TEMPLATE(statuslineCommand()),
   ].join("\n\n");
 }
 
