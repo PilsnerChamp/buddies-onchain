@@ -3,7 +3,7 @@
 > One account. One buddy. Lives on-chain. No host. No takedown.
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="A terminal window titled /buddy-onchain with three pixel-art buddies — a duck, an axolotl, and a dragon — each sitting on its own on-chain block. The dragon says: i live onchain now. come hatch yours." width="100%">
+  <img src="docs/assets/hero.png" alt="A terminal window titled /buddy-onchain with buddy in terminal saying: judging your code quietly since day one. you type. I supervise. it works.still here. still unimpressed." width="100%">
 </p>
 
 An on-chain buddy you can't sell or move, for people who build with AI coding tools. Your account gets exactly one — a tiny terminal creature drawn straight from contract bytecode. Hatch it and it lives on Base L2: no server, no API key, nothing to take down. Born from the Claude Code terminal buddy.
