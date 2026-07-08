@@ -3,7 +3,7 @@
 > One account. One buddy. Lives on-chain. No host. No takedown.
 
 <p align="center">
-  <img src="docs/assets/hero.png" alt="A terminal window titled /buddy-onchain with buddy in terminal saying: judging your code quietly since day one. you type. I supervise. it works.still here. still unimpressed." width="100%">
+  <img src="docs/assets/hero.png" alt="A terminal window titled /buddy-onchain with buddy in terminal saying: judging your code quietly since day one. you type. I supervise. it works. still yours. still unimpressed." width="100%">
 </p>
 
 An on-chain buddy you can't sell or move, for people who build with AI coding tools. Your account gets exactly one — a tiny terminal creature drawn straight from contract bytecode. Hatch it and it lives on Base L2: no server, no API key, nothing to take down. Born from the Claude Code terminal buddy.
@@ -12,17 +12,17 @@ An on-chain buddy you can't sell or move, for people who build with AI coding to
 
 One account, one buddy. Species, hat, eyes, shiny, rarity, stats — all rolled from your account UUID, same every time. Same buddy in Claude Code, same buddy on the dApp.
 
-**In Claude Code** — your buddy rides along as the `/buddy-onchain` ambient companion:
+**In Claude Code** — your buddy rides along as the `/buddy-onchain` ambient companion (see above).
 
-<img src="docs/assets/buddy-in-terminal.png" width="100%" alt="The /buddy-onchain ambient companion rendered in a Claude Code terminal session">
-
-**On-chain** — the same buddy as the `/view` card, a fully on-chain SVG rendered from contract bytecode:
+**On-chain** — the same buddy as the [`/view`](https://buddies-onchain.xyz/view/1) card, a fully on-chain SVG rendered from contract bytecode:
 
 <p align="center">
   <img src="docs/assets/buddy-svg-card.png" width="420" alt="The same buddy rendered as the on-chain SVG card shown on the dApp /view page">
 </p>
 
 Traits vary by account — the full set plus a reference gallery live in [`docs/onchain/renderer.md`](docs/onchain/renderer.md) and [`docs/onchain/derivation.md`](docs/onchain/derivation.md).
+
+Every hatched buddy is public — look one up on the dApp at [buddies-onchain.xyz/view](https://buddies-onchain.xyz/view) or browse the [collection on OpenSea](https://opensea.io/collection/buddies-onchain).
 
 ## Use it
 
@@ -70,7 +70,7 @@ Full detail:
 - Contract shape, stages, invariants — [`docs/onchain/contract.md`](docs/onchain/contract.md)
 - On-chain SVG renderer — [`docs/onchain/renderer.md`](docs/onchain/renderer.md)
 
-Status: live on Base mainnet (chain id 8453). `Hatched` is implemented and deployed — `BuddyNFT` is at `0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9` ([Basescan](https://basescan.org/address/0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9)), source-verified on Basescan and Sourcify (`exact_match`, solc 0.8.24). The genesis buddy #1 is hatched — [view it on the dApp](https://buddies-onchain.xyz/view/1). Source: [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol).
+Status: live on Base mainnet (chain id 8453). `Hatched` is implemented and deployed — `BuddyNFT` is at `0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9`, source-verified on [Basescan](https://basescan.org/address/0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9#code) and [Sourcify](https://repo.sourcify.dev/8453/0x5684082F1219eCB61CbD2e8Ec2dF537104a48fc9) (`exact_match`, solc 0.8.24). Source: [`onchain/contracts/BuddyNFT.sol`](onchain/contracts/BuddyNFT.sol).
 
 ## Build
 
