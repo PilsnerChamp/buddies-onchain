@@ -25,7 +25,7 @@
 
 import { createHash } from "node:crypto";
 
-import { isValidUuid } from "~shared/isValidUuid";
+import { isValidUuid } from "./isValidUuid";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { getActiveNetwork } from "./network";
 import { safeReadJson, safeWriteJson } from "./safe-json-store";

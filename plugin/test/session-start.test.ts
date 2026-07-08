@@ -17,9 +17,28 @@ const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 const DIST = join(PLUGIN_ROOT, "dist", "index.js");
 
+// Pre-deploy mainnet identity (null contract) — used where a subprocess reads
+// an empty deployments dir.
 const MAINNET_IDENTITY: IdentityTuple = {
   accountUuidHash: createHash("sha256").update(TEST_UUID).digest("hex"),
   chainId: 8453,
+  contractAddress: null,
+};
+
+// Fully-resolved mainnet identity: chainId 8453 + the deployed BuddyNFT address
+// from `plugin/deployments/8453.json`. Subprocesses that read the real
+// deployments dir resolve this via `getActiveNetwork()`.
+const MAINNET_DEPLOYED_IDENTITY: IdentityTuple = {
+  accountUuidHash: createHash("sha256").update(TEST_UUID).digest("hex"),
+  chainId: 8453,
+  contractAddress: "0x5684082f1219ecb61cbd2e8ec2df537104a48fc9",
+};
+
+// A stale testnet-era identity persisted from staging. The mainnet-only plugin
+// must invalidate it on the next resolve.
+const STALE_TESTNET_IDENTITY: IdentityTuple = {
+  accountUuidHash: createHash("sha256").update(TEST_UUID).digest("hex"),
+  chainId: 84532,
   contractAddress: null,
 };
 
@@ -138,7 +157,6 @@ async function runSessionStart(
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
-      BUDDY_NETWORK: "mainnet",
       ...env,
     },
   });
@@ -246,7 +264,6 @@ async function runSourceSessionStart(
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
-      BUDDY_NETWORK: "local",
     },
   });
 
@@ -273,7 +290,6 @@ async function runSourceSessionStartWithWriterThrow(
         ...process.env,
         HOME: root,
         CLAUDE_CONFIG_DIR: root,
-        BUDDY_NETWORK: "local",
       },
     },
   );
@@ -398,7 +414,7 @@ describe("SessionStart chain writer behavior", () => {
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain(RULESET_AMBIENT);
     expect(state).toMatchObject({
-      ...LOCAL_IDENTITY,
+      ...MAINNET_DEPLOYED_IDENTITY,
       hatch: "warm",
       tokenId: "0x2a",
     });
@@ -420,7 +436,10 @@ describe("SessionStart chain writer behavior", () => {
 
   test("SessionStart RPC fail force-demotes cached warm state to unknown", async () => {
     const root = freshClaudeRoot();
-    seedState(root, LOCAL_IDENTITY, "warm", "full");
+    // Same (mainnet) identity as the subprocess resolves, so this exercises the
+    // force-demote (warm → unknown on session-start RPC fail), not an identity
+    // rotation.
+    seedState(root, MAINNET_DEPLOYED_IDENTITY, "warm", "full");
 
     const result = await runSourceSessionStart(root, "rpc-fail");
     const state = JSON.parse(readFileSync(statePath(root), "utf8")) as BuddyStateV4;
@@ -430,9 +449,9 @@ describe("SessionStart chain writer behavior", () => {
     expect(result.stdout).toContain(RULESET_AMBIENT);
     expect(state.hatch).toBe("unknown");
     expect(state.tokenId).toBeNull();
-    expect(state.accountUuidHash).toBe(LOCAL_IDENTITY.accountUuidHash);
-    expect(state.chainId).toBe(LOCAL_IDENTITY.chainId);
-    expect(state.contractAddress).toBe(LOCAL_IDENTITY.contractAddress);
+    expect(state.accountUuidHash).toBe(MAINNET_DEPLOYED_IDENTITY.accountUuidHash);
+    expect(state.chainId).toBe(MAINNET_DEPLOYED_IDENTITY.chainId);
+    expect(state.contractAddress).toBe(MAINNET_DEPLOYED_IDENTITY.contractAddress);
   });
 });
 
@@ -599,13 +618,17 @@ describe("SessionStart soft-fail discipline", () => {
 });
 
 describe("SessionStart identity invalidation", () => {
-  test("BUDDY_NETWORK=sepolia invalidates mainnet-cached warmth", async () => {
+  test("stale testnet-cached warmth is invalidated against mainnet", async () => {
+    // The mainnet-only plugin resolves chainId 8453; a persisted testnet-era
+    // identity (84532) mismatches and must be reset to unknown, adopting the
+    // live mainnet identity.
     const root = freshClaudeRoot();
+    // Empty deployments dir => pre-deploy read (buddyNft null), so no live RPC
+    // is attempted; the assertion isolates identity invalidation.
     const deploymentsDir = freshDeploymentsDir();
-    seedState(root, MAINNET_IDENTITY, "warm", "full");
+    seedState(root, STALE_TESTNET_IDENTITY, "warm", "full");
 
     const result = await runSessionStart(root, {
-      BUDDY_NETWORK: "sepolia",
       BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
     });
     const state = JSON.parse(readFileSync(statePath(root), "utf8")) as BuddyStateV4;
@@ -614,7 +637,7 @@ describe("SessionStart identity invalidation", () => {
     expect(result.stdout).toContain(RULESET_AMBIENT);
     expect(state.hatch).toBe("unknown");
     expect(state.tokenId).toBeNull();
-    expect(state.chainId).toBe(84532);
+    expect(state.chainId).toBe(8453);
   });
 });
 

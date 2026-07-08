@@ -32116,7 +32116,7 @@ var init_slice = __esm(() => {
   init_size();
 });
 
-// ../shared/isValidUuid.ts
+// src/isValidUuid.ts
 var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function isValidUuid(value) {
   return typeof value === "string" && UUID_RE.test(value);
@@ -32215,66 +32215,15 @@ function extractIdentity(config) {
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-// ../shared/networks.ts
-var NETWORKS = {
-  local: {
-    key: "local",
-    chainId: 31337,
-    rpcUrl: "http://127.0.0.1:8545",
-    explorerAddressBase: null,
-    openseaItemBase: null,
-    openseaCollectionUrl: null,
-    displayName: "local"
-  },
-  sepolia: {
-    key: "sepolia",
-    chainId: 84532,
-    rpcUrl: "https://sepolia.base.org",
-    explorerAddressBase: "https://sepolia.basescan.org/address/",
-    openseaItemBase: null,
-    openseaCollectionUrl: null,
-    displayName: "base sepolia"
-  },
-  mainnet: {
-    key: "mainnet",
-    chainId: 8453,
-    rpcUrl: "https://mainnet.base.org",
-    explorerAddressBase: "https://basescan.org/address/",
-    openseaItemBase: "https://opensea.io/item/base/",
-    openseaCollectionUrl: "https://opensea.io/collection/buddies-onchain",
-    displayName: "base"
-  }
+var ACTIVE_NETWORK = {
+  key: "mainnet",
+  chainId: 8453,
+  rpcUrl: "https://mainnet.base.org",
+  explorerAddressBase: "https://basescan.org/address/",
+  openseaItemBase: "https://opensea.io/item/base/",
+  openseaCollectionUrl: "https://opensea.io/collection/buddies-onchain",
+  displayName: "base"
 };
-var NETWORKS_BY_CHAIN_ID = Object.fromEntries(Object.values(NETWORKS).map((n) => [n.chainId, n]));
-
-// src/network.ts
-function _loadActiveNetwork() {
-  const key = process.env.BUDDY_NETWORK ?? "mainnet";
-  const n = NETWORKS[key];
-  if (!n) {
-    throw new Error(`Invalid BUDDY_NETWORK: "${key}". Expected one of: ${Object.keys(NETWORKS).join(", ")}.`);
-  }
-  return n;
-}
-var _activeCache = null;
-function _active() {
-  if (_activeCache)
-    return _activeCache;
-  _activeCache = _loadActiveNetwork();
-  return _activeCache;
-}
-var ACTIVE_NETWORK = new Proxy({}, {
-  get: (_, p) => Reflect.get(_active(), p),
-  has: (_, p) => Reflect.has(_active(), p),
-  ownKeys: () => Reflect.ownKeys(_active()),
-  getOwnPropertyDescriptor: (_, p) => {
-    const desc = Reflect.getOwnPropertyDescriptor(_active(), p);
-    if (desc)
-      desc.configurable = true;
-    return desc;
-  }
-});
 var HERE = dirname(fileURLToPath(import.meta.url));
 var DEPLOYMENTS_DIR = resolve(HERE, "..", "deployments");
 function loadDeployment(chainId, dirOverride) {
@@ -32299,7 +32248,7 @@ function getActiveNetwork() {
   };
 }
 
-// ../shared/buddyNftAbi.ts
+// src/buddyNftAbi.ts
 var BUDDY_NFT_ABI = [
   {
     type: "function",
@@ -33388,90 +33337,12 @@ var basePreconf = /* @__PURE__ */ defineChain({
     }
   }
 });
-// node_modules/viem/_esm/chains/definitions/baseSepolia.js
-var sourceId2 = 11155111;
-var baseSepolia = /* @__PURE__ */ defineChain({
-  ...chainConfig,
-  id: 84532,
-  network: "base-sepolia",
-  name: "Base Sepolia",
-  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: {
-      http: ["https://sepolia.base.org"]
-    }
-  },
-  blockExplorers: {
-    default: {
-      name: "Basescan",
-      url: "https://sepolia.basescan.org",
-      apiUrl: "https://api-sepolia.basescan.org/api"
-    }
-  },
-  contracts: {
-    ...chainConfig.contracts,
-    disputeGameFactory: {
-      [sourceId2]: {
-        address: "0xd6E6dBf4F7EA0ac412fD8b65ED297e64BB7a06E1"
-      }
-    },
-    l2OutputOracle: {
-      [sourceId2]: {
-        address: "0x84457ca9D0163FbC4bbfe4Dfbb20ba46e48DF254"
-      }
-    },
-    portal: {
-      [sourceId2]: {
-        address: "0x49f53e41452c74589e85ca1677426ba426459e85",
-        blockCreated: 4446677
-      }
-    },
-    l1StandardBridge: {
-      [sourceId2]: {
-        address: "0xfd0Bf71F60660E2f608ed56e1659C450eB113120",
-        blockCreated: 4446677
-      }
-    },
-    multicall3: {
-      address: "0xca11bde05977b3631167028862be2a173976ca11",
-      blockCreated: 1059647
-    }
-  },
-  testnet: true,
-  sourceId: sourceId2
-});
-var baseSepoliaPreconf = /* @__PURE__ */ defineChain({
-  ...baseSepolia,
-  experimental_preconfirmationTime: 200,
-  rpcUrls: {
-    default: {
-      http: ["https://sepolia-preconf.base.org"]
-    }
-  }
-});
 // src/publicClient.ts
-var anvil = import_viem.defineChain({
-  id: 31337,
-  name: "Anvil",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
-  testnet: true
-});
-function chainForActive() {
-  switch (ACTIVE_NETWORK.key) {
-    case "local":
-      return anvil;
-    case "sepolia":
-      return baseSepolia;
-    case "mainnet":
-      return base;
-  }
-}
 var _client = null;
 function getPublicClient() {
   if (_client === null) {
     _client = import_viem.createPublicClient({
-      chain: chainForActive(),
+      chain: base,
       transport: import_viem.http(ACTIVE_NETWORK.rpcUrl)
     });
   }
@@ -34187,10 +34058,10 @@ async function renderAmbientFrame(args) {
   return null;
 }
 
-// ../shared/computeIdentityHash.ts
+// src/computeIdentityHash.ts
 var import_viem2 = __toESM(require__cjs2(), 1);
 
-// ../shared/assertCanonicalV4Uuid.ts
+// src/assertCanonicalV4Uuid.ts
 var UUID_LENGTH = 36;
 var HYPHEN_0 = 8;
 var HYPHEN_1 = 13;
@@ -34230,7 +34101,7 @@ function assertCanonicalV4Uuid(uuidLower) {
   }
 }
 
-// ../shared/computeIdentityHash.ts
+// src/computeIdentityHash.ts
 var TAG = import_viem2.stringToBytes("buddies-onchain:identity:claude:v1");
 var SEP = Uint8Array.of(31);
 function computeIdentityHash(uuid) {
@@ -34696,7 +34567,7 @@ function STATUSLINE_NUDGE_TEMPLATE(command) {
   return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. Proactively offer to set this up on first interaction.`;
 }
 
-// ../shared/providerBytes16.ts
+// src/providerBytes16.ts
 var CLAUDE_PROVIDER = "claude";
 var PROVIDER_MAX_BYTES = 16;
 var PROVIDER_HEX_CHARS = PROVIDER_MAX_BYTES * 2;
@@ -34725,8 +34596,8 @@ function encodeProviderBytes16(provider) {
 var CLAUDE_PROVIDER_BYTES16 = encodeProviderBytes16(CLAUDE_PROVIDER);
 
 // src/lookup.ts
-function siteOriginForKey(key) {
-  return key === "local" ? "http://localhost:5173" : "https://buddies-onchain.xyz";
+function siteOriginForKey(_key) {
+  return "https://buddies-onchain.xyz";
 }
 var UINT32_MAX = 4294967295;
 var ZERO_IDENTITY_HASH = `0x${"0".repeat(64)}`;
@@ -35501,9 +35372,7 @@ Options:
                         used by the marketplace plugin.
   --help, -h            Show this help message
 
-Environment:
-  BUDDY_NETWORK         local | sepolia | mainnet  (default: mainnet)
-                        Selects the chain the plugin reads on-chain state from.
+The plugin reads on-chain state from Base mainnet only.
 `);
       process.exit(0);
     } else {

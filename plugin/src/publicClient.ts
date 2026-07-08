@@ -18,38 +18,20 @@
 
 import {
   createPublicClient,
-  defineChain,
   http,
   type PublicClient,
 } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import { ACTIVE_NETWORK } from './network';
-
-const anvil = defineChain({
-  id: 31337,
-  name: 'Anvil',
-  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: { default: { http: ['http://127.0.0.1:8545'] } },
-  testnet: true,
-});
-
-function chainForActive() {
-  switch (ACTIVE_NETWORK.key) {
-    case 'local':
-      return anvil;
-    case 'sepolia':
-      return baseSepolia;
-    case 'mainnet':
-      return base;
-  }
-}
 
 let _client: PublicClient | null = null;
 
 export function getPublicClient(): PublicClient {
   if (_client === null) {
+    // The plugin runtime knows exactly one chain (Base mainnet); no per-key
+    // chain dispatch. See `network.ts`.
     _client = createPublicClient({
-      chain: chainForActive(),
+      chain: base,
       transport: http(ACTIVE_NETWORK.rpcUrl),
     }) as PublicClient;
   }

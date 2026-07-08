@@ -23,34 +23,37 @@ import { afterEach, describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadDeployment } from "../src/network";
+import { ACTIVE_NETWORK, loadDeployment } from "../src/network";
 
 const REAL_LOCAL_CHAIN_ID = 31337;
 const REAL_LOCAL_BUDDYNFT =
   "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9" as const;
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 
-// `ACTIVE_NETWORK` resolves once on first property read and caches. Asserting
-// its env-driven default in-process is fragile: the test inherits whatever
-// `BUDDY_NETWORK` the host shell exports (e.g. `BUDDY_NETWORK=local` for
-// devs running the local Anvil flow). Run the assertion in a subprocess with
-// the variable scrubbed so it's hermetic.
-describe("ACTIVE_NETWORK — module-level env validation", () => {
-  test("ACTIVE_NETWORK defaults to mainnet when BUDDY_NETWORK is unset", async () => {
+// The plugin runtime knows exactly one chain (Base mainnet). There is no
+// network selection and no `BUDDY_NETWORK` env override — `ACTIVE_NETWORK` is a
+// static constant.
+describe("ACTIVE_NETWORK — mainnet-only, no env override", () => {
+  test("ACTIVE_NETWORK is Base mainnet", () => {
+    expect(ACTIVE_NETWORK.key).toBe("mainnet");
+    expect(ACTIVE_NETWORK.chainId).toBe(8453);
+    expect(ACTIVE_NETWORK.rpcUrl).toBe("https://mainnet.base.org");
+  });
+
+  test("a stray BUDDY_NETWORK env var is ignored (still mainnet)", async () => {
     const script = `
       import { ACTIVE_NETWORK } from "${join(PLUGIN_ROOT, "src", "network.ts")}";
-      process.stdout.write(ACTIVE_NETWORK.key);
+      process.stdout.write(ACTIVE_NETWORK.key + ":" + ACTIVE_NETWORK.chainId);
     `;
-    const { BUDDY_NETWORK: _omit, ...cleanEnv } = process.env;
     const proc = Bun.spawn(["bun", "--eval", script], {
       stdout: "pipe",
       stderr: "pipe",
-      env: cleanEnv as Record<string, string>,
+      env: { ...process.env, BUDDY_NETWORK: "sepolia" } as Record<string, string>,
     });
     const stdout = await new Response(proc.stdout).text();
     await proc.exited;
 
-    expect(stdout).toBe("mainnet");
+    expect(stdout).toBe("mainnet:8453");
   });
 });
 
@@ -63,13 +66,11 @@ describe("loadDeployment (real on-disk fixture)", () => {
     expect(typeof d!.buddyNftBlock).toBe("number");
   });
 
-  test("returns null for a chainId without a committed deployment file", () => {
-    // 8453 (mainnet) currently has no deployment JSON committed; pick one
-    // that's also unambiguously not local.
+  test("mainnet 8453 deployment resolves when committed, else null", () => {
+    // Mainnet is now deployed, so `plugin/deployments/8453.json` is committed
+    // and this loads non-null. The existsSync guard keeps the test honest if
+    // the deployment fixture is ever removed.
     const d = loadDeployment(8453);
-    // Only assert null if the file genuinely doesn't exist on disk; if a
-    // mainnet deploy lands later this test should adapt rather than
-    // false-fail.
     const path = join(
       __dirname,
       "..",

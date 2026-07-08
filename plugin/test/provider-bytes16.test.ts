@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { BUDDY_NFT_ABI } from "~shared/buddyNftAbi";
+import { BUDDY_NFT_ABI } from "../src/buddyNftAbi";
 import {
   CLAUDE_PROVIDER,
   CLAUDE_PROVIDER_BYTES16,
   decodeProviderBytes16,
   encodeProviderBytes16,
   type ProviderBytes16,
-} from "~shared/providerBytes16";
+} from "../src/providerBytes16";
 
 interface AbiEntry {
   type: string;

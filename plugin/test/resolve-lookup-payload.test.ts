@@ -10,12 +10,10 @@ import {
   type BuddyStateV4,
 } from "../src/buddy-state";
 import { setPublicClientForTest } from "../src/publicClient";
-import type { PluginNetworkInfo } from "../src/network";
 import {
   FIXTURE_ACCOUNT_UUID,
-  LOCAL_BUDDY_NFT_ADDRESS,
   MOCK_DEPLOYED_NET,
-  SEPOLIA_DEPLOYED_NET,
+  MOCK_PRE_DEPLOY_NET,
   cleanupLookupFixtureEnv,
   expectStateIdentity,
   fakeReadContractClient,
@@ -44,7 +42,11 @@ const EXPECTED_CACHED_F0_ROWS = [
 const EXPECTED_HATCH_FRAGMENT =
   `identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
 const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#${EXPECTED_HATCH_FRAGMENT}`;
-const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${EXPECTED_HATCH_FRAGMENT}`;
+// Plugin runtime is Base mainnet only; subprocess identity fixtures must match
+// what `getActiveNetwork()` resolves (chainId 8453 + the mainnet BuddyNFT
+// address from `plugin/deployments/8453.json`).
+const MAINNET_CHAIN_ID = 8453;
+const MAINNET_BUDDY_NFT_ADDRESS = "0x5684082f1219ecb61cbd2e8ec2df537104a48fc9";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 let claudeConfigRoot: string | null = null;
 
@@ -109,8 +111,8 @@ async function runWarmStalePayloadSubprocess(
   getTokenCalls: number;
   tokenUriCalls: number;
 }> {
-  // Subprocess needed because ACTIVE_NETWORK is per-process and identity match
-  // requires BUDDY_NETWORK=local.
+  // Subprocess needed because ACTIVE_NETWORK is per-process; the seeded state
+  // identity must match the mainnet chain the plugin resolves.
   const accountUuidHash = createHash("sha256")
     .update(FIXTURE_ACCOUNT_UUID)
     .digest("hex");
@@ -124,8 +126,8 @@ async function runWarmStalePayloadSubprocess(
       hatch: "warm",
       tokenId: "0xfeed",
       accountUuidHash,
-      chainId: 31337,
-      contractAddress: LOCAL_BUDDY_NFT_ADDRESS,
+      chainId: MAINNET_CHAIN_ID,
+      contractAddress: MAINNET_BUDDY_NFT_ADDRESS,
       turnCounter: 0,
       coldNudgeCounter: 0,
     }),
@@ -136,8 +138,8 @@ async function runWarmStalePayloadSubprocess(
       JSON.stringify({
         schemaVersion: 1,
         accountUuidHash,
-        chainId: 31337,
-        contractAddress: LOCAL_BUDDY_NFT_ADDRESS,
+        chainId: MAINNET_CHAIN_ID,
+        contractAddress: MAINNET_BUDDY_NFT_ADDRESS,
         tokenId: "0xfeed",
         frames: {
           f0: EXPECTED_CACHED_F0_ROWS,
@@ -182,7 +184,6 @@ async function runWarmStalePayloadSubprocess(
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
-      BUDDY_NETWORK: "local",
     },
   });
 
@@ -244,7 +245,6 @@ async function runWarmLookupArtCacheSubprocess(root: string): Promise<{
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
-      BUDDY_NETWORK: "local",
     },
   });
 
@@ -336,25 +336,20 @@ describe("resolveLookupPayload — status mapping", () => {
   });
 
   test("pre-deploy chain (buddyNft null) maps to unknown + offline", async () => {
-    const preDeploySepoliaNet: PluginNetworkInfo = {
-      ...SEPOLIA_DEPLOYED_NET,
-      buddyNft: null,
-      deploymentBlock: null,
-    };
     const result = await resolveLookupPayload({
       accountUuidOverride: FIXTURE_ACCOUNT_UUID,
-      netOverride: preDeploySepoliaNet,
+      netOverride: MOCK_PRE_DEPLOY_NET,
     });
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("unknown");
     expect(result!.cardLines).toEqual(EXPECTED_SLEEPING_CARD_ROWS);
   });
 
-  test("URLs are absolute — sepolia routes to prod origin", async () => {
+  test("URLs are absolute prod URLs with no uuid leak", async () => {
     setPublicClientForTest(fakeReadContractClient(async () => 0n));
     const result = await resolveLookupPayload({
       accountUuidOverride: FIXTURE_ACCOUNT_UUID,
-      netOverride: SEPOLIA_DEPLOYED_NET,
+      netOverride: MOCK_DEPLOYED_NET,
     });
     expect(result!.hatchUrl).toBe(PROD_HATCH_URL);
     expect(result!.viewUrl).toBe("https://buddies-onchain.xyz/view");
@@ -410,15 +405,9 @@ describe("resolveLookupPayload — status mapping", () => {
       tokenId: "0xfeed",
     });
 
-    const preDeploySepoliaNet: PluginNetworkInfo = {
-      ...SEPOLIA_DEPLOYED_NET,
-      buddyNft: null,
-      deploymentBlock: null,
-    };
-
     const result = await resolveLookupPayload({
       accountUuidOverride: FIXTURE_ACCOUNT_UUID,
-      netOverride: preDeploySepoliaNet,
+      netOverride: MOCK_PRE_DEPLOY_NET,
     });
     expect(result!.buddyStatus).toBe("warm");
     expect(result!.cardLines).toEqual(EXPECTED_SLEEPING_CARD_ROWS);
@@ -460,8 +449,8 @@ describe("resolveLookupPayload — orchestrator integration", () => {
 
     expect(result).not.toBeNull();
     expect(result!.buddyStatus).toBe("warm");
-    expect(result!.viewUrl).toBe("http://localhost:5173/view/65261");
-    expect(result!.hatchUrl).toBe(LOCAL_HATCH_URL);
+    expect(result!.viewUrl).toBe("https://buddies-onchain.xyz/view/65261");
+    expect(result!.hatchUrl).toBe(PROD_HATCH_URL);
     expect(result!.cardLines).toEqual(EXPECTED_CACHED_F0_ROWS);
     expect(getTokenCalls).toBe(1);
     expect(tokenUriCalls).toBe(0);
@@ -498,8 +487,8 @@ describe("resolveLookupPayload — orchestrator integration", () => {
     expect(cache).toMatchObject({
       schemaVersion: 1,
       accountUuidHash: createHash("sha256").update(FIXTURE_ACCOUNT_UUID).digest("hex"),
-      chainId: 31337,
-      contractAddress: LOCAL_BUDDY_NFT_ADDRESS,
+      chainId: MAINNET_CHAIN_ID,
+      contractAddress: MAINNET_BUDDY_NFT_ADDRESS,
       tokenId: "0x2a",
     });
     expect((cache as { frames: Record<string, string[]> }).frames).toMatchObject({
@@ -522,6 +511,14 @@ describe("resolveLookupPayload — orchestrator integration", () => {
       throw new Error("test claude root not initialized");
     }
 
+    // A malformed deployment JSON makes `getActiveNetwork()` throw, so the
+    // subprocess resolves a less-resolved identity (null chain/contract) than
+    // the seeded warm cache. `resolveLookupPayload` returns null, but the
+    // identity-mismatch guard must NOT clobber the cached warm state.
+    const malformedDeployments = join(root, "malformed-deployments");
+    mkdirSync(malformedDeployments, { recursive: true });
+    writeFileSync(join(malformedDeployments, "8453.json"), "{ not valid json");
+
     const script = `
       import { resolveLookupPayload } from "./src/lookup-payload.ts";
       import { readState } from "./src/buddy-state.ts";
@@ -540,7 +537,7 @@ describe("resolveLookupPayload — orchestrator integration", () => {
         ...process.env,
         HOME: root,
         CLAUDE_CONFIG_DIR: root,
-        BUDDY_NETWORK: "not-a-network",
+        BUDDY_TEST_DEPLOYMENTS_DIR: malformedDeployments,
       },
     });
 

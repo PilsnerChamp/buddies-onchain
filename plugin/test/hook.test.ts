@@ -27,7 +27,6 @@ const DIST = join(PLUGIN_ROOT, "dist", "index.js");
 const RULESET_PREFIX = "BUDDIES ONCHAIN AMBIENT — ";
 const HATCH_FRAGMENT =
   `identityHash=0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb&prngSeed=2990586173&provider=${CLAUDE_PROVIDER}`;
-const LOCAL_HATCH_URL = `http://localhost:5173/hatch#${HATCH_FRAGMENT}`;
 const PROD_HATCH_URL = `https://buddies-onchain.xyz/hatch#${HATCH_FRAGMENT}`;
 
 interface RunResult {
@@ -72,7 +71,7 @@ function frameStatePath(claudeDir: string, projectDir: string): string {
     "projects",
     projectKey,
     TEST_UUID,
-    "31337",
+    "8453",
     "state.json",
   );
 }
@@ -105,11 +104,14 @@ function seedSessionFreshFlag(claudeDir: string): void {
   writeFileSync(sessionFreshFlagPath(claudeDir), "");
 }
 
-function identityLocal() {
+// Plugin runtime is Base mainnet only; identity fixtures must match what
+// `getActiveNetwork()` resolves in the subprocess (chainId 8453 + the mainnet
+// BuddyNFT address from `plugin/deployments/8453.json`).
+function identityMainnet() {
   return {
     accountUuidHash: createHash("sha256").update(TEST_UUID).digest("hex"),
-    chainId: 31337,
-    contractAddress: "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9",
+    chainId: 8453,
+    contractAddress: "0x5684082f1219ecb61cbd2e8ec2df537104a48fc9",
   };
 }
 
@@ -126,7 +128,7 @@ function seedBuddyState(
       tokenId: "0x2a",
       turnCounter: 0,
       coldNudgeCounter: 0,
-      ...identityLocal(),
+      ...identityMainnet(),
       ...patch,
     }),
   );
@@ -135,7 +137,7 @@ function seedBuddyState(
 function seedArtCache(claudeDir: string, patch: Record<string, unknown> = {}): void {
   const cache = {
     schemaVersion: 1,
-    ...identityLocal(),
+    ...identityMainnet(),
     tokenId: "0x2a",
     frames: {
       f0: ["      .[||].", "     [ -  - ]", "     [ ==== ]"],
@@ -227,7 +229,6 @@ async function runHook(
       ...process.env,
       HOME: claudeDir,
       CLAUDE_CONFIG_DIR: claudeDir,
-      BUDDY_NETWORK: "local",
       ...env,
     },
   });
@@ -260,7 +261,6 @@ async function runDistHook(
       ...process.env,
       HOME: claudeDir,
       CLAUDE_CONFIG_DIR: claudeDir,
-      BUDDY_NETWORK: "mainnet",
       ...env,
     },
   });
@@ -298,7 +298,6 @@ async function runSourceCli(
       ...process.env,
       HOME: claudeDir,
       CLAUDE_CONFIG_DIR: claudeDir,
-      BUDDY_NETWORK: "local",
       ...env,
     },
   });
@@ -389,7 +388,7 @@ describe("hook — lookup route", () => {
     expect(context).toContain("BUDDY_RENDER_BEGIN");
     expect(context).not.toContain(RENDER_VERBATIM_GUARD);
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/42`);
+    expect(context).toContain(`https://buddies-onchain.xyz/view/42`);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
     expect(JSON.parse(readFileSync(statePath(claudeDir), "utf8")).turnCounter).toBe(1);
@@ -436,10 +435,10 @@ describe("hook — lookup route", () => {
     const result = await runHook({ prompt: "/buddy-onchain" }, claudeDir, "cold");
     const context = additionalContext(result.stdout);
 
-    expect(context).toContain(LOCAL_HATCH_URL);
+    expect(context).toContain(PROD_HATCH_URL);
     expect(context).not.toContain(TEST_UUID);
     expect(context).toMatch(
-      /http:\/\/localhost:5173\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude/,
+      /https:\/\/buddies-onchain\.xyz\/hatch#identityHash=0x[0-9a-f]{64}&prngSeed=\d+&provider=claude/,
     );
     expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
@@ -455,7 +454,7 @@ describe("hook — lookup route", () => {
     expect(result.exitCode).toBe(0);
     expect(context).toContain("BUDDY_RENDER_BEGIN");
     expect(context).toContain("your buddy is sleeping - not yet hatched onchain:");
-    expect(context).toContain(LOCAL_HATCH_URL);
+    expect(context).toContain(PROD_HATCH_URL);
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toContain("ZZzzz...");
   });
@@ -466,7 +465,7 @@ describe("hook — lookup route", () => {
     const context = additionalContext(result.stdout);
 
     expect(context).toContain("couldn't verify onchain status - check on the site:");
-    expect(context).toContain(LOCAL_HATCH_URL);
+    expect(context).toContain(PROD_HATCH_URL);
     expect(context).toContain("your buddy appears on every user prompt (mode: `full`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
   });
@@ -502,7 +501,7 @@ describe("hook — lookup route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/42`);
+    expect(context).toContain(`https://buddies-onchain.xyz/view/42`);
     expect(context).not.toContain("/hatch#");
     expect(context).toContain("your buddy appears every 3rd prompt (mode: `lite`).");
     expect(context).toContain("change: `/buddy-onchain lite|full|off`");
@@ -523,7 +522,7 @@ describe("hook — lookup route", () => {
     expect(result.exitCode).toBe(0);
     expect(state.hatch).toBe("warm");
     expect(context).toContain("go see your buddy onchain:");
-    expect(context).toContain(`http://localhost:5173/view/42`);
+    expect(context).toContain(`https://buddies-onchain.xyz/view/42`);
     expect(context).not.toContain("ZZzzz...");
     expect(bodyRows).toHaveLength(5);
     expect(bodyRows[0]).toBe("");
@@ -799,7 +798,6 @@ describe("hook — ambient route", () => {
       { prompt: "hello warm cached buddy" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "local" },
     );
     const context = additionalContext(result.stdout);
     const pipeRows = fencedBodyRows(context).filter((line) => line.includes("|"));
@@ -824,7 +822,6 @@ describe("hook — ambient route", () => {
       { prompt: "hello warm cache miss" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "local" },
     );
 
     expect(result.exitCode).toBe(0);
@@ -911,7 +908,7 @@ describe("hook — ambient route", () => {
     expect(context).toContain("COLD_NUDGE");
     expect(context).toContain(`| ${COLD_NUDGE_LINE_1}`);
     expect(context).toContain(`| ${COLD_NUDGE_LINE_2}`);
-    expect(context).toContain(LOCAL_HATCH_URL);
+    expect(context).toContain(PROD_HATCH_URL);
     expect(context).not.toContain(TEST_UUID);
     expect(state.coldNudgeCounter).toBe(10);
   });
@@ -949,7 +946,6 @@ describe("hook — ambient route", () => {
       { prompt: "warm no nudge" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "local" },
     );
     const context = additionalContext(result.stdout);
     const state = JSON.parse(readFileSync(statePath(claudeDir), "utf8"));
@@ -996,7 +992,10 @@ describe("hook — ambient route", () => {
     expect(state.coldNudgeCounter).toBe(7);
   });
 
-  test("ambient cold fire-turn uses production hatch origin on sepolia", async () => {
+  test("ambient cold fire-turn uses production hatch origin on a pre-deploy read", async () => {
+    // Empty deployments dir => `getActiveNetwork().buddyNft === null`
+    // (pre-deploy). Identity is the mainnet chain with a null contract, so the
+    // seeded cold state still matches and the nudge fires with the prod origin.
     const claudeDir = freshClaudeDir();
     const deploymentsDir = freshDeploymentsDir();
     seedBuddyState(claudeDir, {
@@ -1005,16 +1004,15 @@ describe("hook — ambient route", () => {
       tokenId: null,
       turnCounter: 0,
       coldNudgeCounter: 9,
-      chainId: 84532,
+      chainId: 8453,
       contractAddress: null,
     });
 
     const result = await runHook(
-      { prompt: "sepolia cold nudge" },
+      { prompt: "cold nudge pre-deploy" },
       claudeDir,
       "throw",
       {
-        BUDDY_NETWORK: "sepolia",
         BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
       },
     );
@@ -1040,7 +1038,7 @@ describe("hook — ambient route", () => {
         { prompt: `ambient ${i}` },
         claudeDir,
         "--hook",
-        { ...env, BUDDY_NETWORK: "local" },
+        env,
       );
       outputs.push(result.stdout.trim());
     }
@@ -1075,7 +1073,7 @@ describe("hook — ambient route", () => {
         { prompt: `ambient ${i}` },
         claudeDir,
         "--hook",
-        { ...env, BUDDY_NETWORK: "local" },
+        env,
       );
       outputs.push(result.stdout.trim());
     }
@@ -1101,7 +1099,7 @@ describe("hook — ambient route", () => {
       { prompt: "ambient without cache" },
       claudeDir,
       "--hook",
-      { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" },
+      { CLAUDE_PROJECT_DIR: projectDir },
     );
     const state = JSON.parse(readFileSync(statePath(claudeDir), "utf8"));
 
@@ -1122,7 +1120,7 @@ describe("hook — ambient route", () => {
       { prompt: "ambient lite" },
       claudeDir,
       "--hook",
-      { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" },
+      { CLAUDE_PROJECT_DIR: projectDir },
     );
     const context = additionalContext(result.stdout);
 
@@ -1144,7 +1142,7 @@ describe("hook — ambient route", () => {
     expect(additionalContext(slash.stdout)).toContain("go see your buddy onchain:");
     expect(() => readFileSync(artCachePath(claudeDir), "utf8")).not.toThrow();
 
-    const env = { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" };
+    const env = { CLAUDE_PROJECT_DIR: projectDir };
     await runDistHook({ prompt: "ambient after slash 1" }, claudeDir, "--hook", env);
     await runDistHook({ prompt: "ambient after slash 2" }, claudeDir, "--hook", env);
     const ambient = await runDistHook(
@@ -1163,10 +1161,13 @@ describe("hook — ambient route", () => {
   });
 
   test("identity rotation via slash clears stale warm cache before next ambient sleeping sprite", async () => {
+    // Stale testnet-era identity (chainId 84532) persisted from staging. The
+    // plugin now runs mainnet-only, so the live identity (chainId 8453, null
+    // contract on this empty-deployments read) differs and the slash lookup
+    // must rotate identity, resetting to unknown and clearing the warm cache.
     const claudeDir = freshClaudeDir();
     const deploymentsDir = freshDeploymentsDir();
     const env = {
-      BUDDY_NETWORK: "sepolia",
       BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir,
     };
     seedBuddyState(claudeDir, {
@@ -1174,11 +1175,11 @@ describe("hook — ambient route", () => {
       hatch: "warm",
       tokenId: "0xfeed",
       turnCounter: 2,
-      chainId: 8453,
+      chainId: 84532,
       contractAddress: null,
     });
     seedArtCache(claudeDir, {
-      chainId: 8453,
+      chainId: 84532,
       contractAddress: null,
       tokenId: "0xfeed",
     });
@@ -1194,7 +1195,7 @@ describe("hook — ambient route", () => {
     expect(slash.exitCode).toBe(0);
     expect(stateAfterSlash.hatch).toBe("unknown");
     expect(stateAfterSlash.tokenId).toBeNull();
-    expect(stateAfterSlash.chainId).toBe(84532);
+    expect(stateAfterSlash.chainId).toBe(8453);
     expect(stateAfterSlash.contractAddress).toBeNull();
     expect(() => readFileSync(artCachePath(claudeDir), "utf8")).toThrow();
 
@@ -1223,7 +1224,7 @@ describe("hook — drift reminder lifecycle", () => {
       { prompt: "ambient with drift reminder" },
       claudeDir,
       "throw",
-      { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" },
+      { CLAUDE_PROJECT_DIR: projectDir },
     );
     const context = additionalContext(result.stdout);
 
@@ -1312,7 +1313,7 @@ describe("hook — expected-render flag lifecycle", () => {
       { prompt: "ambient sets expected-render" },
       claudeDir,
       "throw",
-      { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" },
+      { CLAUDE_PROJECT_DIR: projectDir },
     );
 
     expect(result.exitCode).toBe(0);
@@ -1395,7 +1396,7 @@ describe("hook — expected-render flag lifecycle", () => {
       { prompt: "stale flag ambient success" },
       claudeDir,
       "throw",
-      { CLAUDE_PROJECT_DIR: projectDir, BUDDY_NETWORK: "local" },
+      { CLAUDE_PROJECT_DIR: projectDir },
     );
 
     expect(result.exitCode).toBe(0);
@@ -1414,7 +1415,14 @@ describe("hook — soft-fail discipline", () => {
   });
 
   test("outer catch preserves drift flag for the next turn", async () => {
+    // A malformed deployment JSON makes `getActiveNetwork()` throw (deploy-
+    // pipeline integrity hard-fail). The pre-deploy-consistent identity (null
+    // chain/contract on both sides) lets the ambient warm branch run until it
+    // evaluates `getActiveNetwork()` uncaught, exercising the outer catch:
+    // `{}` is emitted and the drift flag is left set for the next turn.
     const claudeDir = freshClaudeDir();
+    const deploymentsDir = freshDeploymentsDir();
+    writeFileSync(join(deploymentsDir, "8453.json"), "{ not valid json");
     seedBuddyState(claudeDir, {
       chainId: null,
       contractAddress: null,
@@ -1428,7 +1436,7 @@ describe("hook — soft-fail discipline", () => {
       { prompt: "force getActiveNetwork throw" },
       claudeDir,
       "throw",
-      { BUDDY_NETWORK: "invalid-network" },
+      { BUDDY_TEST_DEPLOYMENTS_DIR: deploymentsDir },
     );
 
     expect(result.exitCode).toBe(0);

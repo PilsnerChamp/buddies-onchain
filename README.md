@@ -26,11 +26,11 @@ Every hatched buddy is public — look one up on the dApp at [buddies-onchain.xy
 
 ## Use it
 
-Install the plugin inside Claude Code:
+Install the plugin:
 
 ```
-/plugin marketplace add PilsnerChamp/buddies-onchain
-/plugin install buddy-onchain@buddies-onchain
+claude plugin marketplace add PilsnerChamp/buddies-onchain
+claude plugin install buddy-onchain@buddies-onchain
 ```
 
 Then, in any session:

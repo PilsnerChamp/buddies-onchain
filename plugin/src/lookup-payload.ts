@@ -9,7 +9,7 @@
 // The shared chain writer below has its own documented throwing contract so
 // SessionStart / slash callers can choose their local soft-fail behavior.
 
-import { isValidUuid } from "~shared/isValidUuid";
+import { isValidUuid } from "./isValidUuid";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { RENDER_VERBATIM_GUARD } from "./instructions";
 import {

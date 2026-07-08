@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { assertCanonicalV4Uuid } from "~shared/assertCanonicalV4Uuid";
-import { computeIdentityHash } from "~shared/computeIdentityHash";
+import { assertCanonicalV4Uuid } from "../src/assertCanonicalV4Uuid";
+import { computeIdentityHash } from "../src/computeIdentityHash";
 import vectorFileJson from "../../onchain/test/vectors/identity-hash-vectors.json";
 
 interface IdentityHashVector {

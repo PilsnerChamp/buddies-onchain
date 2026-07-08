@@ -7,8 +7,8 @@
  *   - `--stop` scans the last assistant message and marks ambient drift.
  *   - `--uuid <uuid>` is a developer-only override for hook ambient rendering.
  *
- * Network is picked via `BUDDY_NETWORK={local|sepolia|mainnet}` env var
- * (default: `mainnet`). See `plugin/src/network.ts`.
+ * The plugin runtime targets exactly one chain — Base mainnet — with no
+ * network selection or env override. See `plugin/src/network.ts`.
  *
  * Usage:
  *   node plugin/dist/index.js --session-start
@@ -20,7 +20,7 @@
  * CLAUDE.md (plugin component description).
  */
 
-import { isValidUuid } from "~shared/isValidUuid";
+import { isValidUuid } from "./isValidUuid";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { getActiveNetwork } from "./network";
 import { buildAdditionalContext, renderAmbientFrame } from "./ambient";
@@ -110,9 +110,7 @@ Options:
                         used by the marketplace plugin.
   --help, -h            Show this help message
 
-Environment:
-  BUDDY_NETWORK         local | sepolia | mainnet  (default: mainnet)
-                        Selects the chain the plugin reads on-chain state from.
+The plugin reads on-chain state from Base mainnet only.
 `);
       process.exit(0);
     } else {

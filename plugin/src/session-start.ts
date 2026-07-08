@@ -8,7 +8,7 @@
 //
 // Hard contract: never log, exit, or throw past `runSessionStart`.
 
-import { isValidUuid } from "~shared/isValidUuid";
+import { isValidUuid } from "./isValidUuid";
 import { defaultState, getEnvMode, readState, type ModeLevel } from "./buddy-state";
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { deriveEffective } from "./effective-state";

@@ -33,7 +33,6 @@ const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const TEST_IDENTITY_HASH = "0x0fa54136bda4ecc31bcd4169c89d1ea7d5f294d7ef27022c1f68cfd5bab4ddbb";
 const TEST_PRNG_SEED = 2990586173;
 const PROD_ORIGIN = "https://buddies-onchain.xyz";
-const LOCAL_ORIGIN = "http://localhost:5173";
 const FAKE_DEPLOYED_ADDR = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9" as const;
 
 // Tests pass `netOverride` to `resolveDeepLink` so the pre-deploy / deployed
@@ -203,15 +202,9 @@ describe("URL helpers", () => {
   });
 });
 
-describe("siteOriginForKey — local-vs-prod gating", () => {
-  test("local key returns localhost:5173", () => {
-    expect(siteOriginForKey("local")).toBe(LOCAL_ORIGIN);
-  });
-
-  test("sepolia key returns production origin", () => {
-    expect(siteOriginForKey("sepolia")).toBe(PROD_ORIGIN);
-  });
-
+describe("siteOriginForKey — mainnet-only origin", () => {
+  // The plugin runtime knows exactly one chain (Base mainnet), so the site
+  // origin is always production — there is no local/testnet origin branch.
   test("mainnet key returns production origin", () => {
     expect(siteOriginForKey("mainnet")).toBe(PROD_ORIGIN);
   });

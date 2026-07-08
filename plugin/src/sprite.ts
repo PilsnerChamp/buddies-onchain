@@ -12,7 +12,7 @@
 // Soft-fail by design: any error returns null. Sprite/card rendering is
 // decorative; slash/hook routing still owns the product action.
 
-import { BUDDY_NFT_ABI } from '~shared/buddyNftAbi';
+import { BUDDY_NFT_ABI } from './buddyNftAbi';
 import { getPublicClient } from './publicClient';
 import type { PluginNetworkInfo } from './network';
 

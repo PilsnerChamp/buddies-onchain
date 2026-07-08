@@ -15,7 +15,6 @@ import { ACTIVE_NETWORK, type PluginNetworkInfo } from "../../src/network";
 import { artCachePath } from "../../src/art-cache";
 import { setPublicClientForTest } from "../../src/publicClient";
 import type { PublicClient } from "viem";
-import { NETWORKS } from "~shared/networks";
 
 export { artCachePath, readIdentityTuple };
 
@@ -39,14 +38,6 @@ export const MOCK_PRE_DEPLOY_NET: PluginNetworkInfo = {
   ...MOCK_DEPLOYED_NET,
   buddyNft: null,
   deploymentBlock: null,
-};
-
-// Sepolia origin = production; this keeps URL assertions independent of the
-// shell's `BUDDY_NETWORK`.
-export const SEPOLIA_DEPLOYED_NET: PluginNetworkInfo = {
-  ...NETWORKS.sepolia,
-  buddyNft: FAKE_DEPLOYED_CONTRACT_ADDRESS,
-  deploymentBlock: 3,
 };
 
 const ORIGINAL_HOME = process.env.HOME;

@@ -1,14 +1,14 @@
 {
   "name": "buddies-onchain",
   "owner": {
-    "name": "Buddies Onchain",
+    "name": "PilsnerChamp",
     "url": "https://github.com/PilsnerChamp/buddies-onchain"
   },
   "plugins": [
     {
       "name": "buddy-onchain",
       "source": "./plugin",
-      "description": "An AI buddy in your terminal, bound to your account — living fully onchain on Base. No host. No takedown. Go hatch yours."
+      "description": "An AI buddy in your terminal — one per account, non-transferable, living fully onchain on Base. No host. No takedown. Go hatch yours."
     }
   ]
 }

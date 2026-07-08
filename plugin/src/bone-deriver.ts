@@ -9,7 +9,7 @@
  * computed client-side and handed to BuddyNFT.hatch unchanged.
  */
 
-import { computeIdentityHash } from "~shared/computeIdentityHash";
+import { computeIdentityHash } from "./computeIdentityHash";
 
 // ---------- constants ------------------------------------------------------
 

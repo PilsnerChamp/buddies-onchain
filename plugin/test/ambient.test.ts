@@ -34,10 +34,13 @@ const tmpDirs: string[] = [];
 const TEST_UUID = "47492784-eec5-4983-8072-9e2aa832c24b";
 const PLUGIN_ROOT = join(import.meta.dir, "..");
 
-const LOCAL_IDENTITY = {
+// Plugin runtime is Base mainnet only; identity fixtures must match what
+// `getActiveNetwork()` resolves (chainId 8453 + the mainnet BuddyNFT address
+// from `plugin/deployments/8453.json`).
+const MAINNET_IDENTITY = {
   accountUuidHash: createHash("sha256").update(TEST_UUID).digest("hex"),
-  chainId: 31337,
-  contractAddress: "0xdc64a140aa3e981100a9beca4e685f962f0cf6c9",
+  chainId: 8453,
+  contractAddress: "0x5684082f1219ecb61cbd2e8ec2df537104a48fc9",
 };
 
 function freshTmp(): string {
@@ -56,7 +59,7 @@ function writeClaudeConfig(root: string): void {
 function artCache(overrides: Partial<BuddyArtCacheV1> = {}): BuddyArtCacheV1 {
   return {
     schemaVersion: 1,
-    ...LOCAL_IDENTITY,
+    ...MAINNET_IDENTITY,
     tokenId: "0x2a",
     frames: {
       f0: ["frame zero"],
@@ -126,7 +129,6 @@ async function renderAmbientFrames(options: {
       HOME: options.root,
       CLAUDE_CONFIG_DIR: options.root,
       CLAUDE_PROJECT_DIR: options.projectDir,
-      BUDDY_NETWORK: "local",
       BUDDY_TEST_UUID: TEST_UUID,
       BUDDY_TEST_TOKEN_ID: options.tokenId ?? "0x2a",
       BUDDY_TEST_COUNT: String(options.count ?? 1),

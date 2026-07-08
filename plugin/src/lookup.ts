@@ -21,18 +21,19 @@
 //
 // Reference: docs/network-config.md.
 
-import { BUDDY_NFT_ABI } from '~shared/buddyNftAbi';
-import { computeIdentityHash } from '~shared/computeIdentityHash';
-import { CLAUDE_PROVIDER } from '~shared/providerBytes16';
+import { BUDDY_NFT_ABI } from './buddyNftAbi';
+import { computeIdentityHash } from './computeIdentityHash';
+import { CLAUDE_PROVIDER } from './providerBytes16';
 import { deriveBuddyFromAccount } from './bone-deriver';
 import { getActiveNetwork, type PluginNetworkInfo } from './network';
 import { getPublicClient } from './publicClient';
-import type { NetworkKey } from '~shared/networks';
+import type { NetworkKey } from './network';
 
-// Site origin gated on active network key: local dev points at the Vite dev
-// server; all other environments (sepolia, mainnet) use the production origin.
-export function siteOriginForKey(key: NetworkKey): string {
-  return key === 'local' ? 'http://localhost:5173' : 'https://buddies-onchain.xyz';
+// The plugin runtime knows exactly one chain (Base mainnet), so the site
+// origin is always production. The `key` parameter is retained for call-site
+// stability but no longer branches. See `network.ts`.
+export function siteOriginForKey(_key: NetworkKey): string {
+  return 'https://buddies-onchain.xyz';
 }
 
 export type LookupReason =

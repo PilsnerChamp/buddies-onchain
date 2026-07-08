@@ -1,17 +1,16 @@
 // plugin/src/network.ts
 //
-// Plugin-side selector for the active network. Reads `BUDDY_NETWORK` from
-// the process environment (Bun's native `process.env`) and resolves to one
-// of the three entries in `shared/networks.ts`.
+// Plugin-side active network. The published plugin targets exactly one chain —
+// Base mainnet (chainId 8453) — so there is no runtime network selection and
+// no `BUDDY_NETWORK` env override: the plugin "knows one chain." The static
+// `NetworkConfig` below is vendored inline (rather than imported from
+// `shared/networks.ts`) so the shipped `src/` tree is self-contained; the
+// site keeps the broader multi-network `shared/networks.ts` for testnet
+// staging. Keep the mainnet values here in sync with that map.
 //
-// Defaults to `mainnet` because the published plugin distribution targets
-// the production deployment. Local plugin development overrides via
-// `BUDDY_NETWORK=local bun run plugin/src/...` (or equivalent).
-//
-// `getActiveNetwork()` lazily merges the static `NetworkConfig` with the
-// per-chain deployment artifact at `plugin/deployments/<chainId>.json`. The
-// merge is lazy (deferred to first call) so plugin boot stays cold-account
-// fast and MCP-packaging-friendly: no import-time fs reads, no eager network.
+// `getActiveNetwork()` merges this static config with the per-chain deployment
+// artifact at `plugin/deployments/<chainId>.json` on first call (lazy fs read),
+// so plugin boot stays cold-account fast and MCP-packaging-friendly.
 //
 // Loader semantics mirror site's `buildDeployments`
 // (see docs/onchain/build.md):
@@ -27,51 +26,33 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  NETWORKS,
-  type NetworkConfig,
-  type NetworkKey,
-} from '~shared/networks';
 
-// Lazy resolution: validation runs on first PROPERTY READ of
-// `ACTIVE_NETWORK`, not at module import. The hook subprocess
-// (`bun dist/index.js --hook`) imports this module eagerly, but its
-// outer try/catch only wraps `runHook()` — a module-init throw bypasses
-// the catch and crashes the hook with stderr noise instead of emitting
-// the empty-hook JSON contract. Defer the throw so it lands inside the
-// catch frame.
-//
-// Backwards-compatible: existing call sites read properties off
-// `ACTIVE_NETWORK` (e.g. `ACTIVE_NETWORK.key`, `...ACTIVE_NETWORK`),
-// which the Proxy traps and validates lazily.
-function _loadActiveNetwork(): NetworkConfig {
-  const key = (process.env.BUDDY_NETWORK ?? 'mainnet') as NetworkKey;
-  const n = NETWORKS[key];
-  if (!n) {
-    throw new Error(
-      `Invalid BUDDY_NETWORK: "${key}". Expected one of: ${Object.keys(NETWORKS).join(', ')}.`,
-    );
-  }
-  return n;
+// The plugin runtime knows exactly one chain. `NetworkKey` narrows to the
+// single mainnet literal; the `NetworkConfig` shape matches the site's
+// `shared/networks.ts` entry field-for-field so `PluginNetworkInfo` consumers
+// stay portable.
+export type NetworkKey = 'mainnet';
+
+export interface NetworkConfig {
+  key: NetworkKey;
+  chainId: number;
+  rpcUrl: string;                          // public, no API key
+  explorerAddressBase: string | null;      // null for chains with no public explorer
+  openseaItemBase: string | null;          // per-item base (append `<contract>/<tokenId>`); null = no OpenSea surface
+  openseaCollectionUrl: string | null;     // full collection page URL; null = no OpenSea collection
+  displayName: string;                     // lowercase; UI applies casing
 }
 
-let _activeCache: NetworkConfig | null = null;
-function _active(): NetworkConfig {
-  if (_activeCache) return _activeCache;
-  _activeCache = _loadActiveNetwork();
-  return _activeCache;
-}
-
-export const ACTIVE_NETWORK: NetworkConfig = new Proxy({} as NetworkConfig, {
-  get: (_, p) => Reflect.get(_active(), p),
-  has: (_, p) => Reflect.has(_active(), p),
-  ownKeys: () => Reflect.ownKeys(_active()),
-  getOwnPropertyDescriptor: (_, p) => {
-    const desc = Reflect.getOwnPropertyDescriptor(_active(), p);
-    if (desc) desc.configurable = true;
-    return desc;
-  },
-});
+// Vendored from `shared/networks.ts` (`NETWORKS.mainnet`). Keep in sync.
+export const ACTIVE_NETWORK: NetworkConfig = {
+  key: 'mainnet',
+  chainId: 8453,
+  rpcUrl: 'https://mainnet.base.org',
+  explorerAddressBase: 'https://basescan.org/address/',
+  openseaItemBase: 'https://opensea.io/item/base/',
+  openseaCollectionUrl: 'https://opensea.io/collection/buddies-onchain',
+  displayName: 'base',
+};
 
 // `Deployment` type duplicates the site-side type intentionally. The shape is
 // small (5 fields) and hoisting to `shared/` would require Vite + Bun + tsc

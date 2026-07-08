@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.0 — Mainnet-only publish cut (2026-07-08)
+
+### Breaking
+
+- Plugin runtime narrows to Base mainnet only (chainId 8453). The `BUDDY_NETWORK` env var is removed entirely — the plugin knows one chain, so there is no network selection or override. The `local`/`sepolia` runtime branches (chain dispatch in `publicClient`, site-origin gating) are gone; the site keeps the broader multi-network config for testnet staging.
+
+### Changed
+
+- `src/` is now self-contained: the `~shared/*` runtime imports (`isValidUuid`, `assertCanonicalV4Uuid`, `computeIdentityHash`, `providerBytes16`, `buddyNftAbi`, and the mainnet network constants) are vendored into `plugin/src/` so the git-tracked source that ships to installer caches has zero imports reaching outside `plugin/`. Keep the vendored copies in sync with `shared/`.
+- `plugin.json` gains `"license": "MIT"`; author identity is now `PilsnerChamp` (`https://buddies-onchain.xyz`), matching the marketplace `owner`.
+- Manifest hooks switch from POSIX `sh` one-liners (with a `command -v node` guard) to exec form (`"command": "node"` + `args`): Claude Code substitutes `${CLAUDE_PLUGIN_ROOT}` itself and spawns `node` directly, no shell involved, so hooks dispatch identically on Linux, macOS, and native Windows (including PowerShell-fallback hosts without Git Bash). The guard's "install Node" fallback message is gone — a missing `node` now surfaces as a non-blocking hook spawn failure; the Node ≥18 requirement stays documented in the README. Exec form sets a host floor: Claude Code ≥ 2.1.139 (where the hook `args` field landed) — on older versions the hooks do not run and the buddy simply doesn't appear.
+
 ## v0.4.4 — Statusline badge heartbeat (2026-07-03)
 
 ### Added
