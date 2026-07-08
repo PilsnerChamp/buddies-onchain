@@ -8,12 +8,13 @@ Claude Code plugin that emits `/buddy-onchain` deep-links based on on-chain stat
 
 - `index.ts` — CLI entry. Parses `--session-start`, `--hook`, `--stop`, `--uuid <uuid>`. Reads stdin payload for hook mode. Outer try/catch; soft-fails to `{}`.
 - `command-router.ts` — pure routing function. Maps a UserPromptSubmit prompt to one of `lookup` / `mutate` / `invalid` / `ambient`.
-- `lookup.ts` — cold/warm decision. `resolveDeepLink(uuid)` returns `{ reason, tokenId }`. `siteOriginForKey(key)` gates the dApp origin on network key.
+- `lookup.ts` — cold/warm decision. `resolveDeepLink(uuid)` returns `{ reason, tokenId }`. `siteOriginForKey(key)` returns the dApp origin — always the production origin, since the plugin is mainnet-only.
 - `lookup-payload.ts` — formats the rendered deep-link block.
-- `network.ts` — reads `BUDDY_NETWORK` and merges `shared/networks.ts` with `plugin/deployments/<chainId>.json`. Lazy.
-- `publicClient.ts` — viem `publicClient` over the active network's RPC. Lazy singleton.
-- `bone-deriver.ts` — TS-side trait derivation. `deriveTraitSeed(uuid) = wyhash(lowercase(uuid) + "friend-2026-401")` returns the `uint32` seed the contract stores. The `bytes32` identity hash comes from the shared `computeIdentityHash`, not from here. The plugin computes both off the same UUID and emits both in the `/hatch` fragment, plus the fixed `provider=claude` label (`CLAUDE_PROVIDER` in `shared/providerBytes16.ts`).
+- `network.ts` — mainnet-only. Holds the vendored Base mainnet `NetworkConfig` (no `BUDDY_NETWORK`, no network selection) and merges it with `plugin/deployments/8453.json`. Lazy.
+- `publicClient.ts` — viem `publicClient` over the Base mainnet RPC. Lazy singleton.
+- `bone-deriver.ts` — TS-side trait derivation. `deriveTraitSeed(uuid) = wyhash(lowercase(uuid) + "friend-2026-401")` returns the `uint32` seed the contract stores. The `bytes32` identity hash comes from `computeIdentityHash`, not from here. The plugin computes both off the same UUID and emits both in the `/hatch` fragment, plus the fixed `provider=claude` label (`CLAUDE_PROVIDER` in `plugin/src/providerBytes16.ts`).
 - `config-reader.ts` — reads `~/.claude.json`. Extracts `oauthAccount.accountUuid`.
+- `isValidUuid.ts`, `assertCanonicalV4Uuid.ts`, `computeIdentityHash.ts`, `providerBytes16.ts`, `buddyNftAbi.ts` — **generated** vendored copies of the matching `shared/` modules. `shared/` is the source of truth; `bun run sync-shared` (part of `build`) regenerates these so the shipped `plugin/src/` is self-contained (no `~shared/*` alias, which does not resolve in an installer cache). Do not hand-edit — edit `shared/` and rebuild. Drift is caught by `plugin/test/vendored-shared-parity.test.ts` and `just plugin-check-dist`.
 - `session-start.ts`, `stop-hook.ts`, `ambient.ts`, `sleeping-frame.ts`, `sprite-decorations.ts` — ambient-render pipeline.
 - `buddy-state.ts`, `effective-state.ts`, `safe-json-store.ts`, `drift-flag.ts` — local state at `~/.claude/plugins/buddy-onchain/.buddy-state` (override base with `CLAUDE_CONFIG_DIR`).
 
@@ -34,7 +35,7 @@ For `/buddy-onchain` with no args:
    - warm → `https://buddies-onchain.xyz/view/<tokenId>` (numeric; no UUID in the URL)
 4. The hook emits `additionalContext` JSON. Claude Code injects it into the session.
 
-The plugin computes the two derived hatch args off the UUID and emits them in the fragment, alongside the fixed `provider=claude` label. The dApp forwards all three to `hatch` verbatim — it never re-derives any. Identity hash: shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`, also passed to `getTokenIdByIdentity` for the warm/cold check. Trait seed: `bone-deriver.ts::deriveTraitSeed(uuid)`. Provider: `CLAUDE_PROVIDER` from `shared/providerBytes16.ts`. UUID is `trim().toLowerCase()` before both derivations. Only a UUID that passes shared v4 validation (`assertCanonicalV4Uuid`) is used — never a fallback or placeholder. Site origin: `local` → `http://localhost:5173`; everything else → `https://buddies-onchain.xyz`.
+The plugin computes the two derived hatch args off the UUID and emits them in the fragment, alongside the fixed `provider=claude` label. The dApp forwards all three to `hatch` verbatim — it never re-derives any. Identity hash: `computeIdentityHash` (`plugin/src/computeIdentityHash.ts`, vendored from `shared/`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`, also passed to `getTokenIdByIdentity` for the warm/cold check. Trait seed: `bone-deriver.ts::deriveTraitSeed(uuid)`. Provider: `CLAUDE_PROVIDER` from `plugin/src/providerBytes16.ts`. UUID is `trim().toLowerCase()` before both derivations. Only a UUID that passes v4 validation (`assertCanonicalV4Uuid`) is used — never a fallback or placeholder. These primitives are vendored copies of the `shared/` originals (self-contained `plugin/src/`), drift-guarded by `plugin/test/vendored-shared-parity.test.ts`. Site origin: always `https://buddies-onchain.xyz` (the plugin is mainnet-only).
 
 ## Cross-domain parity
 
@@ -72,6 +73,6 @@ Install commands and end-user behavior live in [`plugin/README.md`](../../plugin
 bun run --cwd plugin build
 ```
 
-The `build` script syncs `onchain/deployments/*.json` into `plugin/deployments/` first, then runs `bun build src/index.ts --target=node --outfile=dist/index.js`. CI verifies the rebuild produces an unchanged bundle.
+The `build` script runs three steps in order: `sync-deployments` copies `onchain/deployments/*.json` into `plugin/deployments/`; `sync-shared` regenerates the vendored `plugin/src/*` copies from `shared/` (see Module topology); then `bun build src/index.ts --target=node --outfile=dist/index.js` bundles. All three write tracked artifacts, so a fresh build must leave the tree clean — `just plugin-check-dist` rebuilds and fails if `plugin/dist`, `plugin/deployments`, or any vendored `plugin/src` copy drifts from what is committed. CI verifies the rebuild produces an unchanged bundle.
 
 See `docs/network-config.md` for the env-var and deployment-manifest contract.

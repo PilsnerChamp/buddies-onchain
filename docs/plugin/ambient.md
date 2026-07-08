@@ -15,7 +15,7 @@ Ambient turns read only persisted state and art cache. Cache missing, stale, mal
 
 ## Hook surface
 
-`plugin/.claude-plugin/plugin.json` registers three hooks:
+`plugin/.claude-plugin/plugin.json` registers three hooks. All three use exec form (`"command": "node"` plus an `args` array): Claude Code substitutes `${CLAUDE_PLUGIN_ROOT}` itself and spawns `node` directly — no shell, so dispatch is identical on Linux, macOS, and native Windows. Node missing from `PATH` = spawn failure, which is non-blocking hook noise, not a broken session.
 
 | Hook | Entry | Timeout |
 |---|---|---|
@@ -112,16 +112,15 @@ Default mode is `full`; users may persist `off`, `lite`, or `full` through the s
 
 ```text
 BUDDY_MODE=off|lite|full          # overrides persisted mode
-BUDDY_NETWORK=local|sepolia|mainnet  # see docs/network-config.md
 ```
 
-Env wins over persisted state. When env differs from persisted, slash status output prepends a notice line so the UI doesn't lie. See `docs/network-config.md` for the network env contract.
+Env wins over persisted state. When env differs from persisted, slash status output prepends a notice line so the UI doesn't lie. The plugin is mainnet-only — there is no network env var.
 
 ## Identity coupling
 
 The state file, art cache, and ambient render all key on `(accountUuidHash, chainId, contractAddress)`, and art cache also keys on `tokenId`. If any identity leg changes (account switch, network swap, redeploy), SessionStart updates `.buddy-state`, stale art is cleared or ignored, and the ambient surface goes silent until a warm slash lookup refreshes frames.
 
-`accountUuidHash = sha256(lowercased uuid)` for state-file keying. On-chain identity hash is the shared `computeIdentityHash` (`shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`; the two are distinct on purpose — the file-key hash avoids leaking the on-chain hash on disk.
+`accountUuidHash = sha256(lowercased uuid)` for state-file keying. On-chain identity hash is `computeIdentityHash` (`plugin/src/computeIdentityHash.ts`, a vendored copy of `shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`; the two are distinct on purpose — the file-key hash avoids leaking the on-chain hash on disk.
 
 ## File map
 

@@ -14,18 +14,18 @@ Static metadata: `shared/networks.ts`.
 
 OpenSea surfaces (`openseaItemBase` for per-item deep links, `openseaCollectionUrl` for the collection page) are mainnet-only; both are `null` on `local` and `sepolia` (no marketplace). Selectors return `null` for those chains so the dependent UI (the `/view/<tokenId>` titlebar OpenSea icon, the SEE ALSO `opensea` row) is omitted rather than rendered dead.
 
-`shared/networks.ts` is imported by both site and plugin via the `~shared/*` tsconfig path alias.
+`shared/networks.ts` is imported by the site via the `~shared/*` tsconfig path alias. The published plugin is mainnet-only and does not read it — its single Base mainnet `NetworkConfig` is inlined in `plugin/src/network.ts` so the shipped `plugin/src/` is self-contained.
 
 ## Selectors
 
-Each consumer reads its own env var.
+The site selects a chain at build time; the plugin is pinned to one chain.
 
-| Consumer | Env var | Default | Read mechanism |
+| Consumer | Selection | Default | Read mechanism |
 |---|---|---|---|
 | site | `VITE_CHAIN` | `local` | `import.meta.env.VITE_CHAIN` (build-time inline) |
-| plugin | `BUDDY_NETWORK` | `mainnet` | `process.env.BUDDY_NETWORK` (Bun runtime) |
+| plugin | none — mainnet only | `mainnet` | pinned in `plugin/src/network.ts` |
 
-Site defaults to `local` for dev. Plugin defaults to `mainnet` because the published distribution targets production.
+Site defaults to `local` for dev. The published plugin knows exactly one chain — Base mainnet — so it takes no network env var; `NetworkKey` in `plugin/src/network.ts` is narrowed to `'mainnet'`.
 
 Switch the site:
 
@@ -34,14 +34,7 @@ VITE_CHAIN=sepolia bun --cwd site run dev
 VITE_CHAIN=mainnet bun --cwd site run build
 ```
 
-Switch the plugin:
-
-```bash
-BUDDY_NETWORK=local bun plugin/src/index.ts --hook
-BUDDY_NETWORK=sepolia bun plugin/src/index.ts --hook
-```
-
-Invalid value throws on first read with the list of accepted keys.
+An invalid `VITE_CHAIN` throws on first read with the list of accepted keys.
 
 ## Deployment manifests
 
@@ -57,7 +50,7 @@ Missing manifest for the active chain is soft — `getActiveNetwork()` returns `
 
 ### ABI/selector parity
 
-The contract a `<chainId>.json` manifest points at must expose the same `hatch` selector the site and plugin are built against, or hatch fails. Both clients import the curated ABI in `shared/buddyNftAbi.ts`, which carries `hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider)`; a manifest pointing at a contract with a different `hatch` signature is incompatible. The `buddyPrngSeed(uint256)` and `buddyProvider(uint256)` views live in the on-chain `IBuddyNFT` interface; `buddyProvider` is in the curated subset (no client surface reads it today — kept for external tooling), `buddyPrngSeed` is not. ERC-165 interface ids and the `ClaimAttestation` EIP-712 typehash sit outside the `hatch` path, so wallet and marketplace interface detection is independent of it.
+The contract a `<chainId>.json` manifest points at must expose the same `hatch` selector the site and plugin are built against, or hatch fails. Both clients build against the same curated ABI — the site imports `shared/buddyNftAbi.ts`, the mainnet-only plugin ships a vendored `plugin/src/buddyNftAbi.ts` copy kept byte-for-byte in sync (drift-guarded by `plugin/test/vendored-shared-parity.test.ts`) — which carries `hatch(bytes32 identityHash, uint32 prngSeed, bytes16 provider)`; a manifest pointing at a contract with a different `hatch` signature is incompatible. The `buddyPrngSeed(uint256)` and `buddyProvider(uint256)` views live in the on-chain `IBuddyNFT` interface; `buddyProvider` is in the curated subset (no client surface reads it today — kept for external tooling), `buddyPrngSeed` is not. ERC-165 interface ids and the `ClaimAttestation` EIP-712 typehash sit outside the `hatch` path, so wallet and marketplace interface detection is independent of it.
 
 ### Commit policy
 
@@ -80,7 +73,7 @@ Both expose `ACTIVE_NETWORK: NetworkConfig` for the static metadata of the selec
 
 ## ABI
 
-`shared/buddyNftAbi.ts` holds a curated `BuddyNFT` ABI subset. Both site and plugin import it. One source of truth, no drift. `as const` is required for viem's type inference.
+`shared/buddyNftAbi.ts` holds a curated `BuddyNFT` ABI subset. The site imports it directly; the mainnet-only plugin ships a vendored `plugin/src/buddyNftAbi.ts` copy (so the published `plugin/src/` is self-contained for audit) kept byte-for-byte in sync and drift-guarded by `plugin/test/vendored-shared-parity.test.ts`. `as const` is required for viem's type inference.
 
 ## publicClient
 
