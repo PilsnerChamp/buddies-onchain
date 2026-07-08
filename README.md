@@ -58,6 +58,10 @@ Or open the site: <https://buddies-onchain.xyz/>
 
 The plugin works out a seed and an identity hash from your UUID **client-side** — your raw UUID never hits the wire — then hatches the token on Base. The contract stores the seed, rolls traits with Mulberry32, and anyone can rerun the math. Two stages: `Hatched` (implemented) and `Bonded` (dormant in v1).
 
+<p align="center">
+  <img src="docs/assets/how-it-works.png" width="100%" alt="Three-panel diagram. Panel one, your machine: a terminal window holds the account UUID, shown as an ASCII buddy; a padlock notes the raw UUID stays home, and two arrows fork to two derived values: an identity hash and an art seed. Panel two: the two derived values cross a boundary through an arrow labeled hatch(). Panel three, Base L2: the same ASCII buddy sits inside a glowing vault labeled BuddyNFT, captioned: can't sell, can't move. One account, one buddy.">
+</p>
+
 `Bonded` means moving the buddy from the contract into your own wallet. The `claim` code is written and tested — but v1 ships with it off. Handing a buddy over needs a real way to prove the account is actually yours, and v1 doesn't build that check yet. Without it, claiming is just rubber-stamping. So for now, the contract holds every buddy.
 
 Full detail:
