@@ -73,6 +73,8 @@ The plugin install location is platform-specific. For dev installs, the path is 
 
 Two ways to embed the buddy badge into a script you already maintain:
 
+**Windows note:** the statusline re-runs on every redraw, so a per-redraw process spawn shows up. Option 1 shells out to `buddy-statusline.ps1`, and a cold PowerShell start costs ~280 ms — enough to feel sluggish in the bar. On Windows, prefer Option 2 (inline the logic in your own script's language — no subprocess). On POSIX the `sh` spawn in Option 1 is a few ms, so either option is fine.
+
 ### Option 1 — call the buddy script
 
 Simplest. The buddy statusline outputs nothing on missing/corrupt/symlinked state, so it's safe to interpolate anywhere:
