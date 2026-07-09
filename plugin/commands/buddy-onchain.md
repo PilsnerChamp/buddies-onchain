@@ -14,10 +14,20 @@ Preserve every character in fenced code blocks. Do not add markdown
 links, extra punctuation, commentary, follow-up questions, or tool
 calls.
 
-If no `BUDDY_RENDER_BEGIN` block was injected, print:
+If no `BUDDY_RENDER_BEGIN` block was injected, the plugin runtime did
+not run. Check the session context: if it contains a buddy-onchain
+dormant notice, or hook errors like `Executable not found in $PATH:
+"node"` or `Executable not found in $PATH: "sh"`, the cause is a
+missing runtime dependency — print:
+
+```
+buddy runtime needs Node.js >=18 and sh on PATH - install Node (and Git Bash on native Windows, or use WSL2), then start a new session
+```
+
+Otherwise print:
 
 ```
 buddy lookup unavailable - try again
 ```
 
-Then stop.
+Then stop. Do not add commentary in either case.

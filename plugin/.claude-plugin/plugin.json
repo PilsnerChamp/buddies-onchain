@@ -1,7 +1,7 @@
 {
   "name": "buddy-onchain",
   "description": "An AI buddy in your terminal — one per account, non-transferable, living fully onchain on Base. No host. No takedown. Go hatch yours.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "author": {
     "name": "PilsnerChamp",
@@ -16,8 +16,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js", "--session-start"],
+            "command": "sh",
+            "args": [
+              "-c",
+              "command -v node >/dev/null 2>&1 && exec node \"$0\" \"$@\"; printf '%s\\n' 'buddy-onchain plugin is installed but dormant: Node.js (>=18) is not on PATH, so the buddy cannot appear. If the user asks about the buddy or runs /buddy-onchain, tell them to install Node.js and start a new session.'",
+              "${CLAUDE_PLUGIN_ROOT}/dist/index.js",
+              "--session-start"
+            ],
             "timeout": 5,
             "statusMessage": "Resolving buddy on-chain..."
           }
@@ -29,8 +34,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js", "--hook"],
+            "command": "sh",
+            "args": [
+              "-c",
+              "command -v node >/dev/null 2>&1 && exec node \"$0\" \"$@\"; printf '{}'",
+              "${CLAUDE_PLUGIN_ROOT}/dist/index.js",
+              "--hook"
+            ],
             "timeout": 10,
             "statusMessage": "Tracking buddy mode..."
           }
@@ -42,8 +52,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js", "--stop"],
+            "command": "sh",
+            "args": [
+              "-c",
+              "command -v node >/dev/null 2>&1 && exec node \"$0\" \"$@\"; exit 0",
+              "${CLAUDE_PLUGIN_ROOT}/dist/index.js",
+              "--stop"
+            ],
             "timeout": 5
           }
         ]

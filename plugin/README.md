@@ -14,7 +14,7 @@ claude plugin install buddy-onchain@buddies-onchain
 
 Verify with `claude plugin list`; remove with `claude plugin remove buddy-onchain`. If `marketplace add` stalls or reports the marketplace not found on the first fetch, run the add command again.
 
-Requires [Node.js](https://nodejs.org) 18 or newer on your `PATH`, and Claude Code 2.1.139 or newer (the manifest hooks use exec form, added in that release).
+Requires [Node.js](https://nodejs.org) 18 or newer and `sh` on your `PATH` (Git Bash provides `sh` on native Windows), and Claude Code 2.1.139 or newer (the manifest hooks pass an `args` array, added in that release).
 
 ## Ambient mode
 
@@ -33,7 +33,7 @@ The setting persists across sessions in `~/.claude/plugins/buddy-onchain/.buddy-
 
 - The plugin reads Base mainnet (chain id 8453) — lookups only. It never asks you to sign anything; hatching happens on the dApp, in your own wallet.
 - The install ships this directory wholesale, source and tests included; `dist/index.js` is what runs.
-- Hooks spawn `node` directly (exec form, no shell), so they work the same on Linux, macOS, and native Windows. If `node` isn't on your `PATH` the hooks fail quietly and the buddy just doesn't appear — install Node and start a new session.
+- Hooks dispatch through `sh`, which guards for `node` before running the plugin. If Node.js (>=18) isn't on your `PATH`, the hooks stay quiet — no errors on your prompts — and `/buddy-onchain` tells you to install Node and start a new session. On native Windows the hooks need `sh` on `PATH` (Git Bash provides it).
 
 Site: <https://buddies-onchain.xyz>. Source: <https://github.com/PilsnerChamp/buddies-onchain>.
 

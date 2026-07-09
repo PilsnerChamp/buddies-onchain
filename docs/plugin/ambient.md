@@ -15,13 +15,15 @@ Ambient turns read only persisted state and art cache. Cache missing, stale, mal
 
 ## Hook surface
 
-`plugin/.claude-plugin/plugin.json` registers three hooks. All three use exec form (`"command": "node"` plus an `args` array): Claude Code substitutes `${CLAUDE_PLUGIN_ROOT}` itself and spawns `node` directly — no shell, so dispatch is identical on Linux, macOS, and native Windows. Node missing from `PATH` = spawn failure, which is non-blocking hook noise, not a broken session.
+`plugin/.claude-plugin/plugin.json` registers three hooks. All three use exec form spawning `sh -c` with a `command -v node` guard: node present → `exec node "$0" "$@"` hands off to the plugin transparently (stdin included); node absent → each hook degrades to its own quiet fallback instead of a spawn-failure error on the user's prompt. `${CLAUDE_PLUGIN_ROOT}/dist/index.js` and the hook flag ride after the script as `$0`/`$@`. Requires `sh` on `PATH` — guaranteed on Linux, macOS, and WSL2; on native Windows Git Bash provides it. Because Claude Code direct-spawns `sh`, a missing `sh` fails exactly the way a missing `node` used to: a non-blocking hook spawn error surfaces before any fallback can run. The guard only quiets the node-absent case; it cannot quiet its own interpreter being absent.
 
-| Hook | Entry | Timeout |
-|---|---|---|
-| `SessionStart` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --session-start` | 5s |
-| `UserPromptSubmit` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --hook` | 10s |
-| `Stop` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --stop` | 5s |
+| Hook | Entry (guarded) | Node-absent fallback | Timeout |
+|---|---|---|---|
+| `SessionStart` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --session-start` | one dormant notice into session context ("install Node.js, start a new session") | 5s |
+| `UserPromptSubmit` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --hook` | `printf '{}'` — silent | 10s |
+| `Stop` | `node "${CLAUDE_PLUGIN_ROOT}/dist/index.js" --stop` | `exit 0` — silent | 5s |
+
+The dormant notice pairs with `commands/buddy-onchain.md`: the command markdown runs without node, so `/buddy-onchain` on a node-less host prints an install-Node pointer instead of a dead retry hint.
 
 `SessionStart` emits either `OK` or the active ambient ruleset. `UserPromptSubmit` and `Stop` emit hook JSON and fail closed to `{}`; hook stderr/exit codes must not pollute the user's prompt path.
 

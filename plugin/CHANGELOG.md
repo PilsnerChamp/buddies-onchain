@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.1 — Quiet degradation without Node (2026-07-09)
+
+### Changed
+
+- Manifest hooks return to `sh -c` dispatch, now with per-hook quiet fallbacks when `node` is missing from `PATH` (previously exec form surfaced a spawn-failure error on every hook event): `SessionStart` emits a single dormant notice into session context, `UserPromptSubmit` emits `{}`, `Stop` exits 0. Node present → `exec node "$0" "$@"` hands off transparently, stdin included. Tradeoff reversal of v1.0.0: native Windows hooks again require `sh` on `PATH` (Git Bash); Linux, macOS, and WSL2 unaffected.
+- `/buddy-onchain` no-render fallback is now diagnostic: when the session shows the dormant notice or `node`-not-found hook errors, the command points at installing Node.js ≥18 instead of suggesting a retry that cannot succeed.
+
 ## v1.0.0 — Mainnet-only publish cut (2026-07-08)
 
 ### Breaking
