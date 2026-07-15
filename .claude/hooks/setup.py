@@ -9,16 +9,14 @@ Claude Code Setup Hook: Shared Project Initialization
 Triggered by: claude --init (in any project directory)
 Purpose: Shared setup steps for both main repo and worktrees.
 
-When a worktree-specific setup_worktree.py module exists alongside this script,
-it is dynamically imported and called for worktree-only initialization steps
-(port isolation, per-worktree env files, scratch DB bootstrap, etc.). The
-worktree module is a private extension point — drop a `setup_worktree.py`
-beside this file to opt in. Without it, the hook is a no-op for worktrees.
+Worktree env seeding and optional project customization are owned by the
+pilsner-champ-tools terminal plugin's Setup runner (setup_repo.py); this hook
+no longer probes for a copied setup_worktree.py module. Project-specific
+worktree setup, when needed, belongs in `.claude/hooks/setup_project.py`.
 
 This hook is permanent and idempotent — safe to re-run on any `claude --init-only`.
 """
 
-import importlib.util
 import json
 import os
 import shutil
@@ -122,42 +120,8 @@ def main() -> None:
         if worktree:
             logger.log(f"  Main repo: {main_repo}")
 
-        # --- Worktree pre-step: load module and copy .env.local ---
-        # .env.local must be copied BEFORE shared steps that may need env vars
-        worktree_module = None
-        if worktree:
-            worktree_hook = SCRIPT_DIR / "setup_worktree.py"
-            if worktree_hook.exists():
-                logger.log("\n>>> Loading worktree setup module...")
-                spec = importlib.util.spec_from_file_location(
-                    "setup_worktree", str(worktree_hook)
-                )
-                worktree_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(worktree_module)
-                logger.log("  Loaded setup_worktree.py")
-
-                logger.log("\n>>> Copying environment files from main repo...")
-                if dry_run:
-                    logger.log("  (dry-run) skipping environment file copy")
-                    actions.append("(dry-run) Skipped environment file copy")
-                else:
-                    actions.extend(worktree_module.copy_env_files(main_repo, logger))
-            else:
-                logger.log("\n>>> No setup_worktree.py found (already initialized)")
-
-        # --- Worktree-specific steps ---
-        if worktree_module is not None:
-            logger.log("\n>>> Running worktree-specific setup...")
-            if dry_run:
-                logger.log("  (dry-run) skipping worktree setup")
-                actions.append("(dry-run) Skipped worktree-specific setup")
-                worktree_summary = ""
-            else:
-                worktree_result = worktree_module.run(logger, main_repo, project_dir)
-                actions.extend(worktree_result.get("actions", []))
-                worktree_summary = worktree_result.get("summary", "")
-        else:
-            worktree_summary = ""
+        # Worktree env seeding and project customization run in the terminal
+        # plugin's Setup runner; this hook owns only shared repo steps.
 
         # --- Summary ---
         complete_message = f"{'(dry-run) ' if dry_run else ''}Setup complete ({context})!"
@@ -166,8 +130,6 @@ def main() -> None:
         logger.log("=" * 60)
 
         summary = f"{complete_message}\n\n"
-        if worktree_summary:
-            summary += worktree_summary + "\n"
         summary += "Actions performed:\n"
         for action in actions:
             summary += f"  - {action}\n"
