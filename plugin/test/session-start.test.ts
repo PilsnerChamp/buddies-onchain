@@ -4,9 +4,17 @@
 // SessionStart entry, keeping mode/state cases hermetic.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, test } from "bun:test";
 
@@ -62,7 +70,9 @@ function freshClaudeRoot(): string {
 
   mkdirSync(join(root, "plugins", "buddy-onchain"), { recursive: true });
   writeClaudeConfig(root, TEST_UUID);
-  writeSettings(root, { statusLine: { type: "command", command: "existing" } });
+  // Seeded global heartbeat = badge has rendered somewhere → no statusline
+  // nudge. Nudge tests delete it explicitly.
+  writeHeartbeatFile(globalHeartbeatPath(root));
 
   return root;
 }
@@ -80,8 +90,27 @@ function writeClaudeConfig(root: string, accountUuid: string): void {
   );
 }
 
-function writeSettings(root: string, settings: unknown): void {
-  writeFileSync(join(root, "settings.json"), JSON.stringify(settings));
+function globalHeartbeatPath(root: string): string {
+  return join(root, "plugins", "buddy-onchain", ".badge-heartbeat");
+}
+
+function projectHeartbeatPath(root: string, projectDir: string): string {
+  const key = createHash("sha256").update(projectDir).digest("hex").slice(0, 16);
+  return join(root, "plugins", "buddy-onchain", "projects", key, ".badge-heartbeat");
+}
+
+function writeHeartbeatFile(path: string, mtime?: Date): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "");
+  if (mtime !== undefined) {
+    utimesSync(path, mtime, mtime);
+  }
+}
+
+function staleDate(): Date {
+  // An "overnight gap" mtime — old enough that any freshness-window
+  // regression would misread it as unwired.
+  return new Date(Date.now() - 24 * 60 * 60 * 1000);
 }
 
 function statePath(root: string): string {
@@ -157,6 +186,9 @@ async function runSessionStart(
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
+      // Pin the project dir so heartbeat-based nudge checks are hermetic —
+      // the test runner's own CLAUDE_PROJECT_DIR must not leak in.
+      CLAUDE_PROJECT_DIR: root,
       ...env,
     },
   });
@@ -265,6 +297,7 @@ async function runSourceSessionStart(
       ...process.env,
       HOME: root,
       CLAUDE_CONFIG_DIR: root,
+      CLAUDE_PROJECT_DIR: root,
     },
   });
 
@@ -291,6 +324,7 @@ async function runSourceSessionStartWithWriterThrow(
         ...process.env,
         HOME: root,
         CLAUDE_CONFIG_DIR: root,
+        CLAUDE_PROJECT_DIR: root,
       },
     },
   );
@@ -462,34 +496,74 @@ describe("SessionStart chain writer behavior", () => {
   });
 });
 
-describe("SessionStart statusline nudge", () => {
-  test.each([
-    ["missing settings file", undefined, true],
-    ["settings without statusLine", {}, true],
-    ["statusLine null", { statusLine: null }, false],
-    ["statusLine populated", { statusLine: { type: "command", command: "x" } }, false],
-  ] as const)("nudge behavior: %s", async (_name, settings, shouldNudge) => {
+describe("SessionStart statusline nudge (badge heartbeat)", () => {
+  // The project dir the subprocess resolves is CLAUDE_PROJECT_DIR = root
+  // (pinned in the runners), so project-heartbeat cases key off `root`.
+  test("no heartbeat at all nudges", async () => {
     const root = freshClaudeRoot();
     seedState(root, MAINNET_IDENTITY, "unknown", "full");
-
-    if (settings === undefined) {
-      rmSync(join(root, "settings.json"), { force: true });
-    } else {
-      writeSettings(root, settings);
-    }
+    rmSync(globalHeartbeatPath(root), { force: true });
 
     const result = await runSessionStart(root);
-    const hasNudge = result.stdout.includes("STATUSLINE SETUP NEEDED");
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain(RULESET_AMBIENT);
-    expect(hasNudge).toBe(shouldNudge);
+    expect(result.stdout).toContain("STATUSLINE SETUP NEEDED");
+    expect(result.stdout).toContain("buddy-statusline.sh");
+    expect(result.stdout).toContain("statusLine");
+    expect(result.stdout).toContain("bash");
+  });
 
-    if (shouldNudge) {
-      expect(result.stdout).toContain("buddy-statusline.sh");
-      expect(result.stdout).toContain("statusLine");
-      expect(result.stdout).toContain("bash");
-    }
+  test("old heartbeat mtimes still suppress — idle gap is not unwired", async () => {
+    // Statusline renders are event-driven: an overnight gap leaves old
+    // mtimes everywhere on a perfectly wired setup. Existence must win.
+    const root = freshClaudeRoot();
+    seedState(root, MAINNET_IDENTITY, "unknown", "full");
+    writeHeartbeatFile(globalHeartbeatPath(root), staleDate());
+    writeHeartbeatFile(projectHeartbeatPath(root, root), staleDate());
+
+    const result = await runSessionStart(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(RULESET_AMBIENT);
+    expect(result.stdout).not.toContain("STATUSLINE SETUP NEEDED");
+  });
+
+  test("global heartbeat suppresses the nudge (badge rendered somewhere)", async () => {
+    const root = freshClaudeRoot();
+    seedState(root, MAINNET_IDENTITY, "unknown", "full");
+
+    const result = await runSessionStart(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(RULESET_AMBIENT);
+    expect(result.stdout).not.toContain("STATUSLINE SETUP NEEDED");
+  });
+
+  test("project heartbeat suppresses the nudge without a global one", async () => {
+    const root = freshClaudeRoot();
+    seedState(root, MAINNET_IDENTITY, "unknown", "full");
+    rmSync(globalHeartbeatPath(root), { force: true });
+    writeHeartbeatFile(projectHeartbeatPath(root, root));
+
+    const result = await runSessionStart(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(RULESET_AMBIENT);
+    expect(result.stdout).not.toContain("STATUSLINE SETUP NEEDED");
+  });
+
+  test("another project's heartbeat alone does not suppress the nudge", async () => {
+    const root = freshClaudeRoot();
+    seedState(root, MAINNET_IDENTITY, "unknown", "full");
+    rmSync(globalHeartbeatPath(root), { force: true });
+    writeHeartbeatFile(projectHeartbeatPath(root, "/some/other/project"));
+
+    const result = await runSessionStart(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(RULESET_AMBIENT);
+    expect(result.stdout).toContain("STATUSLINE SETUP NEEDED");
   });
 });
 
@@ -586,7 +660,7 @@ describe("SessionStart soft-fail discipline", () => {
     "writer throw (%s) emits ambient ruleset with statusline nudge",
     async (errorMode) => {
       const root = freshClaudeRoot();
-      rmSync(join(root, "settings.json"), { force: true });
+      rmSync(globalHeartbeatPath(root), { force: true });
 
       const result = await runSourceSessionStartWithWriterThrow(root, errorMode);
 

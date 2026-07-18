@@ -47,13 +47,20 @@ Block shape: triple-backtick fenced code (no language tag), two-column `sprite |
 
 ### Statusline nudge
 
-`plugin/src/instructions.ts::STATUSLINE_NUDGE_TEMPLATE(command)` appends to `SessionStart` output only when `settings.json.statusLine` is missing. The template carries the full platform-matched command from `plugin-paths.ts::statuslineCommand()` — `bash` + `buddy-statusline.sh`, or `powershell` + `buddy-statusline.ps1` on Windows — with the absolute path resolved at injection time (no `${CLAUDE_PLUGIN_ROOT}` literal — that does not interpolate at statusline runtime).
+`plugin/src/instructions.ts::STATUSLINE_NUDGE_TEMPLATE(command)` appends to `SessionStart` output when no badge heartbeat exists — neither this project's nor the global one (see § Badge heartbeat; `settings.json` is never probed — a `statusLine` key proves nothing about the badge actually rendering). The template carries the full platform-matched command from `plugin-paths.ts::statuslineCommand()` — `bash` + `buddy-statusline.sh`, or `powershell` + `buddy-statusline.ps1` on Windows — with the absolute path resolved at injection time (no `${CLAUDE_PLUGIN_ROOT}` literal — that does not interpolate at statusline runtime), and instructs the model to compose (not replace) when a custom statusline already exists.
 
 The statusline badge itself reads `[<eyes>:<mode>]` — `@,@` for warm, `-,-` for cold/unknown; mode is `off`, `lite`, or `full` after `BUDDY_MODE` override.
 
 ### Badge heartbeat
 
-The SessionStart nudge only covers the no-`statusLine` case; it cannot see a foreign statusline or a project-level `.claude/settings.json` that shadows the user-level one. Runtime truth comes from the badge heartbeat: `buddy-statusline.{sh,ps1}` (and the documented inline embed — `plugin/hooks/README.md` § Custom statusline) touch `<CLAUDE_CONFIG_DIR>/plugins/buddy-onchain/.badge-heartbeat` on every render, and the slash lookup (`plugin/src/badge-heartbeat.ts::isBadgeHeartbeatFresh`) checks the mtime. Stale/missing beyond `HEARTBEAT_MAX_AGE_MS` (10 min) → `LookupPayload.statuslineWireHint` carries the absolute script path and `formatLookupBlock` appends a `statusline:` + `wire:` line pair to the card. Certain misses only: ENOENT, a symlinked/non-regular heartbeat (never followed — writer scripts refuse those too), and stale mtime warn; any other fs error stays silent (never nag on uncertainty).
+The rendered bar is TUI chrome nothing can read back, so runtime truth comes from the badge heartbeats: `buddy-statusline.{sh,ps1}` (and the documented inline embed — `plugin/hooks/README.md` § Custom statusline) touch two files on every render — the global `<CLAUDE_CONFIG_DIR>/plugins/buddy-onchain/.badge-heartbeat` and a per-project `projects/<key>/.badge-heartbeat` (`<key>` = first 16 hex chars of sha256 of the project dir; scripts parse `workspace.project_dir` from statusline stdin, the plugin hashes `CLAUDE_PROJECT_DIR` — same string, same key as `ambientStatePath`).
+
+Detection is by existence, not mtime — statusline renders are event-driven, so a stale mtime only proves an idle gap, while a never-created file is a certain miss (trade-off: unwiring a once-wired statusline is never re-nagged; state-file deletion is the reset). Consumers (`plugin/src/badge-heartbeat.ts`):
+
+- Slash lookup checks `hasProjectBadgeHeartbeat` only — per-project, so a badge rendering in another open session cannot mask a project whose `.claude/settings.json` statusline shadows the badge. Never created → `LookupPayload.statuslineWireHint` carries the absolute script path and `formatLookupBlock` appends a `statusline:` + `wire:` line pair to the card (cold and warm alike — the badge renders unhatched too).
+- SessionStart nudges only when project AND global (`hasGlobalBadgeHeartbeat`) are both certain misses — SessionStart can race the first statusline render and a new project has no project heartbeat yet, so a badge that provably rendered elsewhere stays quiet; the slash card is the precise surface.
+
+Certain misses only: ENOENT and a symlinked/non-regular heartbeat (never followed — writer scripts refuse those too) warn; any other fs error stays silent (never nag on uncertainty).
 
 ## Art cache
 

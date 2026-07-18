@@ -33571,6 +33571,9 @@ function buddyStatePath() {
 function badgeHeartbeatPath() {
   return join3(pluginDataDir(), ".badge-heartbeat");
 }
+function projectBadgeHeartbeatPath(projectDir) {
+  return join3(pluginDataDir(), "projects", projectKey(projectDir), ".badge-heartbeat");
+}
 var HERE2 = dirname3(fileURLToPath2(import.meta.url));
 function statuslineScriptPath() {
   const script = process.platform === "win32" ? "buddy-statusline.ps1" : "buddy-statusline.sh";
@@ -33582,9 +33585,6 @@ function statuslineCommand() {
 }
 function buddyArtCachePath() {
   return join3(pluginDataDir(), ".buddy-art-cache.json");
-}
-function settingsPath() {
-  return join3(claudeDir(), "settings.json");
 }
 function projectKey(projectDir) {
   return createHash("sha256").update(projectDir).digest("hex").slice(0, 16);
@@ -34581,7 +34581,7 @@ Joke — when it fits: self-critical, about the user's prompt, ≤ 20 words, voi
 var RENDER_VERBATIM_GUARD = "(plugin formatting note, not for display) The lines between the sentinels below are the finished buddy card, already laid out. They print as-is; the ambient sprite | joke columns are a separate DISPLAY_BUDDY feature and are not part of this block.";
 function STATUSLINE_NUDGE_TEMPLATE(command) {
   const jsonEscaped = command.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. Proactively offer to set this up on first interaction.`;
+  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc), and it is not rendering in this session. If no statusline is configured, offer to add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. If a custom statusline is already configured (user or project settings), do NOT replace it — offer the compose snippets in the plugin's hooks/README.md (§ Custom statusline) instead. Proactively offer on first interaction.`;
 }
 
 // src/providerBytes16.ts
@@ -34691,18 +34691,19 @@ function resolveBuddyStatusMessage(args) {
 
 // src/badge-heartbeat.ts
 import { lstatSync as lstatSync2 } from "node:fs";
-var HEARTBEAT_MAX_AGE_MS = 10 * 60 * 1000;
-function isBadgeHeartbeatFresh(nowMs = Date.now(), maxAgeMs = HEARTBEAT_MAX_AGE_MS) {
+function heartbeatExists(path) {
   try {
-    const stats = lstatSync2(badgeHeartbeatPath());
-    if (!stats.isFile()) {
-      return false;
-    }
-    return nowMs - stats.mtimeMs <= maxAgeMs;
+    return lstatSync2(path).isFile();
   } catch (error) {
     const code = error.code;
     return code !== "ENOENT";
   }
+}
+function hasProjectBadgeHeartbeat(projectDir) {
+  return heartbeatExists(projectBadgeHeartbeatPath(projectDir));
+}
+function hasGlobalBadgeHeartbeat() {
+  return heartbeatExists(badgeHeartbeatPath());
 }
 
 // src/lookup-payload.ts
@@ -34919,7 +34920,8 @@ async function resolveLookupPayload(args = {}) {
     const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
     let statuslineWireHint = null;
     try {
-      if (!isBadgeHeartbeatFresh()) {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+      if (!hasProjectBadgeHeartbeat(projectDir)) {
         statuslineWireHint = statuslineScriptPath();
       }
     } catch {}
@@ -35091,20 +35093,17 @@ function isDriftFlagSet() {
 }
 
 // src/session-start.ts
-var MAX_SETTINGS_BYTES = 64 * 1024;
 var ART_CACHE_REBUILD_TIMEOUT_MS = 2000;
-function validateSettings(raw) {
-  if (!isPlainObject(raw)) {
-    return { hasStatusLine: false };
-  }
-  return { hasStatusLine: Object.hasOwn(raw, "statusLine") };
-}
-function statusLineConfigured() {
-  const probe = safeReadJson(settingsPath(), validateSettings, MAX_SETTINGS_BYTES);
-  return probe?.hasStatusLine ?? false;
+function statuslineNudgeNeeded() {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+  return !hasProjectBadgeHeartbeat(projectDir) && !hasGlobalBadgeHeartbeat();
 }
 function withStatuslineNudge(ruleset) {
-  if (statusLineConfigured()) {
+  try {
+    if (!statuslineNudgeNeeded()) {
+      return ruleset;
+    }
+  } catch {
     return ruleset;
   }
   return [

@@ -16,11 +16,29 @@ export function buddyStatePath(): string {
 }
 
 // Touched by buddy-statusline.{sh,ps1} on every render (and by documented
-// inline embeds — see hooks/README.md § Custom statusline). Fresh mtime is
-// the plugin's only evidence the badge participates in the live status bar;
-// the rendered bar itself is TUI chrome no hook can read back.
+// inline embeds — see hooks/README.md § Custom statusline). The file's
+// existence is the plugin's only evidence the badge participates in the
+// live status bar; the rendered bar itself is TUI chrome no hook can read
+// back.
+//
+// Two heartbeats per render: the global file answers "has the badge ever
+// rendered on this machine?", the per-project file answers "has it rendered
+// in THIS project?" — a project-level statusline can shadow the user-level
+// one, so the global file alone cannot vouch for the current project.
 export function badgeHeartbeatPath(): string {
   return join(pluginDataDir(), ".badge-heartbeat");
+}
+
+// Same 16-hex project key as `ambientStatePath` — the statusline scripts
+// mirror this derivation (sha256 of the project dir, first 16 hex chars),
+// so both sides must hash the identical directory string.
+export function projectBadgeHeartbeatPath(projectDir: string): string {
+  return join(
+    pluginDataDir(),
+    "projects",
+    projectKey(projectDir),
+    ".badge-heartbeat",
+  );
 }
 
 // `import.meta.url` resolves to runtime location of the running module —
@@ -53,10 +71,6 @@ export function statuslineCommand(): string {
 
 export function buddyArtCachePath(): string {
   return join(pluginDataDir(), ".buddy-art-cache.json");
-}
-
-export function settingsPath(): string {
-  return join(claudeDir(), "settings.json");
 }
 
 function projectKey(projectDir: string): string {

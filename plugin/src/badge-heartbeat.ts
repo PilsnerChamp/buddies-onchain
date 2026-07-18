@@ -1,41 +1,49 @@
 // Statusline badge heartbeat check.
 //
-// buddy-statusline.{sh,ps1} (and documented inline embeds) touch
-// `badgeHeartbeatPath()` on every render. Claude Code re-runs the effective
-// statusline command continuously while a session is open, so a wired badge
-// keeps the mtime fresh. A stale/missing heartbeat at slash-lookup time means
-// the badge is not rendering — no statusline at all, or a foreign/project
-// statusline that shadows it.
+// buddy-statusline.{sh,ps1} (and documented inline embeds) touch two
+// heartbeat files on every render: the global `badgeHeartbeatPath()` and the
+// per-project `projectBadgeHeartbeatPath(projectDir)` (project dir taken
+// from the statusline stdin payload).
 //
-// Soft-fail discipline: only a *certain* miss (ENOENT, stale mtime, or a
-// symlinked/non-regular heartbeat the scripts refuse to touch) reports
-// unwired; any other fs error reports wired so the lookup card never nags on
-// uncertainty.
+// The per-project file is the precise signal: a missing project heartbeat
+// means the badge has never rendered in THIS project — no statusline at
+// all, or a foreign/project statusline that shadows it — even while a
+// session in another project keeps its own heartbeat. The global file is
+// the coarse "wired somewhere on this machine" signal; SessionStart uses it
+// to avoid nagging on the first-ever boot in a new project before the
+// statusline loop has produced a project heartbeat.
+//
+// Existence, not mtime: statusline renders are event-driven — nothing
+// re-renders during an idle gap — so a stale mtime proves nothing about
+// wiring (an 11-minute lull would read as "unwired"). Only a file the
+// writer scripts have never created is a certain miss. Trade-off: removing
+// a once-wired statusline leaves the heartbeat behind, so that project is
+// never re-nagged. Accepted — false nags after every ordinary idle gap
+// cost more than a missed nag after deliberate unwiring.
+//
+// Soft-fail discipline: only a *certain* miss (ENOENT, or a symlinked/
+// non-regular heartbeat the scripts refuse to touch) reports unwired; any
+// other fs error reports wired so callers never nag on uncertainty.
 
 import { lstatSync } from "node:fs";
-import { badgeHeartbeatPath } from "./plugin-paths";
+import { badgeHeartbeatPath, projectBadgeHeartbeatPath } from "./plugin-paths";
 
-// Statusline re-renders many times a minute during an active session, and at
-// least once at TUI boot before the first prompt can be submitted. Ten
-// minutes tolerates idle gaps without letting a heartbeat from a long-dead
-// wiring pass as live.
-export const HEARTBEAT_MAX_AGE_MS = 10 * 60 * 1000;
-
-export function isBadgeHeartbeatFresh(
-  nowMs: number = Date.now(),
-  maxAgeMs: number = HEARTBEAT_MAX_AGE_MS,
-): boolean {
+function heartbeatExists(path: string): boolean {
   try {
     // lstat, never stat: the writer scripts refuse symlinked heartbeats, so
-    // the reader must not follow one either — a symlink to a fresh file
+    // the reader must not follow one either — a symlink to a real file
     // would suppress the warning on a wiring that cannot be touching it.
-    const stats = lstatSync(badgeHeartbeatPath());
-    if (!stats.isFile()) {
-      return false;
-    }
-    return nowMs - stats.mtimeMs <= maxAgeMs;
+    return lstatSync(path).isFile();
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     return code !== "ENOENT";
   }
+}
+
+export function hasProjectBadgeHeartbeat(projectDir: string): boolean {
+  return heartbeatExists(projectBadgeHeartbeatPath(projectDir));
+}
+
+export function hasGlobalBadgeHeartbeat(): boolean {
+  return heartbeatExists(badgeHeartbeatPath());
 }

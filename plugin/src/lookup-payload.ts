@@ -57,7 +57,7 @@ import {
   identityIsUnset,
   sameIdentity,
 } from "./identity";
-import { isBadgeHeartbeatFresh } from "./badge-heartbeat";
+import { hasProjectBadgeHeartbeat } from "./badge-heartbeat";
 import { statuslineScriptPath } from "./plugin-paths";
 
 export interface LookupPayload {
@@ -77,10 +77,11 @@ export interface LookupPayload {
   chainId: number;
   effectiveMode: ModeLevel;
   persistedMode: ModeLevel;
-  // Absolute path to `buddy-statusline.sh` when the badge heartbeat is stale
-  // (badge not rendering in the live status bar — no statusline, or a
-  // foreign/project statusline shadows it); `null` = badge detected, or
-  // undeterminable (never nag on uncertainty).
+  // Absolute path to `buddy-statusline.sh` when this project's badge
+  // heartbeat has never been created (badge not rendering in the live
+  // status bar here — no statusline, or a foreign/project statusline
+  // shadows it); `null` = badge detected, or undeterminable (never nag on
+  // uncertainty).
   statuslineWireHint: string | null;
 }
 
@@ -445,11 +446,17 @@ export async function resolveLookupPayload(
     const buddyStatus: BuddyStatus = result.state.hatch satisfies BuddyStatus;
     const viewUrl = warmViewUrlFromState(origin, result.state.tokenId);
 
-    // Checked only on this warm-lookup path by design: before a buddy
-    // exists there is nothing for the badge to show, so no wiring nag.
+    // Runs for cold and warm alike — the badge renders unhatched too
+    // (`[-,-:mode]` sleeping eyes), so a missing badge is worth a hint at any
+    // hatch state. Per-project heartbeat only: by the time a user runs the
+    // slash command the statusline has rendered in THIS project, so a
+    // never-created project heartbeat is a certain miss even while a session
+    // in another project maintains its own — and only existence counts
+    // (renders are event-driven; a stale mtime just means an idle gap).
     let statuslineWireHint: string | null = null;
     try {
-      if (!isBadgeHeartbeatFresh()) {
+      const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+      if (!hasProjectBadgeHeartbeat(projectDir)) {
         statuslineWireHint = statuslineScriptPath();
       }
     } catch {
@@ -583,9 +590,10 @@ export function formatLookupBlock(
   lines.push(...deploymentFooterLines(payload));
   lines.push("");
 
-  // Stale badge heartbeat → the badge is not rendering in the live status
-  // bar. Composition stays explicit and user-driven (see hooks/README.md
-  // "Why we don't auto-merge"), so the card offers the wiring, never does it.
+  // Never-created project badge heartbeat → the badge is not rendering in
+  // this project's status bar. Composition stays explicit and user-driven
+  // (see hooks/README.md "Why we don't auto-merge"), so the card offers the
+  // wiring, never does it.
   if (payload.statuslineWireHint !== null) {
     lines.push("statusline: buddy badge not detected in your status bar");
     lines.push(

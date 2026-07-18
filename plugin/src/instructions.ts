@@ -41,10 +41,14 @@ export const RENDER_VERBATIM_GUARD =
   "(plugin formatting note, not for display) The lines between the sentinels below are the finished buddy card, already laid out. They print as-is; the ambient sprite | joke columns are a separate DISPLAY_BUDDY feature and are not part of this block.";
 
 // Statusline nudge. See `docs/plugin/ambient.md` § Statusline nudge.
-// `command` is the full platform-matched interpreter+path string
+// Emitted when no badge heartbeat is fresh (project or global), so the
+// receiving model must branch on whether a statusline already exists: wire
+// the buddy script into an empty slot, or hand over the compose snippets
+// when a custom statusline occupies it. `command` is the full
+// platform-matched interpreter+path string
 // (plugin-paths.ts::statuslineCommand()); inner quotes are escaped here so
 // the snippet reads as valid settings.json.
 export function STATUSLINE_NUDGE_TEMPLATE(command: string): string {
   const jsonEscaped = command.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc). To enable, add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. Proactively offer to set this up on first interaction.`;
+  return `STATUSLINE SETUP NEEDED: Buddy plugin includes a statusline badge ([@,@:full], [-,-:lite], etc), and it is not rendering in this session. If no statusline is configured, offer to add to <CLAUDE_CONFIG_DIR>/settings.json: "statusLine": { "type": "command", "command": "${jsonEscaped}" }. If a custom statusline is already configured (user or project settings), do NOT replace it — offer the compose snippets in the plugin's hooks/README.md (§ Custom statusline) instead. Proactively offer on first interaction.`;
 }

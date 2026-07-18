@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
   rmSync,
-  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -12,22 +12,39 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import {
-  HEARTBEAT_MAX_AGE_MS,
-  isBadgeHeartbeatFresh,
+  hasGlobalBadgeHeartbeat,
+  hasProjectBadgeHeartbeat,
 } from "../src/badge-heartbeat";
+
+const PROJECT_DIR = "/some/project/dir";
 
 let root: string;
 let savedConfigDir: string | undefined;
 
-function heartbeatPath(): string {
+function projectKey(projectDir: string): string {
+  return createHash("sha256").update(projectDir).digest("hex").slice(0, 16);
+}
+
+function globalHeartbeatPath(): string {
   return join(root, "plugins", "buddy-onchain", ".badge-heartbeat");
 }
 
-function writeHeartbeat(mtime?: Date): void {
-  mkdirSync(dirname(heartbeatPath()), { recursive: true });
-  writeFileSync(heartbeatPath(), "");
+function projectHeartbeatPath(projectDir: string): string {
+  return join(
+    root,
+    "plugins",
+    "buddy-onchain",
+    "projects",
+    projectKey(projectDir),
+    ".badge-heartbeat",
+  );
+}
+
+function writeHeartbeat(path: string, mtime?: Date): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, "");
   if (mtime !== undefined) {
-    utimesSync(heartbeatPath(), mtime, mtime);
+    utimesSync(path, mtime, mtime);
   }
 }
 
@@ -46,15 +63,24 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("isBadgeHeartbeatFresh", () => {
+describe("hasGlobalBadgeHeartbeat", () => {
   test("missing heartbeat is a certain miss", () => {
-    expect(isBadgeHeartbeatFresh()).toBe(false);
+    expect(hasGlobalBadgeHeartbeat()).toBe(false);
   });
 
-  test("fresh heartbeat is detected", () => {
-    writeHeartbeat();
+  test("existing heartbeat is detected", () => {
+    writeHeartbeat(globalHeartbeatPath());
 
-    expect(isBadgeHeartbeatFresh()).toBe(true);
+    expect(hasGlobalBadgeHeartbeat()).toBe(true);
+  });
+
+  test("old mtime still counts as wired — renders are event-driven", () => {
+    // An idle session produces no renders; a stale mtime must not read as
+    // "unwired" or every lull would trigger a false nag.
+    const past = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    writeHeartbeat(globalHeartbeatPath(), past);
+
+    expect(hasGlobalBadgeHeartbeat()).toBe(true);
   });
 
   test("symlinked heartbeat is never followed — counts as a miss", () => {
@@ -62,29 +88,63 @@ describe("isBadgeHeartbeatFresh", () => {
       return;
     }
 
-    // Fresh symlink TARGET must not pass: the writer scripts refuse to touch
-    // a symlinked heartbeat, so a fresh target proves nothing about wiring.
+    // A symlink TARGET must not pass: the writer scripts refuse to touch a
+    // symlinked heartbeat, so its existence proves nothing about wiring.
     const target = join(root, "heartbeat-target");
     writeFileSync(target, "");
-    mkdirSync(dirname(heartbeatPath()), { recursive: true });
-    symlinkSync(target, heartbeatPath());
+    mkdirSync(dirname(globalHeartbeatPath()), { recursive: true });
+    symlinkSync(target, globalHeartbeatPath());
 
-    expect(isBadgeHeartbeatFresh()).toBe(false);
+    expect(hasGlobalBadgeHeartbeat()).toBe(false);
   });
 
-  test("heartbeat older than the window is stale", () => {
-    const past = new Date(Date.now() - HEARTBEAT_MAX_AGE_MS - 60 * 1000);
-    writeHeartbeat(past);
+  test("non-regular heartbeat (directory) counts as a miss", () => {
+    mkdirSync(globalHeartbeatPath(), { recursive: true });
 
-    expect(isBadgeHeartbeatFresh()).toBe(false);
+    expect(hasGlobalBadgeHeartbeat()).toBe(false);
+  });
+});
+
+describe("hasProjectBadgeHeartbeat", () => {
+  test("missing project heartbeat is a certain miss", () => {
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(false);
   });
 
-  test("boundary age still counts as fresh", () => {
-    writeHeartbeat();
-    // Read the mtime back — filesystems may round what utimes/write stored.
-    const mtimeMs = statSync(heartbeatPath()).mtimeMs;
+  test("existing project heartbeat is detected", () => {
+    writeHeartbeat(projectHeartbeatPath(PROJECT_DIR));
 
-    expect(isBadgeHeartbeatFresh(mtimeMs + 1000, 1000)).toBe(true);
-    expect(isBadgeHeartbeatFresh(mtimeMs + 1001, 1000)).toBe(false);
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(true);
+  });
+
+  test("old mtime still counts as wired — renders are event-driven", () => {
+    const past = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    writeHeartbeat(projectHeartbeatPath(PROJECT_DIR), past);
+
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(true);
+  });
+
+  test("global heartbeat does not vouch for the project", () => {
+    writeHeartbeat(globalHeartbeatPath());
+
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(false);
+  });
+
+  test("another project's heartbeat does not vouch for this one", () => {
+    writeHeartbeat(projectHeartbeatPath("/other/project"));
+
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(false);
+  });
+
+  test("symlinked project heartbeat is never followed — counts as a miss", () => {
+    if (process.platform === "win32") {
+      return;
+    }
+
+    const target = join(root, "heartbeat-target");
+    writeFileSync(target, "");
+    mkdirSync(dirname(projectHeartbeatPath(PROJECT_DIR)), { recursive: true });
+    symlinkSync(target, projectHeartbeatPath(PROJECT_DIR));
+
+    expect(hasProjectBadgeHeartbeat(PROJECT_DIR)).toBe(false);
   });
 });

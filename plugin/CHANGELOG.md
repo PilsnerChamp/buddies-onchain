@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2.0 — Heartbeat-only badge detection (2026-07-18)
+
+### Changed
+
+- Badge-wiring detection is heartbeat-only: the SessionStart nudge no longer probes `settings.json` for a `statusLine` key (a key proves nothing — project-level settings can shadow it, and a foreign statusline satisfies the probe without rendering the badge). SessionStart now nudges only when neither the per-project nor the global badge heartbeat exists; the nudge copy tells the model to offer compose snippets instead of replacing an existing custom statusline.
+- Badge heartbeat is per-project: `buddy-statusline.{sh,ps1}` touch `projects/<key>/.badge-heartbeat` (key = first 16 hex chars of sha256 of `workspace.project_dir` from statusline stdin) in addition to the global `.badge-heartbeat`. `/buddy-onchain`'s wire hint checks the per-project file only, so a badge rendering in another open session no longer masks a project whose own `.claude/settings.json` statusline shadows the badge.
+- Heartbeat detection is existence-based, not mtime-based: statusline renders are event-driven, so a stale mtime only proves an idle gap — the old 10-minute freshness window would have false-nagged after any lull. Only a never-created heartbeat (or a symlinked/non-regular one the scripts refuse to touch) counts as a miss. Trade-off: unwiring a once-wired statusline is not re-nagged; deleting the plugin state files resets detection.
+- `buddy-statusline.ps1` reads stdin as raw bytes and decodes UTF-8 explicitly — `[Console]::In` decodes with the legacy console code page under Windows PowerShell 5.1, which mangled non-ASCII project paths into a key the plugin reader could never match.
+- Custom-statusline embeds (hooks/README.md Option 1/2) must forward the statusline stdin JSON (and close the pipe) / touch the per-project heartbeat to stay detected — snippets updated, including the full `sha256sum`/`shasum`/`openssl` fallback chain (macOS has no `sha256sum`); an old embed keeps the global heartbeat alive (no SessionStart nag) but the slash card will show the wire hint until recomposed.
+
+## v1.1.0 — Warm art cache self-heal (2026-07-18)
+
+### Changed
+
+- A warm buddy whose ambient art cache is missing or identity/token-mismatched (e.g. cleared by account rotation) now rebuilds it during SessionStart with one bounded tokenURI fetch, instead of degrading silently until the next warm slash lookup. The fetch is bounded at the process level: a scoped viem client carries an AbortController signal (headers and body) with `retryCount 0`, aborted ahead of the 2s sub-budget inside the 5s hook timeout, with an unref'd race timer as backstop — an abandoned in-flight request would otherwise pin the event loop past the hook budget and lose the emitted ruleset.
+
 ## v1.0.1 — Quiet degradation without Node (2026-07-09)
 
 ### Changed

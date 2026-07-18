@@ -6,7 +6,7 @@
 //   3. Effective mode selects one ruleset body.
 //   4. Warm buddy with a missing/mismatched art cache rebuilds it (bounded
 //      tokenURI fetch) so ambient recovers without a manual slash.
-//   5. Missing statusline config appends a setup nudge.
+//   5. No badge heartbeat (project or global) appends a setup nudge.
 //
 // Hard contract: never log, exit, or throw past `runSessionStart`.
 
@@ -19,46 +19,45 @@ import {
   ensureWarmArtCache,
   resolveAndWriteBuddyChainState,
 } from "./lookup-payload";
-import { safeReadJson } from "./safe-json-store";
+import {
+  hasGlobalBadgeHeartbeat,
+  hasProjectBadgeHeartbeat,
+} from "./badge-heartbeat";
 import {
   clearDriftFlag,
   consumeExpectedRender,
   consumeSessionFresh,
   setSessionFresh,
 } from "./drift-flag";
-import { settingsPath, statuslineCommand } from "./plugin-paths";
-import { isPlainObject } from "./plain-object";
-
-interface StatusLineProbe {
-  hasStatusLine: boolean;
-}
-
-const MAX_SETTINGS_BYTES = 64 * 1024;
+import { statuslineCommand } from "./plugin-paths";
 
 // tokenURI rebuild gets its own sub-budget inside the 5s hook timeout —
 // better to boot without the buddy than let a slow RPC stall session start.
 const ART_CACHE_REBUILD_TIMEOUT_MS = 2000;
 
-function validateSettings(raw: unknown): StatusLineProbe | null {
-  if (!isPlainObject(raw)) {
-    return { hasStatusLine: false };
-  }
-
-  return { hasStatusLine: Object.hasOwn(raw, "statusLine") };
-}
-
-function statusLineConfigured(): boolean {
-  const probe = safeReadJson(
-    settingsPath(),
-    validateSettings,
-    MAX_SETTINGS_BYTES,
+// Nudge on badge-heartbeat evidence, not settings.json contents — a
+// `statusLine` key proves nothing (a project-level settings file can shadow
+// it, and a foreign statusline satisfies the probe without rendering the
+// badge). Project heartbeat present → the badge has rendered here, done.
+// Otherwise the global heartbeat gates the nudge: SessionStart can race the
+// first statusline render, and a brand-new project has no project heartbeat
+// yet, so a badge that provably rendered elsewhere on this machine stays
+// quiet here — the slash lookup's per-project wire hint covers the
+// shadowed-project case precisely.
+function statuslineNudgeNeeded(): boolean {
+  const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+  return (
+    !hasProjectBadgeHeartbeat(projectDir) && !hasGlobalBadgeHeartbeat()
   );
-
-  return probe?.hasStatusLine ?? false;
 }
 
 function withStatuslineNudge(ruleset: string): string {
-  if (statusLineConfigured()) {
+  try {
+    if (!statuslineNudgeNeeded()) {
+      return ruleset;
+    }
+  } catch {
+    // Undeterminable badge status stays silent — never nag on uncertainty.
     return ruleset;
   }
 
