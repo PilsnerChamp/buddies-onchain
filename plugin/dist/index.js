@@ -33575,12 +33575,24 @@ function projectBadgeHeartbeatPath(projectDir) {
   return join3(pluginDataDir(), "projects", projectKey(projectDir), ".badge-heartbeat");
 }
 var HERE2 = dirname3(fileURLToPath2(import.meta.url));
-function statuslineScriptPath() {
-  const script = process.platform === "win32" ? "buddy-statusline.ps1" : "buddy-statusline.sh";
-  return resolve2(HERE2, "..", "hooks", script);
+var STATUSLINE_SCRIPTS = [
+  "buddy-statusline.sh",
+  "buddy-statusline.ps1"
+];
+function platformStatuslineScriptName() {
+  return process.platform === "win32" ? "buddy-statusline.ps1" : "buddy-statusline.sh";
+}
+function bundledStatuslineScriptPath(name) {
+  return resolve2(HERE2, "..", "hooks", name);
+}
+function pluginPackageJsonPath() {
+  return resolve2(HERE2, "..", "package.json");
+}
+function installedStatuslineScriptPath(name = platformStatuslineScriptName()) {
+  return join3(pluginDataDir(), name);
 }
 function statuslineCommand() {
-  const script = statuslineScriptPath();
+  const script = installedStatuslineScriptPath();
   return process.platform === "win32" ? `powershell -ExecutionPolicy Bypass -File "${script}"` : `bash "${script}"`;
 }
 function buddyArtCachePath() {
@@ -34706,6 +34718,241 @@ function hasGlobalBadgeHeartbeat() {
   return heartbeatExists(badgeHeartbeatPath());
 }
 
+// src/statusline-install.ts
+import { randomBytes } from "node:crypto";
+import {
+  linkSync,
+  lstatSync as lstatSync3,
+  mkdirSync as mkdirSync2,
+  readdirSync,
+  readFileSync as readFileSync2,
+  renameSync as renameSync2,
+  rmSync,
+  writeFileSync
+} from "node:fs";
+import { basename, join as join4 } from "node:path";
+var MAX_SCRIPT_BYTES = 256 * 1024;
+var MAX_SETTINGS_BYTES = 64 * 1024;
+function versionSidecarPath() {
+  return join4(pluginDataDir(), ".statusline-scripts-version");
+}
+function readBounded(path) {
+  const stats = lstatSync3(path);
+  if (!stats.isFile() || stats.size > MAX_SCRIPT_BYTES) {
+    return null;
+  }
+  return readFileSync2(path);
+}
+function parseVersion(raw) {
+  if (typeof raw !== "string")
+    return null;
+  const parts = raw.trim().split(".");
+  if (parts.length !== 3)
+    return null;
+  const nums = parts.map((p) => /^\d+$/.test(p) ? Number(p) : NaN);
+  return nums.some(Number.isNaN) ? null : nums;
+}
+function compareVersions(a, b) {
+  for (let i = 0;i < 3; i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d !== 0)
+      return d;
+  }
+  return 0;
+}
+function ownVersion() {
+  try {
+    const raw = readBounded(pluginPackageJsonPath());
+    if (raw === null)
+      return null;
+    const parsed = JSON.parse(raw.toString("utf8"));
+    if (parsed === null || typeof parsed !== "object")
+      return null;
+    return parseVersion(parsed.version);
+  } catch {
+    return null;
+  }
+}
+function sidecarVersion() {
+  try {
+    const raw = readBounded(versionSidecarPath());
+    if (raw === null)
+      return null;
+    return parseVersion(raw.toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+function atomicWrite(dest, content, mode) {
+  const tmp = `${dest}.tmp-${randomBytes(6).toString("hex")}`;
+  try {
+    writeFileSync(tmp, content, mode === undefined ? { flag: "wx" } : { flag: "wx", mode });
+    renameSync2(tmp, dest);
+  } catch (error) {
+    try {
+      rmSync(tmp, { force: true });
+    } catch {}
+    throw error;
+  }
+}
+var LOCK_STALE_MS = 60 * 1000;
+function lockPath() {
+  return join4(pluginDataDir(), ".statusline-scripts.lock");
+}
+function acquireScriptsLock() {
+  const lock = lockPath();
+  const token = randomBytes(12).toString("hex");
+  try {
+    mkdirSync2(pluginDataDir(), { recursive: true });
+    writeFileSync(lock, token, { flag: "wx" });
+    return token;
+  } catch (error) {
+    if (error.code !== "EEXIST")
+      return null;
+  }
+  try {
+    const snapshot = lstatSync3(lock);
+    if (!snapshot.isFile() || Date.now() - snapshot.mtimeMs <= LOCK_STALE_MS) {
+      return null;
+    }
+    const claim = `${lock}.claim-${snapshot.ino}-${Math.floor(snapshot.mtimeMs)}`;
+    try {
+      linkSync(lock, claim);
+    } catch (error) {
+      if (error.code !== "EEXIST") {
+        return null;
+      }
+      try {
+        const claimStats = lstatSync3(claim);
+        if (Date.now() - claimStats.ctimeMs <= LOCK_STALE_MS)
+          return null;
+        rmSync(claim, { force: true });
+        linkSync(lock, claim);
+      } catch {
+        return null;
+      }
+    }
+    try {
+      if (lstatSync3(claim).ino !== snapshot.ino) {
+        return null;
+      }
+      rmSync(lock, { force: true });
+    } finally {
+      rmSync(claim, { force: true });
+    }
+    try {
+      for (const entry of readdirSync(pluginDataDir())) {
+        if (entry.startsWith(".statusline-scripts.lock.claim-") && entry !== basename(claim)) {
+          rmSync(join4(pluginDataDir(), entry), { force: true });
+        }
+      }
+    } catch {}
+    writeFileSync(lock, token, { flag: "wx" });
+    return token;
+  } catch {
+    return null;
+  }
+}
+function releaseScriptsLock(token) {
+  try {
+    const lock = lockPath();
+    const stats = lstatSync3(lock);
+    if (!stats.isFile() || stats.size > 4096)
+      return;
+    if (readFileSync2(lock, "utf8") === token) {
+      rmSync(lock, { force: true });
+    }
+  } catch {}
+}
+function ensureInstalledStatuslineScripts() {
+  const lockToken = acquireScriptsLock();
+  if (lockToken === null)
+    return;
+  try {
+    const mine = ownVersion();
+    try {
+      const installed = sidecarVersion();
+      if (mine !== null && installed !== null && compareVersions(installed, mine) > 0) {
+        return;
+      }
+    } catch {}
+    let wroteAny = false;
+    for (const name of STATUSLINE_SCRIPTS) {
+      try {
+        const sourcePath = bundledStatuslineScriptPath(name);
+        const source = readBounded(sourcePath);
+        if (source === null)
+          continue;
+        const dest = installedStatuslineScriptPath(name);
+        try {
+          const existing = readBounded(dest);
+          if (existing !== null && existing.equals(source))
+            continue;
+          if (existing === null)
+            continue;
+        } catch (error) {
+          if (error.code !== "ENOENT")
+            continue;
+        }
+        atomicWrite(dest, source, lstatSync3(sourcePath).mode & 511);
+        wroteAny = true;
+      } catch {}
+    }
+    if (wroteAny && mine !== null) {
+      try {
+        atomicWrite(versionSidecarPath(), mine.join("."));
+      } catch {}
+    }
+  } finally {
+    releaseScriptsLock(lockToken);
+  }
+}
+var LEGACY_CACHE_SCRIPT_RE = /[^"]*[\\/]cache[\\/][^"]*buddy-onchain[^"]*[\\/]hooks[\\/]buddy-statusline\.(sh|ps1)/;
+function migrateLegacyStatuslineWiring() {
+  try {
+    const settingsPath = join4(claudeDir(), "settings.json");
+    const stats = lstatSync3(settingsPath);
+    if (!stats.isFile() || stats.size > MAX_SETTINGS_BYTES)
+      return;
+    const rawText = readFileSync2(settingsPath, "utf8");
+    const parsed = JSON.parse(rawText);
+    if (parsed === null || typeof parsed !== "object")
+      return;
+    const statusLine = parsed.statusLine;
+    if (statusLine === null || typeof statusLine !== "object")
+      return;
+    const command = statusLine.command;
+    if (typeof command !== "string")
+      return;
+    const match = LEGACY_CACHE_SCRIPT_RE.exec(command);
+    if (match === null)
+      return;
+    const legacyPath = match[0];
+    const flavor = match[1] === "ps1" ? "buddy-statusline.ps1" : "buddy-statusline.sh";
+    const stablePath = installedStatuslineScriptPath(flavor);
+    const escapedCommand = JSON.stringify(command).slice(1, -1);
+    const escapedLegacy = JSON.stringify(legacyPath).slice(1, -1);
+    const escapedStable = JSON.stringify(stablePath).slice(1, -1);
+    if (!escapedCommand.includes(escapedLegacy))
+      return;
+    const rewrittenCommand = escapedCommand.replace(escapedLegacy, escapedStable);
+    const expectedCommand = command.replace(legacyPath, stablePath);
+    for (let idx = rawText.indexOf(escapedCommand);idx !== -1; idx = rawText.indexOf(escapedCommand, idx + 1)) {
+      const candidate = rawText.slice(0, idx) + rewrittenCommand + rawText.slice(idx + escapedCommand.length);
+      try {
+        const reparsed = JSON.parse(candidate);
+        const line = reparsed.statusLine;
+        if (line?.command !== expectedCommand)
+          continue;
+      } catch {
+        continue;
+      }
+      atomicWrite(settingsPath, candidate, stats.mode & 511);
+      return;
+    }
+  } catch {}
+}
+
 // src/lookup-payload.ts
 class BuddyChainStateError extends Error {
   constructor(message) {
@@ -34866,6 +35113,9 @@ async function ensureWarmArtCache(args) {
 }
 async function resolveLookupPayload(args = {}) {
   try {
+    try {
+      ensureInstalledStatuslineScripts();
+    } catch {}
     let accountUuid;
     if (args.accountUuidOverride !== undefined) {
       accountUuid = args.accountUuidOverride;
@@ -34922,7 +35172,7 @@ async function resolveLookupPayload(args = {}) {
     try {
       const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
       if (!hasProjectBadgeHeartbeat(projectDir)) {
-        statuslineWireHint = statuslineScriptPath();
+        statuslineWireHint = statuslineCommand();
       }
     } catch {}
     return {
@@ -34998,8 +35248,8 @@ function formatLookupBlock(payload, includeGuard = false) {
   lines.push(...deploymentFooterLines(payload));
   lines.push("");
   if (payload.statuslineWireHint !== null) {
-    lines.push("statusline: buddy badge not detected in your status bar");
-    lines.push(`wire: ask claude to call \`${payload.statuslineWireHint}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`);
+    lines.push("statusline: buddy badge not rendering in this project's status bar");
+    lines.push(`setup: add \`${payload.statuslineWireHint}\` to your statusline command (snippets: plugin/hooks/README.md), then restart the session`);
   }
   if (payload.effectiveMode !== payload.persistedMode) {
     lines.push(`note: \`BUDDY_MODE=${payload.effectiveMode}\` overrides saved mode until unset`);
@@ -35021,24 +35271,24 @@ function formatInvalidVerbBlock(verb) {
 }
 
 // src/drift-flag.ts
-import { existsSync as existsSync2, mkdirSync as mkdirSync2, unlinkSync as unlinkSync3, writeFileSync } from "node:fs";
-import { dirname as dirname4, join as join4 } from "node:path";
+import { existsSync as existsSync2, mkdirSync as mkdirSync3, unlinkSync as unlinkSync3, writeFileSync as writeFileSync2 } from "node:fs";
+import { dirname as dirname4, join as join5 } from "node:path";
 var EXPECTED_RENDER_FLAG = "expected-render.flag";
 var DRIFT_FLAG = "repeat-buddy-instructions.flag";
 var SESSION_FRESH_FLAG = "session-fresh.flag";
 function expectedRenderFlagPath() {
-  return join4(pluginDataDir(), EXPECTED_RENDER_FLAG);
+  return join5(pluginDataDir(), EXPECTED_RENDER_FLAG);
 }
 function driftFlagPath() {
-  return join4(pluginDataDir(), DRIFT_FLAG);
+  return join5(pluginDataDir(), DRIFT_FLAG);
 }
 function sessionFreshFlagPath() {
-  return join4(pluginDataDir(), SESSION_FRESH_FLAG);
+  return join5(pluginDataDir(), SESSION_FRESH_FLAG);
 }
 function touchFlag(path) {
   try {
-    mkdirSync2(dirname4(path), { recursive: true });
-    writeFileSync(path, "");
+    mkdirSync3(dirname4(path), { recursive: true });
+    writeFileSync2(path, "");
   } catch {}
 }
 function clearFlag(path) {
@@ -35154,6 +35404,12 @@ async function readSessionAccountUuid() {
 async function runSessionStart() {
   try {
     try {
+      ensureInstalledStatuslineScripts();
+    } catch {}
+    try {
+      migrateLegacyStatuslineWiring();
+    } catch {}
+    try {
       clearDriftFlag();
     } catch {}
     try {
@@ -35198,7 +35454,7 @@ async function runSessionStart() {
 }
 
 // src/stop-hook.ts
-import { readFileSync as readFileSync2 } from "node:fs";
+import { readFileSync as readFileSync3 } from "node:fs";
 
 // src/buddy-render-detect.ts
 var OPENING_FENCE_RE = /^\s*(```|~~~)(\w*)\s*$/;
@@ -35331,7 +35587,7 @@ function assistantTextFromTranscript(path) {
     return null;
   }
   try {
-    const lines = readFileSync2(path, "utf8").split(/\r?\n/).filter((line) => line.trim().length > 0);
+    const lines = readFileSync3(path, "utf8").split(/\r?\n/).filter((line) => line.trim().length > 0);
     for (let i = lines.length - 1;i >= 0; i--) {
       try {
         const text = assistantTextFromEntry(JSON.parse(lines[i]));

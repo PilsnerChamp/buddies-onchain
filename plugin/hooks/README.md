@@ -53,13 +53,13 @@ Composing your own statusline? Option 1 below fires both heartbeats automaticall
 
 ## Manual setup (replace whatever's there)
 
-If you want to configure it yourself or replace an existing statusline:
+If you want to configure it yourself or replace an existing statusline, wire the **version-stable copy** the plugin maintains in its data dir — SessionStart and `/buddy-onchain` refresh it from every installed plugin version, so it survives updates:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "bash \"/absolute/path/to/buddy-statusline.sh\""
+    "command": "bash \"$HOME/.claude/plugins/buddy-onchain/buddy-statusline.sh\""
   }
 }
 ```
@@ -70,12 +70,14 @@ Windows:
 {
   "statusLine": {
     "type": "command",
-    "command": "powershell -ExecutionPolicy Bypass -File \"C:\\absolute\\path\\to\\buddy-statusline.ps1\""
+    "command": "powershell -ExecutionPolicy Bypass -File \"C:\\Users\\<you>\\.claude\\plugins\\buddy-onchain\\buddy-statusline.ps1\""
   }
 }
 ```
 
-The plugin install location is platform-specific. For dev installs, the path is `<repo-root>/plugin/hooks/buddy-statusline.{sh,ps1}`.
+(Use your literal home path on Windows — the statusline shell does not expand `%USERPROFILE%`. `CLAUDE_CONFIG_DIR` overrides `~/.claude` if you've moved your config dir.)
+
+Do NOT wire the marketplace cache path (`…/cache/<marketplace>/<plugin>/<version>/hooks/…`) — it is version-pinned and goes stale or dead on the next plugin update. For repo dev installs, `<repo-root>/plugin/hooks/buddy-statusline.{sh,ps1}` is fine — a working copy tracks the source directly.
 
 ## Custom statusline (compose with your own script)
 
@@ -91,7 +93,7 @@ Simplest. The buddy statusline outputs nothing on missing/corrupt/symlinked stat
 # inside your custom statusline script
 statusline_json=$(cat)   # you likely already read this for your own fields
 your_existing_left_part="..."
-buddy_badge=$(printf '%s' "$statusline_json" | bash /absolute/path/to/buddy-statusline.sh)
+buddy_badge=$(printf '%s' "$statusline_json" | bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/buddy-onchain/buddy-statusline.sh")
 your_existing_right_part="..."
 
 printf '%s %s %s\n' "$your_existing_left_part" "$buddy_badge" "$your_existing_right_part"
@@ -175,4 +177,4 @@ sh plugin/hooks/uninstall.sh        # POSIX
 powershell -ExecutionPolicy Bypass -File plugin/hooks/uninstall.ps1   # Windows
 ```
 
-Removes the buddy-managed `statusLine` only. Foreign statuslines are left alone. State files at `~/.claude/plugins/buddy-onchain/` (`.buddy-state`, `.buddy-art-cache.json`, `.badge-heartbeat`, `projects/`) are NOT touched — delete them by hand if you want a fully clean reset.
+Removes the buddy-managed `statusLine` only. Foreign statuslines are left alone. State files at `~/.claude/plugins/buddy-onchain/` (`.buddy-state`, `.buddy-art-cache.json`, `.badge-heartbeat`, `buddy-statusline.{sh,ps1}`, `projects/`) are NOT touched — delete them by hand if you want a fully clean reset.

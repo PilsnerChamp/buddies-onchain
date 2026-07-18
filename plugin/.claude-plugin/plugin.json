@@ -1,7 +1,7 @@
 {
   "name": "buddy-onchain",
   "description": "An AI buddy in your terminal — one per account, non-transferable, living fully onchain on Base. No host. No takedown. Go hatch yours.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "author": {
     "name": "PilsnerChamp",

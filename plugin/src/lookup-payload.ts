@@ -58,7 +58,8 @@ import {
   sameIdentity,
 } from "./identity";
 import { hasProjectBadgeHeartbeat } from "./badge-heartbeat";
-import { statuslineScriptPath } from "./plugin-paths";
+import { statuslineCommand } from "./plugin-paths";
+import { ensureInstalledStatuslineScripts } from "./statusline-install";
 
 export interface LookupPayload {
   buddyStatus: BuddyStatus;
@@ -77,11 +78,13 @@ export interface LookupPayload {
   chainId: number;
   effectiveMode: ModeLevel;
   persistedMode: ModeLevel;
-  // Absolute path to `buddy-statusline.sh` when this project's badge
+  // Full platform-matched statusline command for the version-stable script
+  // copy (plugin-paths.ts::statuslineCommand()) when this project's badge
   // heartbeat has never been created (badge not rendering in the live
   // status bar here — no statusline, or a foreign/project statusline
   // shadows it); `null` = badge detected, or undeterminable (never nag on
-  // uncertainty).
+  // uncertainty). Never the bundled cache path — that one is version-pinned
+  // and dies on plugin update.
   statuslineWireHint: string | null;
 }
 
@@ -371,6 +374,16 @@ export async function resolveLookupPayload(
   args: ResolveLookupArgs = {},
 ): Promise<LookupPayload | null> {
   try {
+    try {
+      // Refresh the version-stable statusline script copies here too, not
+      // just at SessionStart: a user who installs the plugin and runs
+      // /buddy-onchain in the same session (no restart, hooks hot-loaded)
+      // must get a live copy at the wired path right away. Content-compare
+      // no-op on every later slash.
+      ensureInstalledStatuslineScripts();
+    } catch {
+      // Script refresh is best-effort; lookup must render regardless.
+    }
     let accountUuid: string;
     if (args.accountUuidOverride !== undefined) {
       accountUuid = args.accountUuidOverride;
@@ -457,7 +470,7 @@ export async function resolveLookupPayload(
     try {
       const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
       if (!hasProjectBadgeHeartbeat(projectDir)) {
-        statuslineWireHint = statuslineScriptPath();
+        statuslineWireHint = statuslineCommand();
       }
     } catch {
       // Undeterminable badge status stays silent; the card never nags on
@@ -593,11 +606,14 @@ export function formatLookupBlock(
   // Never-created project badge heartbeat → the badge is not rendering in
   // this project's status bar. Composition stays explicit and user-driven
   // (see hooks/README.md "Why we don't auto-merge"), so the card offers the
-  // wiring, never does it.
+  // wiring, never does it. Declarative phrasing on purpose: these lines are
+  // DISPLAY text passing through a model-rendered block, and imperative
+  // "ask claude to ..." copy reads as an instruction to the renderer
+  // instead of text for the user (see RENDER_VERBATIM_GUARD).
   if (payload.statuslineWireHint !== null) {
-    lines.push("statusline: buddy badge not detected in your status bar");
+    lines.push("statusline: buddy badge not rendering in this project's status bar");
     lines.push(
-      `wire: ask claude to call \`${payload.statuslineWireHint}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
+      `setup: add \`${payload.statuslineWireHint}\` to your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
     );
   }
 

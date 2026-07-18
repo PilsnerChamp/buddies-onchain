@@ -230,24 +230,26 @@ describe("formatLookupBlock", () => {
   });
 
   describe("statusline wire hint", () => {
-    const HINT_PATH = "/abs/path/to/plugin/hooks/buddy-statusline.sh";
+    // Payload carries the full platform command for the version-stable
+    // data-dir copy — never a version-pinned cache path.
+    const HINT_COMMAND = 'bash "/abs/data/plugins/buddy-onchain/buddy-statusline.sh"';
     const WIRE_LINES = [
-      "statusline: buddy badge not detected in your status bar",
-      `wire: ask claude to call \`${HINT_PATH}\` from your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
+      "statusline: buddy badge not rendering in this project's status bar",
+      `setup: add \`${HINT_COMMAND}\` to your statusline command (snippets: plugin/hooks/README.md), then restart the session`,
     ];
 
     test("null hint renders no statusline lines", () => {
       const out = formatLookupBlock(makeLookupPayload({ buddyStatus: "warm" }));
 
       expect(out).not.toContain("statusline:");
-      expect(out).not.toContain("wire:");
+      expect(out).not.toContain("setup:");
     });
 
-    test("stale-heartbeat hint renders between the footer and mode copy", () => {
+    test("missing-heartbeat hint renders between the footer and mode copy", () => {
       const out = formatLookupBlock(
         makeLookupPayload({
           buddyStatus: "warm",
-          statuslineWireHint: HINT_PATH,
+          statuslineWireHint: HINT_COMMAND,
         }),
       );
 
@@ -270,7 +272,7 @@ describe("formatLookupBlock", () => {
       const out = formatLookupBlock(
         makeLookupPayload({
           buddyStatus: "warm",
-          statuslineWireHint: HINT_PATH,
+          statuslineWireHint: HINT_COMMAND,
           effectiveMode: "full",
           persistedMode: "lite",
         }),

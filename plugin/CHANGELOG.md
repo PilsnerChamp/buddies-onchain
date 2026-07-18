@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.1 — Version-stable statusline script path (2026-07-18)
+
+### Changed
+
+- Statusline wiring no longer references the marketplace cache path: that directory is version-pinned (`cache/<marketplace>/<plugin>/<version>/`), so a wired command went stale — or dead — on every plugin update. SessionStart and `/buddy-onchain` now refresh a copy of `buddy-statusline.{sh,ps1}` into the stable plugin data dir (`~/.claude/plugins/buddy-onchain/`, atomic tmp+rename so a mid-write render never executes a half-copied script), and the setup nudge, wire hint, and README point only at that copy. The slash-path refresh covers install-then-`/buddy-onchain` in a not-yet-restarted session.
+- Wire hint copy is declarative (`statusline:` + `setup:` lines) — the previous `wire: ask claude to call …` phrasing read as an instruction to the rendering model rather than display text for the user.
+- SessionStart migrates pre-v1.2.1 buddy-written wiring: a `settings.json` statusline command pointing at the marketplace cache script is rewritten in place (raw path substring only, formatting preserved, script flavor kept) to the stable copy. Foreign statuslines and repo dev paths are never touched.
+- Stable-copy refresh is guarded by a `.statusline-scripts-version` sidecar so a still-running older session (hot-loaded hooks) cannot downgrade the copy a newer install just wrote; the sidecar check and the writes run under an exclusive-create `.statusline-scripts.lock` (stale locks stolen after 60s) so overlapping sessions cannot interleave either. Tmp files use random exclusive-create names so a pre-planted file or symlink fails the write instead of being followed; migration and script writes preserve the destination's permission bits (a `0600` settings.json stays `0600`), and the settings rewrite is scoped to the `statusLine.command` value only — an identical path elsewhere in the file is untouched.
+
 ## v1.2.0 — Heartbeat-only badge detection (2026-07-18)
 
 ### Changed

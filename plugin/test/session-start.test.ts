@@ -496,6 +496,30 @@ describe("SessionStart chain writer behavior", () => {
   });
 });
 
+describe("SessionStart statusline script install", () => {
+  test("boot refreshes version-stable script copies in the data dir", async () => {
+    const root = freshClaudeRoot();
+
+    const result = await runSessionStart(root);
+
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(join(root, "plugins", "buddy-onchain", "buddy-statusline.sh"))).toBe(true);
+    expect(existsSync(join(root, "plugins", "buddy-onchain", "buddy-statusline.ps1"))).toBe(true);
+  });
+
+  test("env-off boot still refreshes the script copies", async () => {
+    // A wired badge renders the `off` state too — plugin updates must reach
+    // the data-dir copy even when the buddy itself is muted.
+    const root = freshClaudeRoot();
+
+    const result = await runSessionStart(root, { BUDDY_MODE: "off" });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("OK\n");
+    expect(existsSync(join(root, "plugins", "buddy-onchain", "buddy-statusline.sh"))).toBe(true);
+  });
+});
+
 describe("SessionStart statusline nudge (badge heartbeat)", () => {
   // The project dir the subprocess resolves is CLAUDE_PROJECT_DIR = root
   // (pinned in the runners), so project-heartbeat cases key off `root`.

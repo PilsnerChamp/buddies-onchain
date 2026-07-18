@@ -24,6 +24,10 @@ import {
   hasProjectBadgeHeartbeat,
 } from "./badge-heartbeat";
 import {
+  ensureInstalledStatuslineScripts,
+  migrateLegacyStatuslineWiring,
+} from "./statusline-install";
+import {
   clearDriftFlag,
   consumeExpectedRender,
   consumeSessionFresh,
@@ -112,6 +116,24 @@ async function readSessionAccountUuid(): Promise<string | null> {
 
 export async function runSessionStart(): Promise<void> {
   try {
+    try {
+      // Refresh the version-stable statusline script copies FIRST, before
+      // any short-circuit (including env `off` — the badge renders the off
+      // state too, so a wired script must keep updating): user wiring
+      // points at the data-dir copy, and this is what carries plugin
+      // updates to it.
+      ensureInstalledStatuslineScripts();
+    } catch {
+      // Stale script copy degrades to the previous version; never blocks boot.
+    }
+    try {
+      // Rewrite buddy-written cache-path wiring (pre-v1.2.1 nudges) to the
+      // stable copy — the old path dies on plugin update and existence-only
+      // heartbeats would keep the breakage silent.
+      migrateLegacyStatuslineWiring();
+    } catch {
+      // Best-effort; unmigrated wiring keeps working until cache pruning.
+    }
     try {
       clearDriftFlag();
     } catch {
