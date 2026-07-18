@@ -140,41 +140,39 @@ describe("applyColdNudge", () => {
   test("fire=false returns unchanged rows and null joke overrides", () => {
     const rows = ["row 0", "row 1", "row 2", "row 3", "row 4"];
 
-    const out = applyColdNudge(rows, false, "https://example.test/hatch");
+    const out = applyColdNudge(rows, false);
 
     expect(out.rows).toBe(rows);
     expect(out.jokeOverrides).toEqual([null, null, null, null, null]);
   });
 
-  test("fire=true pre-fills first three joke cells without changing rows", () => {
+  test("fire=true pre-fills the first two joke cells without changing rows", () => {
     const rows = ["row 0", "row 1", "row 2", "row 3", "row 4"];
-    const url = "https://example.test/hatch#identityHash=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&prngSeed=123";
 
-    const out = applyColdNudge(rows, true, url);
+    const out = applyColdNudge(rows, true);
 
     expect(out.rows).toBe(rows);
     expect(out.jokeOverrides).toEqual([
       COLD_NUDGE_LINE_1,
       COLD_NUDGE_LINE_2,
-      url,
+      null,
       null,
       null,
     ]);
   });
 
   test("fire=true with empty input returns empty rows and overrides", () => {
-    const rows: string[] = [];
-
-    const out = applyColdNudge(rows, true, "https://example.test/hatch");
+    const out = applyColdNudge([], true);
 
     expect(out).toEqual({ rows: [], jokeOverrides: [] });
   });
 
-  test("passes hatch URL through verbatim", () => {
-    const url = "https://buddiesonchain.dev/hatch#identityHash=0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&prngSeed=123";
-
-    const out = applyColdNudge(["row 0", "row 1", "row 2"], true, url);
-
-    expect(out.jokeOverrides[2]).toBe(url);
+  test("nudge lines stay short enough to never wrap the fenced block", () => {
+    // The joke column rides next to ~17-char sprite rows inside a fenced
+    // code block; a long cell (the old full hatch URL) wraps and shears the
+    // sprite. Route via the slash command instead and keep cells short.
+    expect(COLD_NUDGE_LINE_1.length).toBeLessThanOrEqual(30);
+    expect(COLD_NUDGE_LINE_2.length).toBeLessThanOrEqual(30);
+    expect(COLD_NUDGE_LINE_2).toContain("/buddy-onchain");
   });
 });

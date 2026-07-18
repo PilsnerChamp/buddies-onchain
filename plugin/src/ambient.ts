@@ -46,7 +46,7 @@ const MAX_STATE_BYTES = 4 * 1024;
 const DISPLAY_BUDDY_DIRECTIVE =
   'DISPLAY_BUDDY [render block top of reply; fill jokes right of |]';
 const COLD_NUDGE_DIRECTIVE =
-  'COLD_NUDGE [pre-filled joke cells take precedence over the joke voice rules for those rows; render them verbatim or paraphrase lightly but keep the URL intact and the meaning of each line stable; only fill the blank cells per the joke voice instructions]';
+  'COLD_NUDGE [pre-filled joke cells take precedence over the joke voice rules for those rows; render them verbatim or paraphrase lightly but keep the /buddy-onchain command string intact and the meaning of each line stable; only fill the blank cells per the joke voice instructions]';
 
 export interface BuildOptions {
   jokeOverrides?: (string | null)[];

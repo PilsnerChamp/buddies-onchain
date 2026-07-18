@@ -33959,7 +33959,7 @@ function cacheMatchesIdentityAndToken(cache, identity, tokenId) {
 var STATE_VERSION = 1;
 var MAX_STATE_BYTES2 = 4 * 1024;
 var DISPLAY_BUDDY_DIRECTIVE = "DISPLAY_BUDDY [render block top of reply; fill jokes right of |]";
-var COLD_NUDGE_DIRECTIVE = "COLD_NUDGE [pre-filled joke cells take precedence over the joke voice rules for those rows; render them verbatim or paraphrase lightly but keep the URL intact and the meaning of each line stable; only fill the blank cells per the joke voice instructions]";
+var COLD_NUDGE_DIRECTIVE = "COLD_NUDGE [pre-filled joke cells take precedence over the joke voice rules for those rows; render them verbatim or paraphrase lightly but keep the /buddy-onchain command string intact and the meaning of each line stable; only fill the blank cells per the joke voice instructions]";
 function freshState() {
   return { lastFrameIndex: -1, accountUuid: null, chainId: null };
 }
@@ -34504,8 +34504,8 @@ function sleepingFrame(args) {
 
 // src/sprite-decorations.ts
 var SLEEP_INDICATOR_ROW = "      ZZzzz...   ";
-var COLD_NUDGE_LINE_1 = "your buddy is sleeping";
-var COLD_NUDGE_LINE_2 = "hatch it onchain";
+var COLD_NUDGE_LINE_1 = "still an egg. embarrassing.";
+var COLD_NUDGE_LINE_2 = "/buddy-onchain hatches me";
 function applySleepIndicator(rows, state, effective) {
   if (effective.reason !== "ok")
     return rows;
@@ -34517,7 +34517,7 @@ function applySleepIndicator(rows, state, effective) {
   out[0] = SLEEP_INDICATOR_ROW;
   return out;
 }
-function applyColdNudge(rows, fire, hatchUrl) {
+function applyColdNudge(rows, fire) {
   if (!fire || rows.length === 0) {
     return { rows, jokeOverrides: rows.map(() => null) };
   }
@@ -34526,8 +34526,6 @@ function applyColdNudge(rows, fire, hatchUrl) {
       return COLD_NUDGE_LINE_1;
     if (i === 1)
       return COLD_NUDGE_LINE_2;
-    if (i === 2)
-      return hatchUrl;
     return null;
   });
   return { rows, jokeOverrides };
@@ -35909,9 +35907,7 @@ async function runHook(args) {
           } catch {}
           const fire = nextCounter !== null && nextCounter > 0 && nextCounter % 10 === 0;
           if (fire) {
-            const origin = siteOriginForKey(getActiveNetwork().key);
-            const url = hatchUrl(origin, accountUuid);
-            coldNudge = applyColdNudge(sleepRows, true, url);
+            coldNudge = applyColdNudge(sleepRows, true);
             coldNudgeActive = true;
           }
         }

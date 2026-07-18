@@ -8,8 +8,15 @@ import type { BuddyStateV4 } from "./buddy-state";
 import type { EffectiveState } from "./effective-state";
 
 export const SLEEP_INDICATOR_ROW = "      ZZzzz...   ";
-export const COLD_NUDGE_LINE_1 = "your buddy is sleeping";
-export const COLD_NUDGE_LINE_2 = "hatch it onchain";
+// Buddy-voice on purpose: these override the JOKE column, so the nudge reads
+// as the creature talking, not plugin ad copy. Short lines only — the full
+// hatch URL used to ride row 2 and its ~130 chars wrapped the fenced block,
+// shearing the sprite. The slash card carries the URL; the sprite just
+// routes there.
+// Considered neutral-register alternative (three rows, plugin voice):
+//   "your buddy is sleeping" / "hatch it onchain" / "run /buddy-onchain"
+export const COLD_NUDGE_LINE_1 = "still an egg. embarrassing.";
+export const COLD_NUDGE_LINE_2 = "/buddy-onchain hatches me";
 
 export interface ColdNudgeResult {
   rows: string[];
@@ -30,11 +37,7 @@ export function applySleepIndicator(
   return out;
 }
 
-export function applyColdNudge(
-  rows: string[],
-  fire: boolean,
-  hatchUrl: string,
-): ColdNudgeResult {
+export function applyColdNudge(rows: string[], fire: boolean): ColdNudgeResult {
   if (!fire || rows.length === 0) {
     return { rows, jokeOverrides: rows.map(() => null) };
   }
@@ -42,7 +45,6 @@ export function applyColdNudge(
   const jokeOverrides = rows.map((_, i) => {
     if (i === 0) return COLD_NUDGE_LINE_1;
     if (i === 1) return COLD_NUDGE_LINE_2;
-    if (i === 2) return hatchUrl;
     return null;
   });
 

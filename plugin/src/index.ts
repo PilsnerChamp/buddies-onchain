@@ -42,10 +42,6 @@ import {
   formatInvalidVerbBlock,
   resolveLookupPayload,
 } from "./lookup-payload";
-import {
-  hatchUrl as buildHatchUrl,
-  siteOriginForKey,
-} from "./lookup";
 import { runSessionStart } from "./session-start";
 import { RULESET_AMBIENT } from "./instructions";
 import {
@@ -424,9 +420,7 @@ async function runHook(args: CliArgs): Promise<void> {
 
           const fire = nextCounter !== null && nextCounter > 0 && nextCounter % 10 === 0;
           if (fire) {
-            const origin = siteOriginForKey(getActiveNetwork().key);
-            const url = buildHatchUrl(origin, accountUuid);
-            coldNudge = applyColdNudge(sleepRows, true, url);
+            coldNudge = applyColdNudge(sleepRows, true);
             coldNudgeActive = true;
           }
         }

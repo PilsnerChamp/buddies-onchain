@@ -908,7 +908,9 @@ describe("hook — ambient route", () => {
     expect(context).toContain("COLD_NUDGE");
     expect(context).toContain(`| ${COLD_NUDGE_LINE_1}`);
     expect(context).toContain(`| ${COLD_NUDGE_LINE_2}`);
-    expect(context).toContain(PROD_HATCH_URL);
+    // The nudge routes via the slash command; the long hatch URL would wrap
+    // the fenced block and shear the sprite, so it must never ride ambient.
+    expect(context).not.toContain("/hatch");
     expect(context).not.toContain(TEST_UUID);
     expect(state.coldNudgeCounter).toBe(10);
   });
@@ -992,10 +994,11 @@ describe("hook — ambient route", () => {
     expect(state.coldNudgeCounter).toBe(7);
   });
 
-  test("ambient cold fire-turn uses production hatch origin on a pre-deploy read", async () => {
+  test("ambient cold fire-turn still fires on a pre-deploy read, without a URL", async () => {
     // Empty deployments dir => `getActiveNetwork().buddyNft === null`
-    // (pre-deploy). Identity is the mainnet chain with a null contract, so the
-    // seeded cold state still matches and the nudge fires with the prod origin.
+    // (pre-deploy). Identity is the mainnet chain with a null contract, so
+    // the seeded cold state still matches and the nudge fires; the hatch
+    // URL rides the slash card only, never the ambient block.
     const claudeDir = freshClaudeDir();
     const deploymentsDir = freshDeploymentsDir();
     seedBuddyState(claudeDir, {
@@ -1020,7 +1023,7 @@ describe("hook — ambient route", () => {
 
     expect(result.exitCode).toBe(0);
     expect(context).toContain("COLD_NUDGE");
-    expect(context).toContain(PROD_HATCH_URL);
+    expect(context).not.toContain("/hatch");
     expect(context).not.toContain(TEST_UUID);
   });
 

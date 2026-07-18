@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.2 — Short cold-hatch nudge (2026-07-18)
+
+### Changed
+
+- The ambient cold-buddy nudge no longer prints the full hatch URL in the sprite's joke column — its ~130 characters wrapped inside the fenced block and sheared the sprite. The nudge is now two short buddy-voice lines (`still an egg. embarrassing.` / `/buddy-onchain hatches me`) routing to the slash command, whose card carries the full hatch URL as before.
+
 ## v1.2.1 — Version-stable statusline script path (2026-07-18)
 
 ### Changed
