@@ -114,6 +114,10 @@ def buddy_badge(data: dict) -> str | None:
     try:
         out = subprocess.run(
             ["bash", str(script)],
+            # Forward the statusline payload: the badge script reads
+            # workspace.project_dir from stdin to write its per-project
+            # heartbeat (missing heartbeat = /buddy-onchain nags here).
+            input=json.dumps(data),
             capture_output=True,
             text=True,
             timeout=2,
