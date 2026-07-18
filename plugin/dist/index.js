@@ -33339,14 +33339,31 @@ var basePreconf = /* @__PURE__ */ defineChain({
 });
 // src/publicClient.ts
 var _client = null;
+var _testOverride = null;
+function resolveRpcUrl() {
+  return process.env.BUDDY_TEST_RPC_URL || ACTIVE_NETWORK.rpcUrl;
+}
 function getPublicClient() {
+  if (_testOverride !== null)
+    return _testOverride;
   if (_client === null) {
     _client = import_viem.createPublicClient({
       chain: base,
-      transport: import_viem.http(ACTIVE_NETWORK.rpcUrl)
+      transport: import_viem.http(resolveRpcUrl())
     });
   }
   return _client;
+}
+function createScopedReadClient(signal) {
+  if (_testOverride !== null)
+    return _testOverride;
+  return import_viem.createPublicClient({
+    chain: base,
+    transport: import_viem.http(resolveRpcUrl(), {
+      retryCount: 0,
+      fetchOptions: { signal }
+    })
+  });
 }
 
 // src/sprite.ts
@@ -33418,11 +33435,11 @@ function extractSpriteFrame(svg, frameId) {
   }
   return rows.map((r) => r.replace(/\s+$/, ""));
 }
-async function fetchTokenSvg(tokenId, net) {
+async function fetchTokenSvg(tokenId, net, client) {
   if (net.buddyNft === null)
     return null;
   try {
-    const tokenUri = await getPublicClient().readContract({
+    const tokenUri = await (client ?? getPublicClient()).readContract({
       abi: BUDDY_NFT_ABI,
       address: net.buddyNft,
       functionName: "tokenURI",
@@ -34811,6 +34828,41 @@ async function resolveAndWriteBuddyChainState(args) {
     identity: currentIdentity
   };
 }
+async function ensureWarmArtCache(args) {
+  try {
+    if (args.state.hatch !== "warm" || args.state.tokenId === null)
+      return;
+    if (!identityCanCacheArt(args.identity))
+      return;
+    const tokenId = BigInt(args.state.tokenId);
+    const cache = readArtCache();
+    if (cache !== null && cacheMatchesIdentityAndToken(cache, args.identity, tokenId)) {
+      return;
+    }
+    const net = args.netOverride ?? getActiveNetwork();
+    const timeoutMs = args.timeoutMs ?? 2000;
+    const abortDelayMs = Math.max(1, timeoutMs - Math.min(500, Math.floor(timeoutMs / 2)));
+    const controller = new AbortController;
+    const abortTimer = setTimeout(() => controller.abort(), abortDelayMs);
+    abortTimer.unref?.();
+    let raceTimer;
+    try {
+      const svg = await Promise.race([
+        fetchTokenSvg(tokenId, net, createScopedReadClient(controller.signal)),
+        new Promise((resolve3) => {
+          raceTimer = setTimeout(() => resolve3(null), timeoutMs);
+          raceTimer.unref?.();
+        })
+      ]);
+      if (svg === null)
+        return;
+      populateArtCacheFromSvg(svg, tokenId, args.identity);
+    } finally {
+      clearTimeout(abortTimer);
+      clearTimeout(raceTimer);
+    }
+  } catch {}
+}
 async function resolveLookupPayload(args = {}) {
   try {
     let accountUuid;
@@ -35040,6 +35092,7 @@ function isDriftFlagSet() {
 
 // src/session-start.ts
 var MAX_SETTINGS_BYTES = 64 * 1024;
+var ART_CACHE_REBUILD_TIMEOUT_MS = 2000;
 function validateSettings(raw) {
   if (!isPlainObject(raw)) {
     return { hasStatusLine: false };
@@ -35132,6 +35185,13 @@ async function runSessionStart() {
       return;
     }
     const effective = deriveEffective(resolved.state, resolved.identity, getEnvMode());
+    if (effective.effectiveMode !== "off") {
+      await ensureWarmArtCache({
+        state: resolved.state,
+        identity: resolved.identity,
+        timeoutMs: ART_CACHE_REBUILD_TIMEOUT_MS
+      });
+    }
     emitRulesetForMode(effective.effectiveMode);
   } catch {
     emit("OK");

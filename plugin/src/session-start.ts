@@ -4,7 +4,9 @@
 //   1. Environment `off` short-circuits to OK before any state/RPC work.
 //   2. Lookup refresh performs live chain resolution and state writeback.
 //   3. Effective mode selects one ruleset body.
-//   4. Missing statusline config appends a setup nudge.
+//   4. Warm buddy with a missing/mismatched art cache rebuilds it (bounded
+//      tokenURI fetch) so ambient recovers without a manual slash.
+//   5. Missing statusline config appends a setup nudge.
 //
 // Hard contract: never log, exit, or throw past `runSessionStart`.
 
@@ -13,7 +15,10 @@ import { defaultState, getEnvMode, readState, type ModeLevel } from "./buddy-sta
 import { readClaudeConfig, extractIdentity } from "./config-reader";
 import { deriveEffective } from "./effective-state";
 import { RULESET_AMBIENT, STATUSLINE_NUDGE_TEMPLATE } from "./instructions";
-import { resolveAndWriteBuddyChainState } from "./lookup-payload";
+import {
+  ensureWarmArtCache,
+  resolveAndWriteBuddyChainState,
+} from "./lookup-payload";
 import { safeReadJson } from "./safe-json-store";
 import {
   clearDriftFlag,
@@ -29,6 +34,10 @@ interface StatusLineProbe {
 }
 
 const MAX_SETTINGS_BYTES = 64 * 1024;
+
+// tokenURI rebuild gets its own sub-budget inside the 5s hook timeout —
+// better to boot without the buddy than let a slow RPC stall session start.
+const ART_CACHE_REBUILD_TIMEOUT_MS = 2000;
 
 function validateSettings(raw: unknown): StatusLineProbe | null {
   if (!isPlainObject(raw)) {
@@ -149,6 +158,18 @@ export async function runSessionStart(): Promise<void> {
       resolved.identity,
       getEnvMode(),
     );
+
+    if (effective.effectiveMode !== "off") {
+      // Heal a cleared/mismatched warm art cache (identity rotation) so
+      // ambient turns render without a manual `/buddy-onchain`. Bounded well
+      // under the 5s SessionStart hook budget, which the chain-state resolve
+      // above already spends from; soft-fails to the old degraded behavior.
+      await ensureWarmArtCache({
+        state: resolved.state,
+        identity: resolved.identity,
+        timeoutMs: ART_CACHE_REBUILD_TIMEOUT_MS,
+      });
+    }
 
     emitRulesetForMode(effective.effectiveMode);
   } catch {

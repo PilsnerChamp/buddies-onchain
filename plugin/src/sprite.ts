@@ -12,6 +12,7 @@
 // Soft-fail by design: any error returns null. Sprite/card rendering is
 // decorative; slash/hook routing still owns the product action.
 
+import type { PublicClient } from 'viem';
 import { BUDDY_NFT_ABI } from './buddyNftAbi';
 import { getPublicClient } from './publicClient';
 import type { PluginNetworkInfo } from './network';
@@ -141,10 +142,11 @@ export function extractSpriteFrame(svg: string, frameId: FrameId): string[] {
 export async function fetchTokenSvg(
   tokenId: bigint,
   net: PluginNetworkInfo,
+  client?: PublicClient,
 ): Promise<string | null> {
   if (net.buddyNft === null) return null;
   try {
-    const tokenUri = (await getPublicClient().readContract({
+    const tokenUri = (await (client ?? getPublicClient()).readContract({
       abi: BUDDY_NFT_ABI,
       address: net.buddyNft,
       functionName: 'tokenURI',

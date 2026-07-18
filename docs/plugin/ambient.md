@@ -8,7 +8,7 @@ Ambient turns read local files only and never touch the chain. The hook fires on
 
 Live RPC happens on two paths:
 
-- **`SessionStart`** — once per Claude Code session. Resolves identity, refreshes chain-facing state with `getTokenIdByIdentity`, and writes `.buddy-state`. It intentionally does **not** fetch `tokenURI` and does not populate the art cache.
+- **`SessionStart`** — once per Claude Code session. Resolves identity, refreshes chain-facing state with `getTokenIdByIdentity`, and writes `.buddy-state`. When the buddy is warm but the art cache is missing or identity/token-mismatched (e.g. cleared by an account rotation), it additionally fetches `tokenURI` once to rebuild the cache — bounded by a 2s sub-timeout inside the 5s hook budget, soft-failing to the degraded ambient surface. The fetch is aborted at the sub-deadline (no retries), so a stalled RPC cannot leave a socket pinning the hook process past its budget. A valid cache skips the fetch entirely.
 - **`/buddy-onchain`** — every slash invocation. Resolves identity and chain state; when warm, fetches `tokenURI` once and derives both the rendered slash card and `.buddy-art-cache.json` frames from that single payload.
 
 Ambient turns read only persisted state and art cache. Cache missing, stale, malformed, oversized, symlinked, or identity-mismatched → emit `{}` (no injection). No fallback RPC.
@@ -57,7 +57,7 @@ The SessionStart nudge only covers the no-`statusLine` case; it cannot see a for
 
 ## Art cache
 
-The art cache is the bridge between warm slash RPC and ambient turns. SessionStart updates `.buddy-state` only; it does not populate this cache.
+The art cache is the bridge between warm slash RPC and ambient turns. SessionStart updates `.buddy-state`, then heals this cache when a warm buddy has none that matches (see Writers).
 
 ### Shape
 
@@ -90,6 +90,7 @@ Safety rules — any breach kills the cache and ambient renders nothing:
 ### Writers
 
 - `/buddy-onchain` (slash) — on a warm online lookup, fetches `tokenURI` once, extracts card lines and ambient frames from the same SVG, and writes the cache atomically.
+- `SessionStart` (`ensureWarmArtCache`) — warm buddy, ambient mode on, no identity/token-matching cache → one bounded `tokenURI` fetch rebuilds it; valid cache skips the fetch, failure/timeout aborts the request and leaves ambient degraded until the next warm slash.
 - Identity reset or verified cold state clears stale art cache.
 
 ### Readers
@@ -120,7 +121,7 @@ Env wins over persisted state. When env differs from persisted, slash status out
 
 ## Identity coupling
 
-The state file, art cache, and ambient render all key on `(accountUuidHash, chainId, contractAddress)`, and art cache also keys on `tokenId`. If any identity leg changes (account switch, network swap, redeploy), SessionStart updates `.buddy-state`, stale art is cleared or ignored, and the ambient surface goes silent until a warm slash lookup refreshes frames.
+The state file, art cache, and ambient render all key on `(accountUuidHash, chainId, contractAddress)`, and art cache also keys on `tokenId`. If any identity leg changes (account switch, network swap, redeploy), SessionStart updates `.buddy-state`, clears stale art, and — when the current identity resolves warm — rebuilds the cache in the same boot via `ensureWarmArtCache`. Only when that bounded fetch fails does the ambient surface stay silent until the next SessionStart or warm slash.
 
 `accountUuidHash = sha256(lowercased uuid)` for state-file keying. On-chain identity hash is `computeIdentityHash` (`plugin/src/computeIdentityHash.ts`, a vendored copy of `shared/computeIdentityHash.ts`), `keccak256("buddies-onchain:identity:claude:v1" || 0x1f || lowercase(uuid))`; the two are distinct on purpose — the file-key hash avoids leaking the on-chain hash on disk.
 

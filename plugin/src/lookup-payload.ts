@@ -26,6 +26,7 @@ import {
   fetchTokenSvg,
 } from "./sprite";
 import { getActiveNetwork, type PluginNetworkInfo } from "./network";
+import { createScopedReadClient } from "./publicClient";
 import {
   modeFooterSentence,
   getEnvMode,
@@ -242,7 +243,9 @@ function sleepingCardLines(
  *
  * This function intentionally does not fetch tokenURI SVG or refresh warm art
  * cache. It only writes buddy chain state and clears stale art on identity
- * reset / verified cold.
+ * reset / verified cold. Warm art recovery is the explicit follow-up call
+ * `ensureWarmArtCache` — SessionStart invokes it after this writer so a
+ * cache cleared by identity rotation heals without a manual slash.
  */
 export async function resolveAndWriteBuddyChainState(args: {
   accountUuid: string;
@@ -294,6 +297,73 @@ export async function resolveAndWriteBuddyChainState(args: {
     chainStatus: mappedChainStatus,
     identity: currentIdentity,
   };
+}
+
+/**
+ * Rebuild the ambient art cache when a warm buddy has no matching cache —
+ * the recovery path after identity-rotation invalidation cleared art and the
+ * account flipped back (ambient would otherwise degrade silently until the
+ * next warm slash). Runs from SessionStart, which already owns chain RPC;
+ * the ambient RPC-free contract is untouched. The tokenURI fetch is aborted
+ * shortly before `timeoutMs` via an AbortController on a scoped client —
+ * a race timer alone would only bound this code path while the abandoned
+ * request pinned the event loop (and the hook process) until viem gave up.
+ * The full-`timeoutMs` race stays as a backstop for non-transport stalls;
+ * on abort, timeout, or any failure the cache stays missing and the warm
+ * slash remains the fallback rebuild path. Never throws.
+ */
+export async function ensureWarmArtCache(args: {
+  state: BuddyStateV4;
+  identity: IdentityTuple;
+  netOverride?: PluginNetworkInfo;
+  timeoutMs?: number;
+}): Promise<void> {
+  try {
+    if (args.state.hatch !== "warm" || args.state.tokenId === null) return;
+    if (!identityCanCacheArt(args.identity)) return;
+
+    const tokenId = BigInt(args.state.tokenId);
+    const cache = readArtCache();
+    if (
+      cache !== null &&
+      cacheMatchesIdentityAndToken(cache, args.identity, tokenId)
+    ) {
+      return;
+    }
+
+    const net = args.netOverride ?? getActiveNetwork();
+    const timeoutMs = args.timeoutMs ?? 2000;
+    // Abort lands before the race backstop for every valid timeout: the
+    // margin is min(500ms, half the budget) — an absolute request+body
+    // deadline plus settlement headroom, not per-phase allocations.
+    const abortDelayMs = Math.max(
+      1,
+      timeoutMs - Math.min(500, Math.floor(timeoutMs / 2)),
+    );
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), abortDelayMs);
+    // Timers must not hold the hook process open past main-flow completion;
+    // the AbortController is what releases the fetch itself.
+    abortTimer.unref?.();
+    let raceTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const svg = await Promise.race([
+        fetchTokenSvg(tokenId, net, createScopedReadClient(controller.signal)),
+        new Promise<null>((resolve) => {
+          raceTimer = setTimeout(() => resolve(null), timeoutMs);
+          raceTimer.unref?.();
+        }),
+      ]);
+      if (svg === null) return;
+
+      populateArtCacheFromSvg(svg, tokenId, args.identity);
+    } finally {
+      clearTimeout(abortTimer);
+      clearTimeout(raceTimer);
+    }
+  } catch {
+    // Art cache only powers ambient nicety; boot must proceed without it.
+  }
 }
 
 export async function resolveLookupPayload(

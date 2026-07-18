@@ -2,9 +2,11 @@
 //
 // Ambient UserPromptSubmit never performs chain RPC. `/buddy-onchain` warm
 // lookups refresh the live on-chain SVG, extract sprite frames, and persist this
-// tiny cache. SessionStart writes chain-facing state only. Ambient reads only
-// this file and degrades to `{}` when the cache is missing, stale, malformed,
-// oversized, or symlinked. Full RPC boundary rules:
+// tiny cache. SessionStart writes chain-facing state and, for a warm buddy
+// whose cache is missing or mismatched, rebuilds it via a bounded tokenURI
+// fetch (`ensureWarmArtCache`). Ambient reads only this file and degrades to
+// `{}` when the cache is missing, stale, malformed, oversized, or symlinked.
+// Full RPC boundary rules:
 // `docs/plugin/ambient.md` § Why ambient is RPC-free + § Art cache.
 
 import { unlinkSync } from "node:fs";

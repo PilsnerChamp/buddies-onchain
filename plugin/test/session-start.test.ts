@@ -245,6 +245,7 @@ function sourceSessionStartWriterThrowHarness(
         }
         throw new Error("deployment chainId mismatch");
       },
+      ensureWarmArtCache: async () => {},
     }));
 
     const { runSessionStart } = await import("./src/session-start.ts");
@@ -404,7 +405,7 @@ describe("SessionStart session-fresh flag", () => {
 });
 
 describe("SessionStart chain writer behavior", () => {
-  test("warm SessionStart writes warm state without refreshing art cache", async () => {
+  test("warm SessionStart writes warm state and rebuilds the missing art cache", async () => {
     const root = freshClaudeRoot();
 
     const result = await runSourceSessionStart(root, "warm");
@@ -418,7 +419,13 @@ describe("SessionStart chain writer behavior", () => {
       hatch: "warm",
       tokenId: "0x2a",
     });
-    expect(readArtCacheFile(root)).toBeNull();
+    expect(readArtCacheFile(root)).toMatchObject({
+      schemaVersion: 1,
+      accountUuidHash: MAINNET_DEPLOYED_IDENTITY.accountUuidHash,
+      chainId: MAINNET_DEPLOYED_IDENTITY.chainId,
+      contractAddress: MAINNET_DEPLOYED_IDENTITY.contractAddress,
+      tokenId: "0x2a",
+    });
   });
 
   test.each([

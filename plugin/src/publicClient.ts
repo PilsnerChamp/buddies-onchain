@@ -25,23 +25,58 @@ import { base } from 'viem/chains';
 import { ACTIVE_NETWORK } from './network';
 
 let _client: PublicClient | null = null;
+let _testOverride: PublicClient | null = null;
+
+// Test-only subprocess seam; BUDDY_TEST_* prefix marks this as non-user
+// config (same pattern as BUDDY_TEST_DEPLOYMENTS_DIR in `network.ts`). Lets
+// E2E tests point the built bundle at a local JSON-RPC stub.
+function resolveRpcUrl(): string {
+  return process.env.BUDDY_TEST_RPC_URL || ACTIVE_NETWORK.rpcUrl;
+}
 
 export function getPublicClient(): PublicClient {
+  if (_testOverride !== null) return _testOverride;
   if (_client === null) {
     // The plugin runtime knows exactly one chain (Base mainnet); no per-key
     // chain dispatch. See `network.ts`.
     _client = createPublicClient({
       chain: base,
-      transport: http(ACTIVE_NETWORK.rpcUrl),
+      transport: http(resolveRpcUrl()),
     }) as PublicClient;
   }
   return _client;
 }
 
 /**
+ * Throwaway abortable client for the SessionStart art-cache rebuild. viem's
+ * transport `timeout` only bounds the request until response headers arrive;
+ * body consumption runs outside it, so a stalled body would pin the hook
+ * process past its budget. The caller-owned `signal` covers the whole
+ * request including the body, and `retryCount: 0` stops viem's default
+ * 3-retry policy from resurrecting an aborted call. Uncached by design —
+ * one-shot use; the production singleton keeps its defaults for the slash
+ * path.
+ */
+export function createScopedReadClient(signal: AbortSignal): PublicClient {
+  if (_testOverride !== null) return _testOverride;
+  return createPublicClient({
+    chain: base,
+    transport: http(resolveRpcUrl(), {
+      retryCount: 0,
+      fetchOptions: { signal },
+    }),
+  }) as PublicClient;
+}
+
+/**
  * Test-only seam: inject a mock client so unit tests can stub
- * `readContract` without spinning up an RPC server. Pass `null` to reset.
+ * `readContract` without spinning up an RPC server. The override wins over
+ * both the singleton and scoped clients. Pass `null` to reset (also drops
+ * any built singleton).
  */
 export function setPublicClientForTest(client: PublicClient | null): void {
-  _client = client;
+  _testOverride = client;
+  if (client === null) {
+    _client = null;
+  }
 }
